@@ -1,0 +1,38 @@
+services:
+  ipca-api:
+    container_name: ipca-api
+    build: .
+    ports:
+      - ${SERVER_EXPOSE_PORT}:${SERVER_PORT}
+    restart: on-failure
+    volumes:
+      - ./:/app/
+    depends_on:
+      - ipca-postgres
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${DB_NAME} sslmode=disable"
+    networks:
+      - ipca-stack
+
+  ipca-postgres:
+    image: postgres:15.7
+    container_name: ipca-db
+    ports:
+      - ${DB_EXPOSE_PORT}:${DB_PORT}
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - database_postgres:/var/lib/postgres
+    networks:
+      - ipca-stack
+
+volumes:
+  database_postgres:
+
+networks:
+  ipca-stack:
+    driver: bridge
