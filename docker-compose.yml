@@ -8,30 +8,48 @@ services:
     volumes:
       - ./:/app/
     depends_on:
-      - ipca-postgres
+      - ipca-mysql
     env_file:
       - .env
     environment:
-      DATABASE_URL: "host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${DB_NAME} sslmode=disable"
+      DATABASE_URL: "mysql://${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=True&loc=Local"
     networks:
       - ipca-stack
 
-  ipca-postgres:
-    image: postgres:15.7
+  ipca-mysql:
+    image: mysql:8.0
     container_name: ipca-db
     ports:
       - ${DB_EXPOSE_PORT}:${DB_PORT}
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
     volumes:
-      - database_postgres:/var/lib/postgres
+      - database_mysql:/var/lib/mysql
     networks:
       - ipca-stack
 
+  ipca-migrate:
+    image: migrate/migrate
+    networks:
+      - ipca-stack
+    volumes:
+      - ./db/migrations:/db/migrations
+    depends_on:
+      - ipca-mysql
+    command:
+      [
+        "-path",
+        "/db/migrations",
+        "-database",
+        "mysql://${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=True&loc=Local",
+        "up",
+      ]
+
 volumes:
-  database_postgres:
+  database_mysql:
 
 networks:
   ipca-stack:
