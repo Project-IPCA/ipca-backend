@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/config"
+	"github.com/Project-IPCA/ipca-backend/db"
 )
 
 type Server struct {
@@ -16,6 +17,7 @@ type Server struct {
 func NewServer(cfg *config.Config) *Server {
 	return &Server{
 		Echo:   echo.New(),
+		DB:     db.Init(cfg),
 		Config: cfg,
 	}
 }

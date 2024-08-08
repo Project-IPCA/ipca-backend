@@ -1,16 +1,27 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type User struct {
-	gorm.Model
-	ID        uuid.UUID `gorm:"type:char(36);primaryKey" json:"id"`
-	Username  string    `gorm:"type:char(30)"            json:"username"`
-	Password  string    `gorm:"type:char(50)"            json:"password"`
-	StudentID string    `gorm:"type:char(10)"            json:"student_id"`
-	FirstName string    `                                json:"f_name"`
-	LastName  string    `                                json:"l_name"`
+	ID          uuid.UUID   `gorm:"primaryKey;type:varchar(36)"                                                                 json:"id"`
+	UserStudent UserStudent `gorm:"foreignKey:StuID"`
+	Username    string      `gorm:"unique;type:varchar(30);not null"                                                            json:"username"`
+	Password    string      `gorm:"type:varchar(60)"                                                                            json:"password"`
+	Role        string      `gorm:"type:enum('ADMIN', 'EDITOR', 'AUTHOR', 'STUDENT', 'SUPERVISOR', 'STAFF', 'TA');default:null" json:"role"`
+	Added       time.Time   `gorm:"not null;default:CURRENT_TIMESTAMP"                                                          json:"added"`
+	LastLogin   *time.Time  `gorm:"default:null"                                                                                json:"last_login"`
+	LastSeen    time.Time   `gorm:"not null;default:CURRENT_TIMESTAMP"                                                          json:"last_seen"`
+	IsOnline    bool        `gorm:"not null;default:false"                                                                      json:"is_online"`
+	IsActive    bool        `gorm:"not null;default:true"                                                                       json:"is_active"`
+	AddedBy     *string     `gorm:"type:varchar(40);default:null"                                                               json:"added_by"`
+	CiSession   *int        `gorm:"default:null"                                                                                json:"ci_session"`
+	SessionID   *string     `gorm:"type:varchar(50);default:null"                                                               json:"session_id"`
+}
+
+func (User) TableName() string {
+	return "user"
 }

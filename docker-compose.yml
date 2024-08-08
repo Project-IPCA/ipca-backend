@@ -31,23 +31,6 @@ services:
     networks:
       - ipca-stack
 
-  ipca-migrate:
-    image: migrate/migrate
-    networks:
-      - ipca-stack
-    volumes:
-      - ./db/migrations:/db/migrations
-    depends_on:
-      - ipca-mysql
-    command:
-      [
-        "-path",
-        "/db/migrations",
-        "-database",
-        "mysql://${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=True&loc=Local",
-        "up",
-      ]
-
 volumes:
   database_mysql:
 
