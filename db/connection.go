@@ -3,31 +3,25 @@ package db
 import (
 	"fmt"
 
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
 
 	"github.com/Project-IPCA/ipca-backend/config"
 )
 
 func Init(cfg *config.Config) *gorm.DB {
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai",
-		cfg.DB.Host,
+		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.DB.User,
 		cfg.DB.Password,
-		cfg.DB.Name,
+		cfg.DB.Host,
 		cfg.DB.Port,
+		cfg.DB.Name,
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			TablePrefix:   "ipca_hub.",
-			SingularTable: false,
-		},
-	})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect to database")
+		panic("failed to connect to database: " + err.Error())
 	}
 
 	return db
