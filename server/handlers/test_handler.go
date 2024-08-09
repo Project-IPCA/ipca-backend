@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
+	"github.com/Project-IPCA/ipca-backend/redis_client"
 	s "github.com/Project-IPCA/ipca-backend/server"
 )
 
@@ -27,4 +28,14 @@ func NewTestHandler(server *s.Server) *TestHandler {
 // @Router			/api/greeting [get]
 func (testHandler *TestHandler) Greeting(c echo.Context) error {
 	return responses.MessageResponse(c, http.StatusOK, "Greeting OK")
+}
+
+func (testHandler *TestHandler) TestRedis(c echo.Context) error {
+	 redis := redis_client.NewRedisAction(testHandler.server.Redis)
+	 err := redis.PublishMessage("oot","handsome")
+	
+	if err != nil {
+		panic(err)
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Test Redis ok")
 }

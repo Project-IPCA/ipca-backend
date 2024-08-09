@@ -10,6 +10,7 @@ type Config struct {
 	HTTP HTTPConfig
 	DB   DBConfig
 	Auth AuthConfig
+	REDIS RedisConfig
 }
 
 func NewConfig() *Config {
@@ -21,5 +22,6 @@ func NewConfig() *Config {
 		Auth: LoadAuthConfig(),
 		HTTP: LoadHTTPConfig(),
 		DB:   LoadDBConfig(),
+		REDIS : LoadRedisConfig(),
 	}
 }

@@ -6,12 +6,15 @@ import (
 
 	"github.com/Project-IPCA/ipca-backend/config"
 	"github.com/Project-IPCA/ipca-backend/db"
+	"github.com/Project-IPCA/ipca-backend/redis_client"
+	"github.com/redis/go-redis/v9"
 )
 
 type Server struct {
 	Echo   *echo.Echo
 	DB     *gorm.DB
 	Config *config.Config
+	Redis 	*redis.Client
 }
 
 func NewServer(cfg *config.Config) *Server {
@@ -19,6 +22,7 @@ func NewServer(cfg *config.Config) *Server {
 		Echo:   echo.New(),
 		DB:     db.Init(cfg),
 		Config: cfg,
+		Redis: redis_client.RedisClient(cfg),
 	}
 }
 
