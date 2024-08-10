@@ -24,4 +24,5 @@ func ConfigureRoutes(server *s.Server) {
 
 	authGroup := apiGroup.Group("/auth")
 	authGroup.POST("/login", authHandler.Login)
+	apiGroup.GET("/test_redis",testHandler.TestRedis)
 }
