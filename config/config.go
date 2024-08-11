@@ -11,6 +11,7 @@ type Config struct {
 	DB   DBConfig
 	Auth AuthConfig
 	REDIS RedisConfig
+	RABBITMQ RabbitMQConfig
 }
 
 func NewConfig() *Config {
@@ -23,5 +24,6 @@ func NewConfig() *Config {
 		HTTP: LoadHTTPConfig(),
 		DB:   LoadDBConfig(),
 		REDIS : LoadRedisConfig(),
+		RABBITMQ: LoadRabbitMQConfig(),
 	}
 }
