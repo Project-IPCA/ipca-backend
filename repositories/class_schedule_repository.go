@@ -7,7 +7,12 @@ import (
 	"github.com/Project-IPCA/ipca-backend/models"
 )
 
-type ClassScheduleRepositoryQ interface{}
+type ClassScheduleRepositoryQ interface {
+	GetClassScheduleByGroupID(
+		classSchedule *models.ClassSchedule,
+		groupId uuid.UUID,
+	)
+}
 
 type ClassScheduleRepository struct {
 	DB *gorm.DB
