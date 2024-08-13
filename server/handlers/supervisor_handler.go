@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -12,8 +15,9 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
+	"github.com/Project-IPCA/ipca-backend/services/student"
+	"github.com/Project-IPCA/ipca-backend/services/token"
 	"github.com/Project-IPCA/ipca-backend/services/user"
-	userstudent "github.com/Project-IPCA/ipca-backend/services/user_student"
 )
 
 type SupervisorHandler struct {
@@ -32,6 +36,8 @@ func NewSupervisorHandler(server *s.Server) *SupervisorHandler {
 // @Param params body	requests.AddStudentsTextRequest	true	"Add Students Request"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
 // @Router			/api/supervisor/add_students [post]
 func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	addStudentsReq := new(requests.AddStudentsTextRequest)
@@ -40,32 +46,69 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
 
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	existUser := models.User{}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepository.GetUserByUserID(&existUser, userId)
+	if existUser.Role != &constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
 	arrStudents := strings.Split(addStudentsReq.StudentsData, "\n")
 
 	userService := user.NewUserService(supervisorHandler.server.DB)
-	userStudentService := userstudent.NewUserStudentService(supervisorHandler.server.DB)
-	userStudentRepository := repositories.NewUserStudentRepository(supervisorHandler.server.DB)
+	studentService := student.NewStudentService(supervisorHandler.server.DB)
+	studentRepository := repositories.NewStudentRepository(supervisorHandler.server.DB)
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(arrStudents))
 
 	for _, item := range arrStudents {
-		data := strings.Split(item, " ")
-		stuId := data[1]
-		role := constants.Role.Student
-		firstName := data[2]
-		lastName := data[3]
+		wg.Add(1)
+		go func(item string) {
+			defer wg.Done()
+			data := strings.Split(item, " ")
+			kmitlId := data[1]
+			firstName := data[2]
+			lastName := data[3]
 
-		existUserStudent := models.UserStudent{}
-		userStudentRepository.GetUserByStuID(&existUserStudent, stuId)
+			existUserStudent := models.Student{}
+			studentRepository.GetUserByKmitlID(&existUserStudent, kmitlId)
+			if existUserStudent.KmitlID == kmitlId {
+				errChan <- fmt.Errorf("User Student with ID %s is Already Exist", kmitlId)
+				return
+			}
 
-		if existUserStudent.StuStuID == stuId {
-			return responses.ErrorResponse(
-				c,
-				http.StatusBadRequest,
-				"User Student is Already Exist.",
+			userId, err := userService.CreateQuick(
+				kmitlId,
+				kmitlId,
+				firstName,
+				lastName,
+				constants.Role.Student,
 			)
-		}
+			if err != nil {
+				errChan <- fmt.Errorf("Failed to create user for student %s: %v", kmitlId, err)
+				return
+			}
 
-		userId, _ := userService.Create(stuId, role)
-		userStudentService.Create(userId, stuId, firstName, lastName)
+			err = studentService.Create(userId, kmitlId)
+			if err != nil {
+				errChan <- fmt.Errorf("Failed to create user student for %s: %v", kmitlId, err)
+				return
+			}
+		}(item)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		}
 	}
 
 	return responses.MessageResponse(c, http.StatusCreated, "Add Student Successful")

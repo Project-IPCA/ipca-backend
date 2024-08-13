@@ -1,9 +1,11 @@
 package routes
 
 import (
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 
+	"github.com/Project-IPCA/ipca-backend/middlewares"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/server/handlers"
 )
@@ -16,14 +18,23 @@ func ConfigureRoutes(server *s.Server) {
 	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
 	server.Echo.Use(middleware.Logger())
 
+	authMiddleware := middlewares.NewAuthMiddleware(server)
+	jwtConfig := authMiddleware.GetJwtConfig()
+
 	apiGroup := server.Echo.Group("/api")
 	apiGroup.GET("/greeting", testHandler.Greeting)
+	apiGroup.GET("/test_redis", testHandler.TestRedis)
 
+	// Supervisor
 	supervisorGroup := apiGroup.Group("/supervisor")
-	supervisorGroup.POST("/add_students", supervisorHandler.AddStudents)
+	supervisorAuthGroup := supervisorGroup
+	supervisorAuthGroup.Use(echojwt.WithConfig(jwtConfig))
+	supervisorAuthGroup.POST("/add_students", supervisorHandler.AddStudents)
 
+	// Auth
 	authGroup := apiGroup.Group("/auth")
 	authGroup.POST("/login", authHandler.Login)
+
 	apiGroup.GET("/test_redis",testHandler.TestRedis)
 	apiGroup.GET("/test_rabbit",testHandler.TestRabbitMQ)
 }

@@ -5,13 +5,13 @@ import (
 )
 
 type AuthConfig struct {
-	AccessSecretUserStudent  string
-	RefreshSecretUserStudent string
+	AccessSecret  string
+	RefreshSecret string
 }
 
 func LoadAuthConfig() AuthConfig {
 	return AuthConfig{
-		AccessSecretUserStudent:  os.Getenv("ACCESS_SECRET_USER_STUDENT"),
-		RefreshSecretUserStudent: os.Getenv("REFRESH_SECRET_USER_STUDENT"),
+		AccessSecret:  os.Getenv("ACCESS_SECRET"),
+		RefreshSecret: os.Getenv("REFRESH_SECRET"),
 	}
 }

@@ -1,11 +1,18 @@
 package user
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type ServiceWrapper interface {
-	Create(stuId string, role string) error
+	CreateQuick(
+		username string,
+		password string,
+		firstName string,
+		lastName string,
+		role string,
+	) (userID uuid.UUID, err error)
 }
 
 type Service struct {

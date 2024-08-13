@@ -7,9 +7,15 @@ import (
 	"github.com/Project-IPCA/ipca-backend/server/builders"
 )
 
-func (userService *Service) Create(stuId string, role string) (userID uuid.UUID, err error) {
+func (userService *Service) CreateQuick(
+	username string,
+	password string,
+	firstName string,
+	lastName string,
+	role string,
+) (userID uuid.UUID, err error) {
 	encryptedPassword, err := bcrypt.GenerateFromPassword(
-		[]byte(stuId),
+		[]byte(password),
 		bcrypt.DefaultCost,
 	)
 	userID = uuid.New()
@@ -19,8 +25,10 @@ func (userService *Service) Create(stuId string, role string) (userID uuid.UUID,
 
 	user := builders.NewUserBuilder().
 		SetID(userID).
-		SetUsername(stuId).
+		SetUsername(username).
 		SetPassword(string(encryptedPassword)).
+		SetFirstName(firstName).
+		SetLastName(lastName).
 		SetRole(role).
 		Build()
 
