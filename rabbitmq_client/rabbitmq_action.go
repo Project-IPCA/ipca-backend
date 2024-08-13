@@ -32,7 +32,7 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 	}
 
 	q, err := ch.QueueDeclare(
-		rabbitMQAction.cfg.RABBITMQ.QueueName,
+		rabbitMQAction.cfg.RabbitMQ.QueueName,
 		true,
 		false,
 		false,

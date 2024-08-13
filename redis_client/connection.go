@@ -8,7 +8,7 @@ import (
 )
 
 func RedisClient(cfg *config.Config) *redis.Client {
-	url := fmt.Sprintf("redis://%s:%s@%s:%s/",cfg.REDIS.User,cfg.REDIS.Password,cfg.REDIS.Host,cfg.REDIS.Port)
+	url := fmt.Sprintf("redis://%s:%s@%s:%s/",cfg.Redis.User,cfg.Redis.Password,cfg.Redis.Host,cfg.Redis.Port)
 	
 	opt, err := redis.ParseURL(url)
 	if err != nil {

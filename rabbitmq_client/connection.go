@@ -8,7 +8,7 @@ import (
 )
   
 func RabbitMQClient(cfg *config.Config) *amqp.Connection{
-	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.RABBITMQ.User, cfg.RABBITMQ.Password, cfg.RABBITMQ.Host, cfg.RABBITMQ.Port)
+	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.RabbitMQ.User, cfg.RabbitMQ.Password, cfg.RabbitMQ.Host, cfg.RabbitMQ.Port)
 	
 	conn, err := amqp.Dial(url)
 	if err != nil {
