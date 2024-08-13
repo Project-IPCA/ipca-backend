@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS `departments` (
+  dept_id VARCHAR(36) NOT NULL,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  PRIMARY KEY (dept_id)
+)

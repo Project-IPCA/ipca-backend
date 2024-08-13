@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `class_schedules` (
+  group_id VARCHAR(36) NOT NULL, 
+  number INT DEFAULT NULL,
+  ืname VARCHAR(80),
+  dept_id VARCHAR(36),
+  supervisor_id VARCHAR(36) DEFAULT NULL,
+  day ENUM('SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY') DEFAULT NULL,
+  time_start TIME DEFAULT NULL,
+  time_end TIME DEFAULT NULL,
+  year INT DEFAULT NULL,
+  semester INT DEFAULT NULL,
+  allow_upload_pic BOOLEAN NOT NULL DEFAULT TRUE,
+  allow_submit BOOLEAN NOT NULL DEFAULT TRUE,
+  allow_exercise BOOLEAN NOT NULL DEFAULT TRUE,
+  PRIMARY KEY (group_id),
+  KEY supervisor_id (supervisor_id),
+  KEY dept_id (dept_id),
+  CONSTRAINT fk_class_schedule_supervisor FOREIGN KEY (supervisor_id) REFERENCES supervisors (supervisor_id),
+  CONSTRAINT fk_class_schedule_dept FOREIGN KEY (dept_id) REFERENCES departments (dept_id) ON DELETE SET NULL ON UPDATE SET NULL
+);
