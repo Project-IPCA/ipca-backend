@@ -3,6 +3,8 @@ package user
 import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"github.com/Project-IPCA/ipca-backend/models"
 )
 
 type ServiceWrapper interface {
@@ -13,6 +15,8 @@ type ServiceWrapper interface {
 		lastName string,
 		role string,
 	) (userID uuid.UUID, err error)
+	UpdateLoginSuccess(user *models.User) error
+	UpdateIsOnline(user *models.User, isOnline bool) error
 }
 
 type Service struct {

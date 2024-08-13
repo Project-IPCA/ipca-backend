@@ -5,7 +5,7 @@ import (
 )
 
 type BasicAuth struct {
-	Username string `json:"stu_id"   validate:"required" example:"64010000"`
+	Username string `json:"username" validate:"required" example:"64010000"`
 	Password string `json:"password" validate:"required" example:"64010000"`
 }
 
