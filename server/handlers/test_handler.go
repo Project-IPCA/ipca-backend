@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
+	"github.com/Project-IPCA/ipca-backend/rabbitmq_client"
 	"github.com/Project-IPCA/ipca-backend/redis_client"
 	s "github.com/Project-IPCA/ipca-backend/server"
 )
@@ -30,6 +31,15 @@ func (testHandler *TestHandler) Greeting(c echo.Context) error {
 	return responses.MessageResponse(c, http.StatusOK, "Greeting OK")
 }
 
+
+// @Description TestRedis (Check suscess in docker container)
+// @ID test_redis
+// @Tags Test
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 404		{object}	responses.Error
+// @Router			/api/test_redis [get]
 func (testHandler *TestHandler) TestRedis(c echo.Context) error {
 	 redis := redis_client.NewRedisAction(testHandler.server.Redis)
 	 err := redis.PublishMessage("oot","handsome")
@@ -38,4 +48,28 @@ func (testHandler *TestHandler) TestRedis(c echo.Context) error {
 		panic(err)
 	}
 	return responses.MessageResponse(c, http.StatusOK, "Test Redis ok")
+}
+
+
+// @Description TestRabbitMQ (Check suscess in docker container)
+// @ID test_rabbit
+// @Tags Test
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 404		{object}	responses.Error
+// @Router			/api/test_rabbit [get]
+func (testHandler *TestHandler) TestRabbitMQ(c echo.Context) error {
+	rabbit := rabbitmq_client.NewRabbitMQAction(testHandler.server.RabitMQ,testHandler.server.Config)
+	test := map[string]interface{}{
+        "FirstName": "John",
+        "LastName":  "Doe",
+        "Age":       30,
+    }
+	err := rabbit.SendQueue(test)
+   
+   if err != nil {
+	   panic(err)
+   }
+   return responses.MessageResponse(c, http.StatusOK, "Test Rabbit OK")
 }

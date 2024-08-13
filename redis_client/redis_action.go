@@ -1,7 +1,6 @@
 package redis_client
 
 import (
-	"fmt"
 	"context"
 	"time"
 	"github.com/redis/go-redis/v9"
@@ -26,7 +25,7 @@ func (redisAction *RedisAction )PublishMessage(channel, message string) error {
     defer cancel()  
     err := redisAction.Redis.Publish(ctx, channel, message).Err()
     if err != nil {
-        return fmt.Errorf("failed to publish message: %w", err)
+		panic("failed to publish message: " + err.Error())
     }
 
     return nil
