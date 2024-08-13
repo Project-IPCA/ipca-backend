@@ -1,7 +1,6 @@
 package rabbitmq_client
 
 import (
-	"os"
 	"context"
 	"encoding/json"
 	"time"
@@ -19,9 +18,10 @@ type RabbitMQAction struct {
 	cfg      *config.Config
 }
 
-func NewRabbitMQAction(rabbitmq *amqp.Connection) *RabbitMQAction {
+func NewRabbitMQAction(rabbitmq *amqp.Connection,config *config.Config) *RabbitMQAction {
 	return &RabbitMQAction{
 		RabbitMQ: rabbitmq,
+		cfg: config,
 	}
 }
 
@@ -32,7 +32,7 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 	}
 
 	q, err := ch.QueueDeclare(
-		os.Getenv("RABBITMQ_QUEUENAME"),
+		rabbitMQAction.cfg.RABBITMQ.QueueName,
 		true,
 		false,
 		false,

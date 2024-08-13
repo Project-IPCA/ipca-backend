@@ -42,7 +42,7 @@ func (testHandler *TestHandler) TestRedis(c echo.Context) error {
 }
 
 func (testHandler *TestHandler) TestRabbitMQ(c echo.Context) error {
-	rabbit := rabbitmq_client.NewRabbitMQAction(testHandler.server.RabitMQ)
+	rabbit := rabbitmq_client.NewRabbitMQAction(testHandler.server.RabitMQ,testHandler.server.Config)
 	test := map[string]interface{}{
         "FirstName": "John",
         "LastName":  "Doe",
