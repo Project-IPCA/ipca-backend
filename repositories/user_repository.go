@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -21,4 +22,11 @@ func (userRepository *UserRepository) GetUserByUsername(
 	username string,
 ) {
 	userRepository.DB.Where("username = ?", username).Find(user)
+}
+
+func (userRepository *UserRepository) GetUserByUserID(
+	user *models.User,
+	userId uuid.UUID,
+) {
+	userRepository.DB.Where("user_id = ?", userId).Find(user)
 }

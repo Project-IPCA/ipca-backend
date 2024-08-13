@@ -8,12 +8,12 @@ import (
 	"github.com/Project-IPCA/ipca-backend/models"
 )
 
-func (tokenService *Service) CreateUserStudentAccessToken(
+func (tokenService *Service) CreateAccessToken(
 	user *models.User,
 ) (t string, expired int64, err error) {
 	exp := time.Now().Add(time.Hour * ExpireCount)
 	claims := &JwtCustomClaims{
-		user.ID,
+		user.UserID,
 		user.Username,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(exp),
@@ -21,7 +21,7 @@ func (tokenService *Service) CreateUserStudentAccessToken(
 	}
 	expired = exp.Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	t, err = token.SignedString([]byte(tokenService.config.Auth.AccessSecretUserStudent))
+	t, err = token.SignedString([]byte(tokenService.config.Auth.AccessSecret))
 	if err != nil {
 		return
 	}
