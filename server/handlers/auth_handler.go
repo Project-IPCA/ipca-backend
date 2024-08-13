@@ -7,7 +7,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Project-IPCA/ipca-backend/models"
-	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	"github.com/Project-IPCA/ipca-backend/repositories"
@@ -48,17 +47,14 @@ func (authHandler AuthHandler) Login(c echo.Context) error {
 	}
 
 	tokenService := tokenservice.NewTokenService(authHandler.server.Config)
-	if user.Role == constants.Role.Student {
-		accessToken, exp, err := tokenService.CreateUserStudentAccessToken(&user)
-		if err != nil {
-			return err
-		}
-		refreshToken, err := tokenService.CreateRefreshTokenUserStudent(&user)
-		if err != nil {
-			return err
-		}
-		response := responses.NewLoginResponse(accessToken, refreshToken, exp)
-		return responses.Response(c, http.StatusOK, response)
+	accessToken, exp, err := tokenService.CreateAccessToken(&user)
+	if err != nil {
+		return err
 	}
-	return nil
+	refreshToken, err := tokenService.CreateRefreshToken(&user)
+	if err != nil {
+		return err
+	}
+	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
+	return responses.Response(c, http.StatusOK, response)
 }

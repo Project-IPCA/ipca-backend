@@ -1,8 +1,16 @@
-CREATE TABLE IF NOT EXISTS `user` (
-  id VARCHAR(36) NOT NULL,
+CREATE TABLE IF NOT EXISTS `users` (
+  user_id VARCHAR(36) NOT NULL,
   username VARCHAR(30) UNIQUE NOT NULL,
   password VARCHAR(60) DEFAULT NULL,
+  f_name VARCHAR(10) DEFAULT NULL,
+  l_name VARCHAR(32) DEFAULT NULL,
+  nickname VARCHAR(50) DEFAULT NULL,
+  gender ENUM('MALE', 'FEMALE', 'OTHER') DEFAULT NULL,
+  dob DATE DEFAULT NULL,
+  avatar VARCHAR(128) DEFAULT NULL,
   role ENUM('ADMIN', 'EDITOR', 'AUTHOR', 'STUDENT', 'SUPERVISOR', 'STAFF', 'TA') DEFAULT NULL,
+  email VARCHAR(64) DEFAULT NULL,
+  tel VARCHAR(10) DEFAULT NULL,
   added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_login DATETIME DEFAULT NULL,
   last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -11,62 +19,38 @@ CREATE TABLE IF NOT EXISTS `user` (
   added_by VARCHAR(40) DEFAULT NULL,
   ci_session INT DEFAULT NULL,
   session_id VARCHAR(50) DEFAULT NULL,
-  PRIMARY KEY (id)
+  PRIMARY KEY (user_id)
 );
 
-CREATE TABLE IF NOT EXISTS `user_student` (
+CREATE TABLE IF NOT EXISTS `students` (
   stu_id VARCHAR(36) NOT NULL,
-  stu_stu_id VARCHAR(10) NOT NULL,
-  stu_firstname VARCHAR(40) DEFAULT NULL,
-  stu_lastname VARCHAR(32) DEFAULT NULL,
-  stu_nickname VARCHAR(20) DEFAULT NULL,
-  stu_gender ENUM('MALE', 'FEMALE', 'OTHER') DEFAULT NULL,
-  stu_dob DATE DEFAULT NULL,
-  stu_avatar VARCHAR(128) DEFAULT NULL,
-  stu_email VARCHAR(64) DEFAULT NULL,
-  stu_tel VARCHAR(10) DEFAULT NULL,
-  stu_group INT DEFAULT NULL,
+  kmitl_id VARCHAR(8) NOT NULL,
+  group_id INT DEFAULT NULL,
   note VARCHAR(64) DEFAULT NULL,
-  stu_dept_id INT DEFAULT NULL,
+  dept_id VARCHAR(36) DEFAULT NULL,
   mid_core FLOAT NOT NULL DEFAULT '0',
-  can_submit VARCHAR(3) NOT NULL DEFAULT 'YES',
+  can_submit BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (stu_id),
   UNIQUE KEY user_student_pk (stu_id),
-  KEY student_group (stu_group),
-  KEY stu_department (stu_dept_id),
-  CONSTRAINT user_student_ibfk_1 FOREIGN KEY (stu_id) REFERENCES user (id) ON DELETE CASCADE ON UPDATE CASCADE
+  KEY student_group (group_id),
+  KEY stu_department (dept_id),
+  CONSTRAINT user_student_ibfk_1 FOREIGN KEY (stu_id) REFERENCES users (user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `user_supervisor` (
+CREATE TABLE IF NOT EXISTS `supervisors` (
   supervisor_id VARCHAR(36) NOT NULL,
-  supervisor_firstname VARCHAR(50) DEFAULT NULL,
-  supervisor_lastname VARCHAR(50) DEFAULT NULL,
-  supervisor_nickname VARCHAR(50) DEFAULT NULL,
-  supervisor_gender ENUM('MALE', 'FEMALE', 'OTHER') DEFAULT NULL,
-  supervisor_dob DATE DEFAULT NULL,
-  supervisor_avatar VARCHAR(64) DEFAULT NULL,
-  supervisor_email VARCHAR(64) DEFAULT NULL,
-  supervisor_tel VARCHAR(10) DEFAULT NULL,
-  supervisor_department VARCHAR(40) DEFAULT NULL,
+  dept VARCHAR(40) DEFAULT NULL,
   PRIMARY KEY (supervisor_id),
-  CONSTRAINT fk_user_supervisor_user1 FOREIGN KEY (supervisor_id) REFERENCES user (id) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT fk_user_supervisor_user1 FOREIGN KEY (supervisor_id) REFERENCES users (user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `user_ta` (
+CREATE TABLE IF NOT EXISTS `tas` (
   ta_id VARCHAR(36) NOT NULL,
-  ta_gender ENUM('MALE', 'FEMALE', 'OTHER') DEFAULT NULL,
-  ta_firstname VARCHAR(40) DEFAULT NULL,
-  ta_lastname VARCHAR(32) DEFAULT NULL,
-  ta_nickname VARCHAR(20) DEFAULT NULL,
-  ta_dob DATE DEFAULT NULL,
-  ta_avatar VARCHAR(128) DEFAULT NULL,
-  ta_email VARCHAR(64) DEFAULT NULL,
-  ta_tel VARCHAR(10) DEFAULT NULL,
-  ta_group INT DEFAULT NULL,
+  group_id INT DEFAULT NULL,
   note VARCHAR(64) DEFAULT NULL,
-  ta_dept_id INT DEFAULT NULL,
+  dept_id VARCHAR(36) DEFAULT NULL,
   PRIMARY KEY (ta_id),
-  KEY fk_user_ta_department1_idx (ta_dept_id),
-  KEY fk_user_ta_class_schedule1_idx (ta_group),
-  CONSTRAINT user_ta_ibfk_1 FOREIGN KEY (ta_id) REFERENCES user (id) ON DELETE CASCADE ON UPDATE CASCADE
+  KEY fk_user_ta_department1_idx (dept_id),
+  KEY fk_user_ta_class_schedule1_idx (group_id),
+  CONSTRAINT user_ta_ibfk_1 FOREIGN KEY (ta_id) REFERENCES users (user_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
