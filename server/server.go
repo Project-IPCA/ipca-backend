@@ -32,5 +32,3 @@ func NewServer(cfg *config.Config) *Server {
 func (server *Server) Start(addr string) error {
 	return server.Echo.Start(":" + addr)
 }
-
-// test github
