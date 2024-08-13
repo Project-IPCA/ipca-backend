@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS `class_schedules` (
   group_id VARCHAR(36) NOT NULL, 
   number INT DEFAULT NULL,
-  ืname VARCHAR(80),
+  name VARCHAR(80),
   dept_id VARCHAR(36),
   supervisor_id VARCHAR(36) DEFAULT NULL,
   day ENUM('SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY') DEFAULT NULL,
@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `class_schedules` (
   semester INT DEFAULT NULL,
   allow_upload_pic BOOLEAN NOT NULL DEFAULT TRUE,
   allow_submit BOOLEAN NOT NULL DEFAULT TRUE,
+  allow_login BOOLEAN NOT NULL DEFAULT TRUE,
   allow_exercise BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (group_id),
   KEY supervisor_id (supervisor_id),
