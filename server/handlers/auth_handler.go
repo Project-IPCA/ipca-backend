@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/redis_client"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
+	"github.com/Project-IPCA/ipca-backend/services/token"
 	tokenservice "github.com/Project-IPCA/ipca-backend/services/token"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
@@ -94,7 +96,7 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	userService.UpdateLoginSuccess(&user)
 
 	redis := redis_client.NewRedisAction(authHandler.server.Redis)
-	redisCnl := fmt.Sprintf("online-students:%s", user.UserID)
+	redisCnl := fmt.Sprintf("online-students:%s", user.Student.GroupID)
 	redisMsg := redis.NewMessage("login", user.UserID)
 	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error")
@@ -102,4 +104,40 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 
 	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
 	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description	Logout
+// @ID				auth-logout
+// @Tags			Auth
+// @Accept		json
+// @Produce		json
+// @Success		200		{object}	responses.Data
+// @Failure		404		{object}	responses.Error
+// @Failure		500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/auth/logout [post]
+func (authHandler *AuthHandler) Logout(c echo.Context) error {
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	userService := userservice.NewUserService(authHandler.server.DB)
+	existsUser := models.User{}
+
+	userRepository := repositories.NewUserRepository(authHandler.server.DB)
+	userRepository.GetUserByUserID(&existsUser, userId)
+
+	if existsUser.UserID != userId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "User ID not found in session.")
+	}
+
+	userService.UpdateIsOnline(&existsUser, false)
+
+	redis := redis_client.NewRedisAction(authHandler.server.Redis)
+	redisCnl := fmt.Sprintf("online-students:%s", existsUser.Student.GroupID)
+	redisMsg := redis.NewMessage("logout", existsUser.UserID)
+	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error")
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Logout successful")
 }

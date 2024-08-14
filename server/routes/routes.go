@@ -22,8 +22,6 @@ func ConfigureRoutes(server *s.Server) {
 	jwtConfig := authMiddleware.GetJwtConfig()
 
 	apiGroup := server.Echo.Group("/api")
-	apiGroup.GET("/greeting", testHandler.Greeting)
-	apiGroup.GET("/test_redis", testHandler.TestRedis)
 
 	// Supervisor
 	supervisorGroup := apiGroup.Group("/supervisor")
@@ -34,7 +32,12 @@ func ConfigureRoutes(server *s.Server) {
 	// Auth
 	authGroup := apiGroup.Group("/auth")
 	authGroup.POST("/login", authHandler.Login)
+	authAuthGroup := authGroup
+	authAuthGroup.Use(echojwt.WithConfig(jwtConfig))
+	authAuthGroup.POST("/logout", authHandler.Logout)
 
-	apiGroup.GET("/test_redis",testHandler.TestRedis)
-	apiGroup.GET("/test_rabbit",testHandler.TestRabbitMQ)
+	// Test
+	apiGroup.GET("/greeting", testHandler.Greeting)
+	apiGroup.GET("/test_redis", testHandler.TestRedis)
+	apiGroup.GET("/test_rabbit", testHandler.TestRabbitMQ)
 }
