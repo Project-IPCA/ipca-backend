@@ -4,13 +4,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/oklog/ulid"
 
 	"github.com/Project-IPCA/ipca-backend/models"
 )
 
 type ActivityLogBuilder struct {
-	LogID      ulid.ULID
+	LogID      string
 	Timestamp  time.Time
 	GroupID    *uuid.UUID
 	Username   string
@@ -26,7 +25,7 @@ func NewActivityLogBuilder() *ActivityLogBuilder {
 	return &ActivityLogBuilder{}
 }
 
-func (activityLogBuilder *ActivityLogBuilder) SetLogID(logId ulid.ULID) (al *ActivityLogBuilder) {
+func (activityLogBuilder *ActivityLogBuilder) SetLogID(logId string) (al *ActivityLogBuilder) {
 	activityLogBuilder.LogID = logId
 	return activityLogBuilder
 }
@@ -74,9 +73,9 @@ func (activityLogBuilder *ActivityLogBuilder) SetAgent(
 }
 
 func (activityLogBuilder *ActivityLogBuilder) SetPageName(
-	pageName *string,
+	pageName string,
 ) (al *ActivityLogBuilder) {
-	activityLogBuilder.PageName = *pageName
+	activityLogBuilder.PageName = pageName
 	return activityLogBuilder
 }
 

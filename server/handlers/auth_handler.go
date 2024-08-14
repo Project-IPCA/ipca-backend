@@ -12,9 +12,11 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
+	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 	"github.com/Project-IPCA/ipca-backend/redis_client"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
+	activitylog "github.com/Project-IPCA/ipca-backend/services/activity_log"
 	"github.com/Project-IPCA/ipca-backend/services/token"
 	tokenservice "github.com/Project-IPCA/ipca-backend/services/token"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
@@ -83,9 +85,48 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 		}
 	}
 
+	activityLogService := activitylog.NewActivityLogService(authHandler.server.DB)
+
+	ip, port, userAgent := utils.GetNetworkRequest(c)
+
+	redis := redis_client.NewRedisAction(authHandler.server.Redis)
+
 	userService := userservice.NewUserService(authHandler.server.DB)
 	if user.IsOnline == true {
 		userService.UpdateIsOnline(&user, false)
+
+		redisCnl := fmt.Sprintf("%s:%s", constants.RedisChannel.LoginRepeat, user.Student.GroupID)
+		redisMsg := redis.NewMessage("repeat-login", user.UserID)
+		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
+		redisCnl = fmt.Sprintf(
+			"%s:%s",
+			constants.RedisChannel.OnlineStudent,
+			user.Student.GroupID,
+		)
+		redisMsg = redis.NewMessage("logout", user.UserID)
+		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
+
+		activityLogService.Create(
+			user.Student.GroupID,
+			user.Username,
+			ip,
+			&port,
+			&userAgent,
+			constants.LogPage.Login,
+			constants.LogAction.LoginRepeat,
+		)
 		return responses.ErrorResponse(
 			c,
 			http.StatusUnauthorized,
@@ -95,12 +136,21 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 
 	userService.UpdateLoginSuccess(&user)
 
-	redis := redis_client.NewRedisAction(authHandler.server.Redis)
-	redisCnl := fmt.Sprintf("online-students:%s", user.Student.GroupID)
+	redisCnl := fmt.Sprintf("%s:%s", constants.RedisChannel.OnlineStudent, user.Student.GroupID)
 	redisMsg := redis.NewMessage("login", user.UserID)
 	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error")
 	}
+
+	activityLogService.Create(
+		user.Student.GroupID,
+		user.Username,
+		ip,
+		&port,
+		&userAgent,
+		constants.LogPage.Login,
+		constants.LogAction.Login,
+	)
 
 	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
 	return responses.Response(c, http.StatusOK, response)
@@ -134,10 +184,26 @@ func (authHandler *AuthHandler) Logout(c echo.Context) error {
 	userService.UpdateIsOnline(&existsUser, false)
 
 	redis := redis_client.NewRedisAction(authHandler.server.Redis)
-	redisCnl := fmt.Sprintf("online-students:%s", existsUser.Student.GroupID)
+	redisCnl := fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.OnlineStudent,
+		existsUser.Student.GroupID,
+	)
 	redisMsg := redis.NewMessage("logout", existsUser.UserID)
 	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error")
 	}
+
+	activityLogService := activitylog.NewActivityLogService(authHandler.server.DB)
+	ip, port, userAgent := utils.GetNetworkRequest(c)
+	activityLogService.Create(
+		existsUser.Student.GroupID,
+		existsUser.Username,
+		ip,
+		&port,
+		&userAgent,
+		constants.LogPage.Login,
+		constants.LogAction.Logout,
+	)
 	return responses.MessageResponse(c, http.StatusOK, "Logout successful")
 }
