@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/oklog/ulid"
 )
 
 type ActivityLog struct {
-	LogID      ulid.ULID  `gorm:"type:varchar(26);primary_key;column:log_id"`
+	LogID      string     `gorm:"type:varchar(26);primary_key;column:log_id"`
 	Timestamp  time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:timestamp"`
 	GroupID    *uuid.UUID `gorm:"type:varchar(36);column:group_id"`
 	Username   string     `gorm:"type:varchar(30);not null;column:username"`
