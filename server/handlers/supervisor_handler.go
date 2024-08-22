@@ -7,16 +7,21 @@ import (
 	"sync"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
+	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
 	classschedule "github.com/Project-IPCA/ipca-backend/services/class_schedule"
+	groupassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/group_assignment_chapter_item"
+	groupassignmentexercise "github.com/Project-IPCA/ipca-backend/services/group_assignment_exercise"
+	groupchapterpermission "github.com/Project-IPCA/ipca-backend/services/group_chapter_permission"
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	"github.com/Project-IPCA/ipca-backend/services/token"
@@ -124,6 +129,7 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 // @Param params body	requests.CreateGroupRequest	true	"Create Group Request"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
+// @Security BearerAuth
 // @Router			/api/supervisor/create_group [post]
 func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	createGroupReq := new(requests.CreateGroupRequest)
@@ -157,6 +163,90 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
 	groupId, _ := classScheduleService.Create(createGroupReq)
+
+	var existLabExercises []models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseOrderByChapterLevel(&existLabExercises)
+
+	var existGroupAssignmentExercise []models.GroupAssignmentExercise
+	groupAssignmentExerciseRepo := repositories.NewGroupAssignmentExerciseRepository(
+		supervisorHandler.server.DB,
+	)
+	groupAssignmentExerciseRepo.GetGroupAssignmnetExercisesByGroupID(
+		&existGroupAssignmentExercise,
+		groupId,
+	)
+	var exerciseList []uuid.UUID
+	for _, exercise := range existGroupAssignmentExercise {
+		exerciseList = append(exerciseList, exercise.ExerciseID)
+	}
+	groupAssignmentExerciseService := groupassignmentexercise.NewGroupAssignmentExerciseService(
+		supervisorHandler.server.DB,
+	)
+	if len(existLabExercises) > len(existGroupAssignmentExercise) {
+		for _, labExercise := range existLabExercises {
+			if !utils.ContainsUUID(exerciseList, labExercise.ExerciseID) {
+				groupAssignmentExerciseService.Create(groupId, labExercise.ExerciseID, true)
+			}
+		}
+	}
+
+	existClassSchedule := models.ClassSchedule{}
+	classScheduleRepository.GetClassScheduleByGroupID(&existClassSchedule, groupId)
+
+	var labClassInfos []models.LabClassInfo
+	labClassInfoRepository := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
+	labClassInfoRepository.GetAllLabClassInfos(&labClassInfos)
+	groupAssignmentChapterItemRepository := repositories.NewGroupAssignmentChapterItemRepository(
+		supervisorHandler.server.DB,
+	)
+	groupAssignmentChapterItemService := groupassignmentchapteritem.NewGroupAssignmentChapterItemService(
+		supervisorHandler.server.DB,
+	)
+	for _, labClassInfo := range labClassInfos {
+		for itemIndex := 1; itemIndex <= 5; itemIndex++ {
+			gaci := models.GroupAssignmentChapterItem{}
+			groupAssignmentChapterItemRepository.GetGroupAssignmentChapterItemsByPK(
+				&gaci,
+				groupId,
+				labClassInfo.ChapterID,
+				int64(itemIndex),
+			)
+			if gaci.ItemID != int64(itemIndex) {
+				groupAssignmentChapterItemService.Create(
+					groupId,
+					labClassInfo.ChapterID,
+					int64(itemIndex),
+					2,
+					existClassSchedule.TimeStart,
+					existClassSchedule.TimeEnd,
+					constants.GroupAssignmentChapterItemStatus.Closed,
+				)
+			}
+		}
+	}
+
+	groupChapterPermRepo := repositories.NewGroupChapterPermissionRepository(
+		supervisorHandler.server.DB,
+	)
+	groupChapterPermService := groupchapterpermission.NewGroupChapterPermissionService(
+		supervisorHandler.server.DB,
+	)
+	for _, labClassInfo := range labClassInfos {
+		gcp := models.GroupChapterPermission{}
+		groupChapterPermRepo.GetGroupChapterPermissionByPK(&gcp, groupId, labClassInfo.ChapterID)
+		if gcp.ChapterID != labClassInfo.ChapterID {
+			groupChapterPermService.Create(
+				groupId,
+				labClassInfo.ChapterID,
+				*existClassSchedule.TimeStart,
+				*existClassSchedule.TimeEnd,
+				false,
+				false,
+				constants.GroupChapterPermStatus.Na,
+			)
+		}
+	}
 
 	classLabStaffService := classlabstaff.NewClassLabStaffService(supervisorHandler.server.DB)
 	for _, item := range createGroupReq.Staffs {
@@ -200,6 +290,7 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
 	labExerciseService.Create(createLabExerciseReq, &existUser.UserID, existUser.Username)
+
 	return nil
 }
 
