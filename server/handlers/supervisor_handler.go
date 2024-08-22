@@ -15,6 +15,9 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
+	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
+	classschedule "github.com/Project-IPCA/ipca-backend/services/class_schedule"
+	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	"github.com/Project-IPCA/ipca-backend/services/token"
 	"github.com/Project-IPCA/ipca-backend/services/user"
@@ -53,7 +56,7 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	existUser := models.User{}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	userRepository.GetUserByUserID(&existUser, userId)
-	if existUser.Role != &constants.Role.Supervisor {
+	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -110,6 +113,106 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 			return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		}
 	}
-
 	return responses.MessageResponse(c, http.StatusCreated, "Add Student Successful")
+}
+
+// @Description Create Group
+// @ID supervisor-create-group
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateGroupRequest	true	"Create Group Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Router			/api/supervisor/create_group [post]
+func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
+	createGroupReq := new(requests.CreateGroupRequest)
+	if err := c.Bind(createGroupReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createGroupReq.BasicGroup.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	existUser := models.User{}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepository.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existGroup := models.ClassSchedule{}
+	classScheduleRepository := repositories.NewClassScheduleRepository(
+		supervisorHandler.server.DB,
+	)
+	classScheduleRepository.GetClassScheduleByNumber(&existGroup, *createGroupReq.Number)
+
+	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
+	groupId, _ := classScheduleService.Create(createGroupReq)
+
+	classLabStaffService := classlabstaff.NewClassLabStaffService(supervisorHandler.server.DB)
+	for _, item := range createGroupReq.Staffs {
+		classLabStaffService.Create(groupId, item.StaffID)
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Create Group Successful.")
+}
+
+// @Description Create Exercise
+// @ID supervisor-create-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateLabExerciseRequest	true	"Creaet Lab Exercise Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/create_exercise [post]
+func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error {
+	createLabExerciseReq := new(requests.CreateLabExerciseRequest)
+	if err := c.Bind(createLabExerciseReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createLabExerciseReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	existUser := models.User{}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepository.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
+	labExerciseService.Create(createLabExerciseReq, &existUser.UserID, existUser.Username)
+	return nil
+}
+
+func (supervisorHandler *SupervisorHandler) UpdateExerciseTestcases(c echo.Context) error {
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	existUser := models.User{}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepository.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+	return nil
 }

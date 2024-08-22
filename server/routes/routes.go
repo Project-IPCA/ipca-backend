@@ -14,6 +14,7 @@ func ConfigureRoutes(server *s.Server) {
 	testHandler := handlers.NewTestHandler(server)
 	supervisorHandler := handlers.NewSupervisorHandler(server)
 	authHandler := handlers.NewAuthHandler(server)
+	initHandler := handlers.NewInitHandler(server)
 
 	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
 	server.Echo.Use(middleware.Logger())
@@ -23,11 +24,18 @@ func ConfigureRoutes(server *s.Server) {
 
 	apiGroup := server.Echo.Group("/api")
 
+	// Init
+	initGroup := apiGroup.Group("/init")
+	initGroup.POST("/department", initHandler.InitDepartment)
+	initGroup.POST("/supervisor", initHandler.InitSupervisor)
+
 	// Supervisor
 	supervisorGroup := apiGroup.Group("/supervisor")
+	supervisorGroup.POST("/create_group", supervisorHandler.CreateGroup)
 	supervisorAuthGroup := supervisorGroup
 	supervisorAuthGroup.Use(echojwt.WithConfig(jwtConfig))
 	supervisorAuthGroup.POST("/add_students", supervisorHandler.AddStudents)
+	supervisorAuthGroup.POST("/create_exercise", supervisorHandler.CreateExercise)
 
 	// Auth
 	authGroup := apiGroup.Group("/auth")
