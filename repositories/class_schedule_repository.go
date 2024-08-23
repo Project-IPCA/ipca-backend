@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"strconv"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
@@ -34,4 +36,32 @@ func (classScheduleRepository *ClassScheduleRepository) GetClassScheduleByNumber
 	number int,
 ) {
 	classScheduleRepository.DB.Where("number = ?", number).Find(classSchedule)
+}
+
+func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedules(
+	classSchedule *[]models.ClassSchedule,
+	page string,
+	pageSize string,
+) {
+	defaultPage := 1
+	defaultPageSize := 10
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = defaultPage
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = defaultPageSize
+	}
+
+	offset := (pageInt - 1) * pageSizeInt
+
+	classScheduleRepository.DB.Preload("Supervisor.User").
+		Preload("Department").
+		Preload("ClassLabStaffs.Supervisor.User").Preload("Students").
+		Offset(offset).
+		Limit(pageSizeInt).
+		Find(classSchedule)
 }

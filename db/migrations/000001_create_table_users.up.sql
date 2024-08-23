@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 CREATE TABLE IF NOT EXISTS `students` (
   stu_id VARCHAR(36) NOT NULL,
   kmitl_id VARCHAR(8) NOT NULL,
-  group_id INT DEFAULT NULL,
+  group_id VARCHAR(36) DEFAULT NULL,
   note VARCHAR(64) DEFAULT NULL,
   dept_id VARCHAR(36) DEFAULT NULL,
   mid_core FLOAT NOT NULL DEFAULT '0',
@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS `students` (
   UNIQUE KEY user_student_pk (stu_id),
   KEY student_group (group_id),
   KEY stu_department (dept_id),
-  CONSTRAINT user_student_ibfk_1 FOREIGN KEY (stu_id) REFERENCES users (user_id) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT user_student_ibfk_1 FOREIGN KEY (stu_id) REFERENCES users (user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_students_class_schedules FOREIGN KEY (group_id) REFERENCES class_schedules (group_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS `supervisors` (

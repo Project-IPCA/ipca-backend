@@ -85,6 +85,7 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 		"noppo",
 		"Noppo",
 		"Mummum",
+		constants.Gender.Male,
 		constants.Role.Supervisor,
 	)
 	if err != nil {
