@@ -33,9 +33,10 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorGroup := apiGroup.Group("/supervisor")
 	supervisorAuthGroup := supervisorGroup
 	supervisorAuthGroup.Use(echojwt.WithConfig(jwtConfig))
-	supervisorAuthGroup.POST("/add_students", supervisorHandler.AddStudents)
-	supervisorAuthGroup.POST("/create_group", supervisorHandler.CreateGroup)
-	supervisorAuthGroup.POST("/create_exercise", supervisorHandler.CreateExercise)
+	supervisorAuthGroup.POST("/students", supervisorHandler.AddStudents)
+	supervisorAuthGroup.POST("/group", supervisorHandler.CreateGroup)
+	supervisorAuthGroup.POST("/exercise", supervisorHandler.CreateExercise)
+	supervisorAuthGroup.GET("/available_groups", supervisorHandler.GetAllAvailableGroups)
 
 	// Auth
 	authGroup := apiGroup.Group("/auth")

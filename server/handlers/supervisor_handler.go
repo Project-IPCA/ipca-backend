@@ -36,6 +36,23 @@ func NewSupervisorHandler(server *s.Server) *SupervisorHandler {
 	return &SupervisorHandler{server: server}
 }
 
+func GetUserClaims(c echo.Context, userRepo repositories.UserRepository) models.User {
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	existUser := models.User{}
+	userRepo.GetUserByUserID(&existUser, userId)
+	return existUser
+}
+
+func IsRoleSupervisor(user models.User) bool {
+	if *user.Role != constants.Role.Supervisor {
+		return false
+	}
+	return true
+}
+
 // @Description Add Students
 // @ID supervisor-add-students
 // @Tags Supervisor
@@ -46,7 +63,7 @@ func NewSupervisorHandler(server *s.Server) *SupervisorHandler {
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/add_students [post]
+// @Router			/api/supervisor/students [post]
 func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	addStudentsReq := new(requests.AddStudentsTextRequest)
 
@@ -54,14 +71,17 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	if err := addStudentsReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
 
-	existUser := models.User{}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepository.GetUserByUserID(&existUser, userId)
-	if *existUser.Role != constants.Role.Supervisor {
+	existUser := GetUserClaims(c, *userRepository)
+	if !IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -82,7 +102,15 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 			kmitlId := data[1]
 			firstName := data[2]
 			lastName := data[3]
+			gender := constants.Gender.Other
 
+			if strings.Contains(firstName, constants.Prefix.Mr) {
+				firstName = strings.TrimPrefix(firstName, constants.Prefix.Mr)
+				gender = constants.Gender.Male
+			} else if strings.Contains(firstName, constants.Prefix.Miss) {
+				firstName = strings.TrimPrefix(firstName, constants.Prefix.Miss)
+				gender = constants.Gender.Female
+			}
 			existUserStudent := models.Student{}
 			studentRepository.GetUserByKmitlID(&existUserStudent, kmitlId)
 			if existUserStudent.KmitlID == kmitlId {
@@ -95,6 +123,7 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 				kmitlId,
 				firstName,
 				lastName,
+				gender,
 				constants.Role.Student,
 			)
 			if err != nil {
@@ -102,7 +131,7 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 				return
 			}
 
-			err = studentService.Create(userId, kmitlId)
+			err = studentService.Create(userId, kmitlId, &addStudentsReq.GroupID)
 			if err != nil {
 				errChan <- fmt.Errorf("Failed to create user student for %s: %v", kmitlId, err)
 				return
@@ -130,7 +159,7 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/create_group [post]
+// @Router			/api/supervisor/group [post]
 func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	createGroupReq := new(requests.CreateGroupRequest)
 	if err := c.Bind(createGroupReq); err != nil {
@@ -144,16 +173,12 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	existUser := models.User{}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepository.GetUserByUserID(&existUser, userId)
-	if *existUser.Role != constants.Role.Supervisor {
+	existUser := GetUserClaims(c, *userRepository)
+	if !IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
+	supervisorId := existUser.UserID
 
 	existGroup := models.ClassSchedule{}
 	classScheduleRepository := repositories.NewClassScheduleRepository(
@@ -162,7 +187,7 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	classScheduleRepository.GetClassScheduleByNumber(&existGroup, *createGroupReq.Number)
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
-	groupId, _ := classScheduleService.Create(createGroupReq)
+	groupId, _ := classScheduleService.Create(createGroupReq, &supervisorId)
 
 	var existLabExercises []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
@@ -256,6 +281,33 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	return responses.MessageResponse(c, http.StatusOK, "Create Group Successful.")
 }
 
+// @Description Get All Available Group
+// @ID supervisor-get-all-available-group
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param page query string false "Page"
+// @Param pageSize query string false "Page Size"
+// @Success 200		{object}	responses.Data
+// @Security BearerAuth
+// @Router			/api/supervisor/available_groups [get]
+func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context) error {
+	page := c.QueryParam("page")
+	pageSize := c.QueryParam("pageSize")
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := GetUserClaims(c, *userRepository)
+	if !IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var existClassSchedules []models.ClassSchedule
+	classSceduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classSceduleR.GetAllClassSchedules(&existClassSchedules, page, pageSize)
+	response := responses.NewClassScheduleResponse(existClassSchedules)
+	return responses.Response(c, http.StatusOK, response)
+}
+
 // @Description Create Exercise
 // @ID supervisor-create-exercise
 // @Tags Supervisor
@@ -265,7 +317,7 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/create_exercise [post]
+// @Router			/api/supervisor/exercise [post]
 func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error {
 	createLabExerciseReq := new(requests.CreateLabExerciseRequest)
 	if err := c.Bind(createLabExerciseReq); err != nil {
@@ -294,16 +346,17 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	return nil
 }
 
-func (supervisorHandler *SupervisorHandler) UpdateExerciseTestcases(c echo.Context) error {
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	existUser := models.User{}
-	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepository.GetUserByUserID(&existUser, userId)
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-	return nil
-}
+//
+// func (supervisorHandler *SupervisorHandler) UpdateExerciseTestcases(c echo.Context) error {
+// 	userJwt := c.Get("user").(*jwt.Token)
+// 	claims := userJwt.Claims.(*token.JwtCustomClaims)
+// 	userId := claims.UserID
+//
+// 	existUser := models.User{}
+// 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+// 	userRepository.GetUserByUserID(&existUser, userId)
+// 	if *existUser.Role != constants.Role.Supervisor {
+// 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+// 	}
+// 	return nil
+// }

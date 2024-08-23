@@ -9,14 +9,16 @@ import (
 
 func (classScheduleService *Service) Create(
 	request *requests.CreateGroupRequest,
+	supervisorId *uuid.UUID,
 ) (groupId uuid.UUID, err error) {
 	groupId = uuid.New()
 	group := builders.NewClassScheduleBuilder().
 		SetGroupID(groupId).
-		SetSupervisorID(request.SupervisorID).
+		SetSupervisorID(supervisorId).
 		SetNumber(request.Number).
 		SetName(request.Name).
 		SetDeptID(request.DeptID).
+		SetSemester(request.Semester).
 		SetDay(request.Day).
 		SetYear(request.Year).
 		SetTimeStart(request.TimeStart).

@@ -12,6 +12,7 @@ func (userService *Service) CreateQuick(
 	password string,
 	firstName string,
 	lastName string,
+	gender string,
 	role string,
 ) (userID uuid.UUID, err error) {
 	encryptedPassword, err := bcrypt.GenerateFromPassword(
@@ -29,6 +30,7 @@ func (userService *Service) CreateQuick(
 		SetPassword(string(encryptedPassword)).
 		SetFirstName(firstName).
 		SetLastName(lastName).
+		SetGender(gender).
 		SetRole(role).
 		Build()
 

@@ -30,8 +30,8 @@ func (studentBuilder *StudentBuilder) SetKmitlID(kmitlId string) (us *StudentBui
 	return studentBuilder
 }
 
-func (studentBuilder *StudentBuilder) SetGroupID(groupId string) (us *StudentBuilder) {
-	studentBuilder.KmitlID = groupId
+func (studentBuilder *StudentBuilder) SetGroupID(groupId uuid.UUID) (us *StudentBuilder) {
+	studentBuilder.GroupID = &groupId
 	return studentBuilder
 }
 
