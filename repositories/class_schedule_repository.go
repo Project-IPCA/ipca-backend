@@ -28,3 +28,10 @@ func (classScheduleRepository *ClassScheduleRepository) GetClassScheduleByGroupI
 ) {
 	classScheduleRepository.DB.Where("group_id = ?", groupId).Find(classSchedule)
 }
+
+func (classScheduleRepository *ClassScheduleRepository) GetClassScheduleByNumber(
+	classSchedule *models.ClassSchedule,
+	number int,
+) {
+	classScheduleRepository.DB.Where("number = ?", number).Find(classSchedule)
+}

@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS `group_assignment_chapter_items` (
   group_id VARCHAR(36) NOT NULL,
   chapter_id VARCHAR(36) NOT NULL,
-  item_id VARCHAR(36) NOT NULL,
+  item_id INT NOT NULL,
   exercise_id_list VARCHAR(1024) DEFAULT NULL,
   full_mark INT NOT NULL DEFAULT '2',
   time_start DATETIME DEFAULT NULL,
