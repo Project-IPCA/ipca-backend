@@ -80,6 +80,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetClassSchedulePreloadB
 	classScheduleRepository.DB.Preload("Supervisor.User").
 		Preload("Department").
 		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("GroupChapterPermissions.LabClassInfo").
 		Where("group_id = ?", classScheduleId).Find(classSchedule)
 }
 

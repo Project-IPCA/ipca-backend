@@ -25,3 +25,10 @@ func (groupChapterPermissionRepository *GroupChapterPermissionRepository) GetGro
 	groupChapterPermissionRepository.DB.Where("class_id = ?", classId).
 		Where("chapter_id = ?", chapterId).Find(groupChapterPermission)
 }
+
+func (groupChapterPermissionRepository *GroupChapterPermissionRepository) GetGroupChapterPermissionByGroupID(
+	groupChapterPermission *models.GroupChapterPermission,
+	classId uuid.UUID,
+) {
+	groupChapterPermissionRepository.DB.Where("class_id = ?", classId).Find(groupChapterPermission)
+}
