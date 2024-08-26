@@ -288,7 +288,7 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 // @Produce json
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
-// @Success 200		{object}	responses.Data
+// @Success 200		{array}	responses.ClassScheduleResponse
 // @Security BearerAuth
 // @Router			/api/supervisor/available_groups [get]
 func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context) error {
@@ -313,7 +313,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 // @Tags Supervisor
 // @Accept json
 // @Produce json
-// @Success 200		{object}	responses.Data
+// @Success 200		{array} int
 // @Security BearerAuth
 // @Router			/api/supervisor/my_group_years [get]
 func (supervisorHandler *SupervisorHandler) GetMyGroupYears(c echo.Context) error {
@@ -349,7 +349,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroupYears(c echo.Context) erro
 // @Param year query string false "Year"
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
-// @Success 200		{object}	responses.Data
+// @Success 200		{array}	responses.MyClassScheduleResponse
 // @Security BearerAuth
 // @Router			/api/supervisor/my_groups [get]
 func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
@@ -373,6 +373,45 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 		pageSize,
 	)
 	response := responses.NewMyClassSchedulesResponse(existClassSchedules)
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get Group Info By Group ID
+// @ID supervisor-get-group-info-by-group-id
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id path string true "Group ID"
+// @Success 200		{object}	responses.ClassScheduleResponse
+// @Failure 403		{object}	responses.Error
+// @Failure 404		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/group/{group_id} [get]
+func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context) error {
+	groupIdStr := c.Param("group_id")
+	groupId, err := uuid.Parse(groupIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := GetUserClaims(c, *userRepository)
+	if !IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existClassSchedule := models.ClassSchedule{}
+	classScheduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleR.GetClassSchedulePreloadByGroupID(&existClassSchedule, groupId)
+
+	if *existClassSchedule.SupervisorID != existUser.UserID {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	if existClassSchedule.GroupID != groupId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "Not found group.")
+	}
+
+	response := responses.NewClassScheduleResponse(existClassSchedule)
 	return responses.Response(c, http.StatusOK, response)
 }
 
