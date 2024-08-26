@@ -65,3 +65,45 @@ func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedules(
 		Limit(pageSizeInt).
 		Find(classSchedule)
 }
+
+func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedules(
+	classSchedules *[]models.ClassSchedule,
+	supervisorId uuid.UUID,
+) {
+	classScheduleRepository.DB.Where("supervisor_id = ?", supervisorId).Find(classSchedules)
+}
+
+func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQuery(
+	classSchedules *[]models.ClassSchedule,
+	supervisorId uuid.UUID,
+	year string,
+	page string,
+	pageSize string,
+) {
+	query := classScheduleRepository.DB.Preload("Department")
+
+	defaultPage := 1
+	defaultPageSize := 10
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = defaultPage
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = defaultPageSize
+	}
+
+	yearInt, err := strconv.Atoi(year)
+	if err != nil && year != "" {
+		query = query.Where("year = ?", yearInt)
+	}
+
+	offset := (pageInt - 1) * pageSizeInt
+
+	query = query.Where("supervisor_id = ?", supervisorId).Offset(offset).
+		Limit(pageSizeInt)
+
+	query.Find(classSchedules)
+}
