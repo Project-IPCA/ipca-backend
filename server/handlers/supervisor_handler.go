@@ -411,7 +411,7 @@ func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context
 		return responses.ErrorResponse(c, http.StatusNotFound, "Not found group.")
 	}
 
-	response := responses.NewClassScheduleResponse(existClassSchedule)
+	response := responses.NewClassScheduleInfoResponse(existClassSchedule)
 	return responses.Response(c, http.StatusOK, response)
 }
 
