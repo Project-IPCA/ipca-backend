@@ -304,7 +304,75 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 	var existClassSchedules []models.ClassSchedule
 	classSceduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
 	classSceduleR.GetAllClassSchedules(&existClassSchedules, page, pageSize)
-	response := responses.NewClassScheduleResponse(existClassSchedules)
+	response := responses.NewClassSchedulesResponse(existClassSchedules)
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get My Group Years
+// @ID supervisor-get-my-group-years
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Security BearerAuth
+// @Router			/api/supervisor/my_group_years [get]
+func (supervisorHandler *SupervisorHandler) GetMyGroupYears(c echo.Context) error {
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := GetUserClaims(c, *userRepository)
+	if !IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var existClassSchedules []models.ClassSchedule
+	classScheduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleR.GetMyClassSchedules(&existClassSchedules, existUser.UserID)
+
+	yearMap := make(map[int]bool)
+
+	for _, classSchedule := range existClassSchedules {
+		yearMap[*classSchedule.Year] = true
+	}
+
+	var uniqueYears []*int
+	for year := range yearMap {
+		uniqueYears = append(uniqueYears, &year)
+	}
+
+	return responses.Response(c, http.StatusOK, uniqueYears)
+}
+
+// @Description Get My Groups
+// @ID supervisor-get-my-groups
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param year query string false "Year"
+// @Param page query string false "Page"
+// @Param pageSize query string false "Page Size"
+// @Success 200		{object}	responses.Data
+// @Security BearerAuth
+// @Router			/api/supervisor/my_groups [get]
+func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
+	page := c.QueryParam("page")
+	pageSize := c.QueryParam("pageSize")
+	year := c.QueryParam("year")
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := GetUserClaims(c, *userRepository)
+	if !IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var existClassSchedules []models.ClassSchedule
+	classScheduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleR.GetMyClassSchedulesByQuery(
+		&existClassSchedules,
+		existUser.UserID,
+		year,
+		page,
+		pageSize,
+	)
+	response := responses.NewMyClassSchedulesResponse(existClassSchedules)
 	return responses.Response(c, http.StatusOK, response)
 }
 

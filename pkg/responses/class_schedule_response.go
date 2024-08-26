@@ -21,6 +21,7 @@ type Instructor struct {
 type ClassScheduleResponse struct {
 	GroupID       uuid.UUID    `json:"group_id"`
 	GroupNo       int          `json:"group_no"`
+	Department    string       `json:"department"`
 	Year          *int         `json:"year"`
 	Semester      *int         `json:"semester"`
 	Day           *string      `json:"day"`
@@ -31,7 +32,7 @@ type ClassScheduleResponse struct {
 	Staff         []ClassStaff `json:"staffs"`
 }
 
-func NewClassScheduleResponse(classSchedules []models.ClassSchedule) *[]ClassScheduleResponse {
+func NewClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]ClassScheduleResponse {
 	classSchedulesResponse := make([]ClassScheduleResponse, 0)
 	for _, classSchedule := range classSchedules {
 		classStaffResponse := make([]ClassStaff, 0)
@@ -45,6 +46,7 @@ func NewClassScheduleResponse(classSchedules []models.ClassSchedule) *[]ClassSch
 		classSchedulesResponse = append(classSchedulesResponse, ClassScheduleResponse{
 			GroupID:       classSchedule.GroupID,
 			GroupNo:       *classSchedule.Number,
+			Department:    classSchedule.Department.Name,
 			Year:          classSchedule.Year,
 			Semester:      classSchedule.Semester,
 			Day:           classSchedule.Day,
@@ -57,6 +59,34 @@ func NewClassScheduleResponse(classSchedules []models.ClassSchedule) *[]ClassSch
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
 			Staff: classStaffResponse,
+		})
+	}
+	return &classSchedulesResponse
+}
+
+type MyClassScheduleResponse struct {
+	GroupID    uuid.UUID `json:"group_id"`
+	GroupNo    int       `json:"group_no"`
+	Department string    `json:"department"`
+	Year       *int      `json:"year"`
+	Semester   *int      `json:"semester"`
+	Day        *string   `json:"day"`
+	TimeStart  *string   `json:"time_start"`
+	TimeEnd    *string   `json:"time_end"`
+}
+
+func NewMyClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]MyClassScheduleResponse {
+	classSchedulesResponse := make([]MyClassScheduleResponse, 0)
+	for _, classSchedule := range classSchedules {
+		classSchedulesResponse = append(classSchedulesResponse, MyClassScheduleResponse{
+			GroupID:    classSchedule.GroupID,
+			GroupNo:    *classSchedule.Number,
+			Department: classSchedule.Department.Name,
+			Year:       classSchedule.Year,
+			Semester:   classSchedule.Semester,
+			Day:        classSchedule.Day,
+			TimeStart:  classSchedule.TimeStart,
+			TimeEnd:    classSchedule.TimeEnd,
 		})
 	}
 	return &classSchedulesResponse
