@@ -73,6 +73,16 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedules(
 	classScheduleRepository.DB.Where("supervisor_id = ?", supervisorId).Find(classSchedules)
 }
 
+func (classScheduleRepository *ClassScheduleRepository) GetClassSchedulePreloadByGroupID(
+	classSchedule *models.ClassSchedule,
+	classScheduleId uuid.UUID,
+) {
+	classScheduleRepository.DB.Preload("Supervisor.User").
+		Preload("Department").
+		Preload("ClassLabStaffs.Supervisor.User").
+		Where("group_id = ?", classScheduleId).Find(classSchedule)
+}
+
 func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQuery(
 	classSchedules *[]models.ClassSchedule,
 	supervisorId uuid.UUID,
