@@ -18,7 +18,7 @@ type Instructor struct {
 	LastName     string    `json:"l_name"`
 }
 
-type ClassScheduleResponse struct {
+type ClassSchedule struct {
 	GroupID       uuid.UUID    `json:"group_id"`
 	GroupNo       int          `json:"group_no"`
 	Department    string       `json:"department"`
@@ -32,9 +32,24 @@ type ClassScheduleResponse struct {
 	Staff         []ClassStaff `json:"staffs"`
 }
 
-func NewClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]ClassScheduleResponse {
-	classSchedulesResponse := make([]ClassScheduleResponse, 0)
-	for _, classSchedule := range classSchedules {
+type AvailableGroupFilter struct {
+	Instructors []ClassStaff `json:"instructors"`
+	Staffs      []ClassStaff `json:"staffs"`
+	Years       []*int       `json:"years"`
+}
+
+type AvailableGroupsResponse struct {
+	AvailableGroups []ClassSchedule      `json:"available_groups"`
+	Filter          AvailableGroupFilter `json:"filters"`
+}
+
+func NewClassSchedulesResponse(
+	filteredClassSchedules []models.ClassSchedule,
+	allClassSchedules []models.ClassSchedule,
+	staffs []models.Supervisor,
+) *AvailableGroupsResponse {
+	classSchedules := make([]ClassSchedule, 0)
+	for _, classSchedule := range filteredClassSchedules {
 		classStaffResponse := make([]ClassStaff, 0)
 		for _, labStaff := range classSchedule.ClassLabStaffs {
 			classStaffResponse = append(classStaffResponse, ClassStaff{
@@ -43,7 +58,7 @@ func NewClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]ClassSc
 				LastName:     *labStaff.Supervisor.User.LastName,
 			})
 		}
-		classSchedulesResponse = append(classSchedulesResponse, ClassScheduleResponse{
+		classSchedules = append(classSchedules, ClassSchedule{
 			GroupID:       classSchedule.GroupID,
 			GroupNo:       *classSchedule.Number,
 			Department:    classSchedule.Department.Name,
@@ -61,10 +76,36 @@ func NewClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]ClassSc
 			Staff: classStaffResponse,
 		})
 	}
-	return &classSchedulesResponse
+
+	allStaffs := make([]ClassStaff, 0)
+	for _, staff := range staffs {
+		allStaffs = append(allStaffs, ClassStaff{
+			SupervisorID: staff.SupervisorID,
+			FirstName:    *staff.User.FirstName,
+			LastName:     *staff.User.LastName,
+		})
+	}
+
+	yearMap := make(map[int]bool)
+	for _, classSchedule := range allClassSchedules {
+		yearMap[*classSchedule.Year] = true
+	}
+	var uniqueYears []*int
+	for year := range yearMap {
+		uniqueYears = append(uniqueYears, &year)
+	}
+
+	return &AvailableGroupsResponse{
+		AvailableGroups: classSchedules,
+		Filter: AvailableGroupFilter{
+			Years:       uniqueYears,
+			Instructors: allStaffs,
+			Staffs:      allStaffs,
+		},
+	}
 }
 
-type MyClassScheduleResponse struct {
+type MyClassSchedule struct {
 	GroupID    uuid.UUID `json:"group_id"`
 	GroupNo    int       `json:"group_no"`
 	Department string    `json:"department"`
@@ -75,10 +116,22 @@ type MyClassScheduleResponse struct {
 	TimeEnd    *string   `json:"time_end"`
 }
 
-func NewMyClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]MyClassScheduleResponse {
-	classSchedulesResponse := make([]MyClassScheduleResponse, 0)
-	for _, classSchedule := range classSchedules {
-		classSchedulesResponse = append(classSchedulesResponse, MyClassScheduleResponse{
+type MyGroupFilter struct {
+	Year []*int
+}
+
+type MyGroupResponse struct {
+	MyGroups []MyClassSchedule `json:"my_groups"`
+	Filter   MyGroupFilter     `json:"filters"`
+}
+
+func NewMyClassSchedulesResponse(
+	filteredClassSchedules []models.ClassSchedule,
+	allClassSchedules []models.ClassSchedule,
+) *MyGroupResponse {
+	myClassSchedules := make([]MyClassSchedule, 0)
+	for _, classSchedule := range filteredClassSchedules {
+		myClassSchedules = append(myClassSchedules, MyClassSchedule{
 			GroupID:    classSchedule.GroupID,
 			GroupNo:    *classSchedule.Number,
 			Department: classSchedule.Department.Name,
@@ -89,7 +142,23 @@ func NewMyClassSchedulesResponse(classSchedules []models.ClassSchedule) *[]MyCla
 			TimeEnd:    classSchedule.TimeEnd,
 		})
 	}
-	return &classSchedulesResponse
+	yearMap := make(map[int]bool)
+
+	for _, classSchedule := range allClassSchedules {
+		yearMap[*classSchedule.Year] = true
+	}
+
+	var uniqueYears []*int
+	for year := range yearMap {
+		uniqueYears = append(uniqueYears, &year)
+	}
+
+	return &MyGroupResponse{
+		MyGroups: myClassSchedules,
+		Filter: MyGroupFilter{
+			Year: uniqueYears,
+		},
+	}
 }
 
 type GroupChapterPermission struct {
