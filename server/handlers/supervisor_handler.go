@@ -286,12 +286,22 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 // @Tags Supervisor
 // @Accept json
 // @Produce json
+// @Param instructorId query string false "instructorId"
+// @Param staffIds query []string false "staffIds" collectionFormat(multi)
+// @Param year query string false "year"
+// @Param semester query string false "semester"
+// @Param day query string false "day"
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
-// @Success 200		{array}	responses.ClassScheduleResponse
+// @Success 200		{array}	responses.Data
 // @Security BearerAuth
 // @Router			/api/supervisor/available_groups [get]
 func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context) error {
+	instructorId := c.QueryParam("instructorId")
+	staffIds := c.QueryParams()["staffIds"]
+	year := c.QueryParam("year")
+	semester := c.QueryParam("semester")
+	day := c.QueryParam("day")
 	page := c.QueryParam("page")
 	pageSize := c.QueryParam("pageSize")
 
@@ -303,42 +313,29 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 
 	var existClassSchedules []models.ClassSchedule
 	classSceduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classSceduleR.GetAllClassSchedules(&existClassSchedules, page, pageSize)
-	response := responses.NewClassSchedulesResponse(existClassSchedules)
+	classSceduleR.GetAllClassSchedulesByQuery(
+		&existClassSchedules,
+		instructorId,
+		staffIds,
+		year,
+		semester,
+		day,
+		page,
+		pageSize,
+	)
+
+	var allClassSchedules []models.ClassSchedule
+	classSceduleR.GetAllClassSchedules(&allClassSchedules)
+
+	var allSupervisors []models.Supervisor
+	supervisorR := repositories.NewSupervisorRepository(supervisorHandler.server.DB)
+	supervisorR.GetAllSupervisors(&allSupervisors)
+	response := responses.NewClassSchedulesResponse(
+		existClassSchedules,
+		allClassSchedules,
+		allSupervisors,
+	)
 	return responses.Response(c, http.StatusOK, response)
-}
-
-// @Description Get My Group Years
-// @ID supervisor-get-my-group-years
-// @Tags Supervisor
-// @Accept json
-// @Produce json
-// @Success 200		{array} int
-// @Security BearerAuth
-// @Router			/api/supervisor/my_group_years [get]
-func (supervisorHandler *SupervisorHandler) GetMyGroupYears(c echo.Context) error {
-	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := GetUserClaims(c, *userRepository)
-	if !IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
-	var existClassSchedules []models.ClassSchedule
-	classScheduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleR.GetMyClassSchedules(&existClassSchedules, existUser.UserID)
-
-	yearMap := make(map[int]bool)
-
-	for _, classSchedule := range existClassSchedules {
-		yearMap[*classSchedule.Year] = true
-	}
-
-	var uniqueYears []*int
-	for year := range yearMap {
-		uniqueYears = append(uniqueYears, &year)
-	}
-
-	return responses.Response(c, http.StatusOK, uniqueYears)
 }
 
 // @Description Get My Groups
@@ -372,7 +369,11 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 		page,
 		pageSize,
 	)
-	response := responses.NewMyClassSchedulesResponse(existClassSchedules)
+
+	var allClassSchedules []models.ClassSchedule
+	classScheduleR.GetAllClassSchedules(&allClassSchedules)
+
+	response := responses.NewMyClassSchedulesResponse(existClassSchedules, allClassSchedules)
 	return responses.Response(c, http.StatusOK, response)
 }
 
@@ -382,7 +383,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param group_id path string true "Group ID"
-// @Success 200		{object}	responses.ClassScheduleResponse
+// @Success 200		{object}	responses.Data
 // @Failure 403		{object}	responses.Error
 // @Failure 404		{object}	responses.Error
 // @Security BearerAuth

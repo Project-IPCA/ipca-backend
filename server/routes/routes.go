@@ -38,7 +38,6 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.POST("/exercise", supervisorHandler.CreateExercise)
 	supervisorAuthGroup.GET("/available_groups", supervisorHandler.GetAllAvailableGroups)
 	supervisorAuthGroup.GET("/my_groups", supervisorHandler.GetMyGroups)
-	supervisorAuthGroup.GET("/my_group_years", supervisorHandler.GetMyGroupYears)
 	supervisorAuthGroup.GET("/group/:group_id", supervisorHandler.GetGroupInfoByGroupID)
 
 	// Auth

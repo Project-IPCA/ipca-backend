@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -39,10 +40,24 @@ func (classScheduleRepository *ClassScheduleRepository) GetClassScheduleByNumber
 }
 
 func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedules(
-	classSchedule *[]models.ClassSchedule,
+	classSchedules *[]models.ClassSchedule,
+) {
+	classScheduleRepository.DB.Find(classSchedules)
+}
+
+func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedulesByQuery(
+	classSchedules *[]models.ClassSchedule,
+	instructorId string,
+	staffIds []string,
+	year string,
+	semester string,
+	day string,
 	page string,
 	pageSize string,
 ) {
+	query := classScheduleRepository.DB.Preload("Supervisor.User").
+		Preload("Department").
+		Preload("ClassLabStaffs.Supervisor.User").Preload("Students")
 	defaultPage := 1
 	defaultPageSize := 10
 
@@ -56,14 +71,42 @@ func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedules(
 		pageSizeInt = defaultPageSize
 	}
 
+	instructorIdUuid, err := uuid.Parse(instructorId)
+	if instructorIdUuid != uuid.Nil && instructorId != "" {
+		query = query.Where("supervisor_id = ?", instructorIdUuid)
+	}
+
+	var staffIdList []string
+	for _, id := range staffIds {
+		staffIdList = append(staffIdList, strings.Split(id, ",")...)
+	}
+
+	if len(staffIdList) > 0 {
+		query = query.Joins("JOIN class_lab_staffs ON class_lab_staffs.class_id = class_schedules.group_id").
+			Where("class_lab_staffs.staff_id IN (?)", staffIdList).
+			Group("class_schedules.group_id").
+			Having("COUNT(DISTINCT class_lab_staffs.staff_id) = ?", len(staffIdList))
+	}
+
+	yearInt, err := strconv.Atoi(year)
+	if err == nil && year != "" {
+		query = query.Where("year = ?", yearInt)
+	}
+
+	semesterInt, err := strconv.Atoi(semester)
+	if err == nil && semester != "" {
+		query = query.Where("semester = ?", semesterInt)
+	}
+
+	if day != "" {
+		query = query.Where("day = ?", day)
+	}
+
 	offset := (pageInt - 1) * pageSizeInt
 
-	classScheduleRepository.DB.Preload("Supervisor.User").
-		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").Preload("Students").
-		Offset(offset).
-		Limit(pageSizeInt).
-		Find(classSchedule)
+	query = query.Offset(offset).Limit(pageSizeInt)
+
+	query.Find(classSchedules)
 }
 
 func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedules(
