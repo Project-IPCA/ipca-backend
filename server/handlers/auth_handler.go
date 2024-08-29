@@ -92,41 +92,48 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	redis := redis_client.NewRedisAction(authHandler.server.Redis)
 
 	userService := userservice.NewUserService(authHandler.server.DB)
-	if user.Student != nil && user.IsOnline == true {
+	if user.IsOnline == true {
 		userService.UpdateIsOnline(&user, false)
 
-		redisCnl := fmt.Sprintf("%s:%s", constants.RedisChannel.LoginRepeat, user.Student.GroupID)
-		redisMsg := redis.NewMessage("repeat-login", user.UserID)
-		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
-			return responses.ErrorResponse(
-				c,
-				http.StatusInternalServerError,
-				"Internal Server Error",
-			)
-		}
-		redisCnl = fmt.Sprintf(
-			"%s:%s",
-			constants.RedisChannel.OnlineStudent,
-			user.Student.GroupID,
-		)
-		redisMsg = redis.NewMessage("logout", user.UserID)
-		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
-			return responses.ErrorResponse(
-				c,
-				http.StatusInternalServerError,
-				"Internal Server Error",
-			)
-		}
+		if user.Student != nil {
 
-		activityLogService.Create(
-			user.Student.GroupID,
-			user.Username,
-			ip,
-			&port,
-			&userAgent,
-			constants.LogPage.Login,
-			constants.LogAction.LoginRepeat,
-		)
+			redisCnl := fmt.Sprintf(
+				"%s:%s",
+				constants.RedisChannel.LoginRepeat,
+				user.Student.GroupID,
+			)
+			redisMsg := redis.NewMessage("repeat-login", user.UserID)
+			if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+				return responses.ErrorResponse(
+					c,
+					http.StatusInternalServerError,
+					"Internal Server Error",
+				)
+			}
+			redisCnl = fmt.Sprintf(
+				"%s:%s",
+				constants.RedisChannel.OnlineStudent,
+				user.Student.GroupID,
+			)
+			redisMsg = redis.NewMessage("logout", user.UserID)
+			if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+				return responses.ErrorResponse(
+					c,
+					http.StatusInternalServerError,
+					"Internal Server Error",
+				)
+			}
+
+			activityLogService.Create(
+				user.Student.GroupID,
+				user.Username,
+				ip,
+				&port,
+				&userAgent,
+				constants.LogPage.Login,
+				constants.LogAction.LoginRepeat,
+			)
+		}
 		return responses.ErrorResponse(
 			c,
 			http.StatusUnauthorized,
@@ -136,21 +143,29 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 
 	userService.UpdateLoginSuccess(&user)
 
-	redisCnl := fmt.Sprintf("%s:%s", constants.RedisChannel.OnlineStudent, user.Student.GroupID)
-	redisMsg := redis.NewMessage("login", user.UserID)
-	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error")
+	if user.Student != nil {
+		redisCnl := fmt.Sprintf("%s:%s", constants.RedisChannel.OnlineStudent, user.Student.GroupID)
+		redisMsg := redis.NewMessage("login", user.UserID)
+		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
 	}
 
-	activityLogService.Create(
-		user.Student.GroupID,
-		user.Username,
-		ip,
-		&port,
-		&userAgent,
-		constants.LogPage.Login,
-		constants.LogAction.Login,
-	)
+	if user.Student != nil {
+		activityLogService.Create(
+			user.Student.GroupID,
+			user.Username,
+			ip,
+			&port,
+			&userAgent,
+			constants.LogPage.Login,
+			constants.LogAction.Login,
+		)
+	}
 
 	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
 	return responses.Response(c, http.StatusOK, response)
