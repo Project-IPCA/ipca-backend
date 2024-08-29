@@ -14,6 +14,7 @@ func ConfigureRoutes(server *s.Server) {
 	testHandler := handlers.NewTestHandler(server)
 	supervisorHandler := handlers.NewSupervisorHandler(server)
 	authHandler := handlers.NewAuthHandler(server)
+	commonHandler := handlers.NewCommonHandler(server)
 	initHandler := handlers.NewInitHandler(server)
 
 	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
@@ -46,6 +47,12 @@ func ConfigureRoutes(server *s.Server) {
 	authAuthGroup := authGroup
 	authAuthGroup.Use(echojwt.WithConfig(jwtConfig))
 	authAuthGroup.POST("/logout", authHandler.Logout)
+
+	// Common
+	commonGroup := apiGroup.Group("/common")
+	commonAuthGroup := commonGroup
+	commonAuthGroup.Use(echojwt.WithConfig(jwtConfig))
+	commonAuthGroup.GET("/user_info", commonHandler.GetUserInfo)
 
 	// Test
 	apiGroup.GET("/greeting", testHandler.Greeting)

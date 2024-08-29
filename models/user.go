@@ -28,8 +28,8 @@ type User struct {
 	CISession  *int        `gorm:"column:ci_session"`
 	SessionID  *string     `gorm:"column:session_id;type:varchar(50)"`
 	Supervisor *Supervisor `gorm:"foreignKey:SupervisorID"`
-	Student    Student     `gorm:"foreignKey:StuID"`
-	TA         TA          `gorm:"foreignKey:TaID"`
+	Student    *Student    `gorm:"foreignKey:StuID"`
+	TA         *TA         `gorm:"foreignKey:TaID"`
 }
 
 func (User) TableName() string {
