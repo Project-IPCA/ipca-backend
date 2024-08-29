@@ -28,5 +28,8 @@ func (userRepository *UserRepository) GetUserByUserID(
 	user *models.User,
 	userId uuid.UUID,
 ) {
-	userRepository.DB.Preload("Student").Where("user_id = ?", userId).Find(user)
+	userRepository.DB.Preload("Student").
+		Preload("Supervisor").
+		Where("user_id = ?", userId).
+		Find(user)
 }

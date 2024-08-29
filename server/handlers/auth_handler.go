@@ -92,7 +92,7 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	redis := redis_client.NewRedisAction(authHandler.server.Redis)
 
 	userService := userservice.NewUserService(authHandler.server.DB)
-	if user.IsOnline == true {
+	if user.Student != nil && user.IsOnline == true {
 		userService.UpdateIsOnline(&user, false)
 
 		redisCnl := fmt.Sprintf("%s:%s", constants.RedisChannel.LoginRepeat, user.Student.GroupID)

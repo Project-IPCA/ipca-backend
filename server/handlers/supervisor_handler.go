@@ -36,23 +36,6 @@ func NewSupervisorHandler(server *s.Server) *SupervisorHandler {
 	return &SupervisorHandler{server: server}
 }
 
-func GetUserClaims(c echo.Context, userRepo repositories.UserRepository) models.User {
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	existUser := models.User{}
-	userRepo.GetUserByUserID(&existUser, userId)
-	return existUser
-}
-
-func IsRoleSupervisor(user models.User) bool {
-	if *user.Role != constants.Role.Supervisor {
-		return false
-	}
-	return true
-}
-
 // @Description Add Students
 // @ID supervisor-add-students
 // @Tags Supervisor
@@ -80,8 +63,8 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := GetUserClaims(c, *userRepository)
-	if !IsRoleSupervisor(existUser) {
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -174,8 +157,8 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := GetUserClaims(c, *userRepository)
-	if !IsRoleSupervisor(existUser) {
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 	supervisorId := existUser.UserID
@@ -293,7 +276,8 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 // @Param day query string false "day"
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
-// @Success 200		{array}	responses.Data
+// @Success 200		{array}	responses.AvailableGroupsResponse
+// @Failure 403		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/supervisor/available_groups [get]
 func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context) error {
@@ -306,8 +290,8 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 	pageSize := c.QueryParam("pageSize")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := GetUserClaims(c, *userRepository)
-	if !IsRoleSupervisor(existUser) {
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -346,7 +330,8 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 // @Param year query string false "Year"
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
-// @Success 200		{array}	responses.MyClassScheduleResponse
+// @Success 200		{array}	responses.MyGroupResponse
+// @Failure 403		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/supervisor/my_groups [get]
 func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
@@ -355,8 +340,8 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 	year := c.QueryParam("year")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := GetUserClaims(c, *userRepository)
-	if !IsRoleSupervisor(existUser) {
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -383,7 +368,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param group_id path string true "Group ID"
-// @Success 200		{object}	responses.Data
+// @Success 200		{object}	responses.ClassScheduleInfoResponse
 // @Failure 403		{object}	responses.Error
 // @Failure 404		{object}	responses.Error
 // @Security BearerAuth
@@ -395,8 +380,8 @@ func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := GetUserClaims(c, *userRepository)
-	if !IsRoleSupervisor(existUser) {
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
