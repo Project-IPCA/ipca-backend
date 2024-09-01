@@ -228,3 +228,85 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 		GroupChapterPermissions: groupChapterPermResponse,
 	}
 }
+
+type Department struct {
+	DeptID uuid.UUID `json:"dept_id"`
+	Name   string    `json:"name"`
+}
+
+type MyGroupInfoSelecter struct {
+	Staffs      []ClassStaff `json:"staffs"`
+	Departments []Department `json:"departments"`
+}
+
+type MyClassScheduleInfo struct {
+	GroupID    uuid.UUID    `json:"group_id"`
+	GroupNo    int          `json:"group_no"`
+	Name       string       `json:"name"`
+	Department Department   `json:"department"`
+	Year       *int         `json:"year"`
+	Semester   *int         `json:"semester"`
+	Day        *string      `json:"day"`
+	TimeStart  *string      `json:"time_start"`
+	TimeEnd    *string      `json:"time_end"`
+	Staff      []ClassStaff `json:"staffs"`
+}
+
+type MyGroupInfoResponse struct {
+	Group    MyClassScheduleInfo `json:"group"`
+	Selecter MyGroupInfoSelecter `json:"selecter"`
+}
+
+func NewMyClassScheduleInfoResponse(
+	classSchedule models.ClassSchedule,
+	allDepts []models.Department,
+	staffs []models.Supervisor,
+) *MyGroupInfoResponse {
+	classStaffResponse := make([]ClassStaff, 0)
+	for _, labStaff := range classSchedule.ClassLabStaffs {
+		classStaffResponse = append(classStaffResponse, ClassStaff{
+			SupervisorID: labStaff.Supervisor.SupervisorID,
+			FirstName:    *labStaff.Supervisor.User.FirstName,
+			LastName:     *labStaff.Supervisor.User.LastName,
+		})
+	}
+
+	allDeptsRes := make([]Department, 0)
+	for _, dept := range allDepts {
+		allDeptsRes = append(allDeptsRes, Department{
+			DeptID: dept.DeptID,
+			Name:   dept.Name,
+		})
+	}
+
+	allStaffsRes := make([]ClassStaff, 0)
+	for _, staff := range staffs {
+		allStaffsRes = append(allStaffsRes, ClassStaff{
+			SupervisorID: staff.SupervisorID,
+			FirstName:    *staff.User.FirstName,
+			LastName:     *staff.User.LastName,
+		})
+	}
+
+	return &MyGroupInfoResponse{
+		Group: MyClassScheduleInfo{
+			GroupID: classSchedule.GroupID,
+			GroupNo: *classSchedule.Number,
+			Name:    classSchedule.Name,
+			Department: Department{
+				DeptID: classSchedule.Department.DeptID,
+				Name:   classSchedule.Department.Name,
+			},
+			Year:      classSchedule.Year,
+			Semester:  classSchedule.Semester,
+			Day:       classSchedule.Day,
+			TimeStart: classSchedule.TimeStart,
+			TimeEnd:   classSchedule.TimeEnd,
+			Staff:     classStaffResponse,
+		},
+		Selecter: MyGroupInfoSelecter{
+			Staffs:      allStaffsRes,
+			Departments: allDeptsRes,
+		},
+	}
+}

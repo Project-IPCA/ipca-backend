@@ -407,7 +407,7 @@ func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context
 // @Accept json
 // @Produce json
 // @Param stu_id path string true "Stu ID"
-// @Success 200		{object}	responses.ClassScheduleInfoResponse
+// @Success 200		{object}	responses.Data
 // @Failure 403		{object}	responses.Error
 // @Failure 404		{object}	responses.Error
 // @Security BearerAuth
@@ -435,6 +435,58 @@ func (supervisorHandler *SupervisorHandler) ResetStudentPassword(c echo.Context)
 	userService.ResetUserStudentPassword(&existStudent, existStudent.Student.KmitlID)
 
 	return responses.MessageResponse(c, http.StatusOK, "Reset Student Password.")
+}
+
+// @Description Get My Group Info By Group ID
+// @ID supervisor-get-my-group-info-by-group-id
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id path string true "Group ID"
+// @Success 200		{object}	responses.MyGroupInfoResponse
+// @Failure 403		{object}	responses.Error
+// @Failure 404		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/my_group_info/{group_id} [get]
+func (supervisorHandler *SupervisorHandler) GetMyGroupInfo(c echo.Context) error {
+	groupIdStr := c.Param("group_id")
+	groupId, err := uuid.Parse(groupIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existClassSchedule := models.ClassSchedule{}
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&existClassSchedule, groupId)
+	if existClassSchedule.GroupID != groupId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "Not Found Class Schedule.")
+	}
+
+	if existUser.UserID != *existClassSchedule.SupervisorID {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var existDepts []models.Department
+	deptRepo := repositories.NewDepartmentRepository(supervisorHandler.server.DB)
+	deptRepo.GetAllDepts(&existDepts)
+
+	var existStaffs []models.Supervisor
+	supervisorRepo := repositories.NewSupervisorRepository(supervisorHandler.server.DB)
+	supervisorRepo.GetAllSupervisors(&existStaffs)
+
+	response := responses.NewMyClassScheduleInfoResponse(
+		existClassSchedule,
+		existDepts,
+		existStaffs,
+	)
+
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Create Exercise
