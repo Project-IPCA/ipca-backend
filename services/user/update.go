@@ -67,3 +67,17 @@ func (userService *Service) UpdateUserInfo(
 
 	userService.DB.Save(user)
 }
+
+func (userService *Service) ResetUserStudentPassword(
+	user *models.User,
+	kmitlId string,
+) {
+	encryptedPassword, err := bcrypt.GenerateFromPassword(
+		[]byte(kmitlId),
+		bcrypt.DefaultCost,
+	)
+	if err == nil {
+		user.Password = string(encryptedPassword)
+		userService.DB.Save(user)
+	}
+}

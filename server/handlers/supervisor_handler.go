@@ -401,6 +401,42 @@ func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context
 	return responses.Response(c, http.StatusOK, response)
 }
 
+// @Description Reset Student Password
+// @ID supervisor-reset-student-password
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param stu_id path string true "Stu ID"
+// @Success 200		{object}	responses.ClassScheduleInfoResponse
+// @Failure 403		{object}	responses.Error
+// @Failure 404		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/reset_student_password/{stu_id} [put]
+func (supervisorHandler *SupervisorHandler) ResetStudentPassword(c echo.Context) error {
+	stuIdStr := c.Param("stu_id")
+	stuId, err := uuid.Parse(stuIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existStudent := models.User{}
+	userRepository.GetUserByUserID(&existStudent, stuId)
+	if existStudent.UserID != stuId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "User Not found.")
+	}
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	userService.ResetUserStudentPassword(&existStudent, existStudent.Student.KmitlID)
+
+	return responses.MessageResponse(c, http.StatusOK, "Reset Student Password.")
+}
+
 // @Description Create Exercise
 // @ID supervisor-create-exercise
 // @Tags Supervisor
