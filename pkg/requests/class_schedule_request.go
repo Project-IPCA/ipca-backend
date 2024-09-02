@@ -29,3 +29,8 @@ type CreateGroupRequest struct {
 	BasicGroup
 	Staffs []BasicStaff `json:"staffs"`
 }
+
+type UpdateMyGroupRequest struct {
+	BasicGroup
+	Staffs []BasicStaff `json:"staffs"`
+}
