@@ -489,6 +489,74 @@ func (supervisorHandler *SupervisorHandler) GetMyGroupInfo(c echo.Context) error
 	return responses.Response(c, http.StatusOK, response)
 }
 
+// @Description Update My Group Info
+// @ID supervisor-update-my-group-info
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.UpdateMyGroupRequest	true	"Update My Group Request"
+// @Param group_id path string true "Group ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 404		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/my_group_info/{group_id} [put]
+func (supervisorHandler *SupervisorHandler) UpdateMyGroupInfo(c echo.Context) error {
+	updateMyGroupReq := new(requests.UpdateMyGroupRequest)
+	if err := c.Bind(updateMyGroupReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := updateMyGroupReq.BasicGroup.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	groupIdStr := c.Param("group_id")
+	groupId, err := uuid.Parse(groupIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := utils.GetUserClaims(c, *userRepository)
+	if !utils.IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existClassSchedule := models.ClassSchedule{}
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&existClassSchedule, groupId)
+	if existClassSchedule.GroupID != groupId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "Not Found Class Schedule.")
+	}
+
+	if existUser.UserID != *existClassSchedule.SupervisorID {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
+	classScheduleService.UpdateMyGroup(
+		&existClassSchedule,
+		updateMyGroupReq,
+	)
+
+	var existClassLabStaff []models.ClassLabStaff
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+	classLabStaffRepo.GetClassLabStaffByGroupID(&existClassLabStaff, groupId)
+
+	classLabStaffService := classlabstaff.NewClassLabStaffService(supervisorHandler.server.DB)
+	classLabStaffService.DeleteAll(&existClassLabStaff)
+	for _, staff := range updateMyGroupReq.Staffs {
+		classLabStaffService.Create(groupId, staff.StaffID)
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Update Group Info.")
+}
+
 // @Description Create Exercise
 // @ID supervisor-create-exercise
 // @Tags Supervisor

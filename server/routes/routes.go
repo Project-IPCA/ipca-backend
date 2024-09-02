@@ -45,6 +45,7 @@ func ConfigureRoutes(server *s.Server) {
 		supervisorHandler.ResetStudentPassword,
 	)
 	supervisorAuthGroup.GET("/my_group_info/:group_id", supervisorHandler.GetMyGroupInfo)
+	supervisorAuthGroup.PUT("/my_group_info/:group_id", supervisorHandler.UpdateMyGroupInfo)
 
 	// Auth
 	authGroup := apiGroup.Group("/auth")
