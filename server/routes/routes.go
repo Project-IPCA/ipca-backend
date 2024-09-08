@@ -16,9 +16,11 @@ func ConfigureRoutes(server *s.Server) {
 	authHandler := handlers.NewAuthHandler(server)
 	commonHandler := handlers.NewCommonHandler(server)
 	initHandler := handlers.NewInitHandler(server)
+  
 
 	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
 	server.Echo.Use(middleware.Logger())
+  server.Echo.Use(middleware.CORS())
 
 	authMiddleware := middlewares.NewAuthMiddleware(server)
 	jwtConfig := authMiddleware.GetJwtConfig()
