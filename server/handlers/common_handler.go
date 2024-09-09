@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -23,7 +24,7 @@ func NewCommonHandler(server *s.Server) *CommonHandler {
 }
 
 // @Description Get User Info
-// @ID supervisor-get-user-info
+// @ID common-get-user-info
 // @Tags Common
 // @Accept json
 // @Produce json
@@ -38,7 +39,7 @@ func (commonHandler *CommonHandler) GetUserInfo(c echo.Context) error {
 }
 
 // @Description Update User Info
-// @ID supervisor-update-user-info
+// @ID common-update-user-info
 // @Tags Common
 // @Accept json
 // @Produce json
@@ -90,4 +91,68 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 
 	response := responses.NewUserInfoResponse(existUser)
 	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get Keyword List
+// @ID common-get-keyword-list
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Param params body	requests.GetKeywordListRequest	true	"Creaet Get Keyword List Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Router			/api/common/get_keyword_list [post]
+func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error{
+	getKeywordListRequest := new(requests.GetKeywordListRequest)
+	if err := c.Bind(getKeywordListRequest); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := getKeywordListRequest.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	keywordList,err := utils.GetKeywordFromCode(getKeywordListRequest.Sourcecode)
+	if(err!=nil){
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Error While Running Sourcecode %s", err),
+		)
+	}
+	return responses.Response(c,http.StatusOK,keywordList)
+}
+
+// @Description Keyword Check
+// @ID common-keyword-check
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Param params body	requests.GetKeywordListRequest	true	"Creaet Get Keyword List Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Router			/api/common/keyword_check [post]
+func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error{
+	checkKeywordRequest := new(requests.CheckKeywordRequest)
+	if err := c.Bind(checkKeywordRequest); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := checkKeywordRequest.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	checkKeyword,err := utils.KeywordCheck(checkKeywordRequest.Sourcecode,checkKeywordRequest.ExerciseKeywordList)
+	if(err!=nil){
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Error While Running Sourcecode %s", err),
+		)
+	}
+	return responses.Response(c,http.StatusOK,checkKeyword)
 }

@@ -62,6 +62,8 @@ func ConfigureRoutes(server *s.Server) {
 	commonAuthGroup.Use(echojwt.WithConfig(jwtConfig))
 	commonAuthGroup.GET("/user_info", commonHandler.GetUserInfo)
 	commonAuthGroup.PUT("/user_info", commonHandler.UpdateUserInfo)
+	commonAuthGroup.POST("/get_keyword_list", commonHandler.GetKeywordList)
+	commonAuthGroup.POST("/keyword_check", commonHandler.KeywordCheck)
 
 	// Test
 	apiGroup.GET("/greeting", testHandler.Greeting)
