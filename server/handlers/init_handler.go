@@ -11,6 +11,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/services/department"
+	labclassinfo "github.com/Project-IPCA/ipca-backend/services/lab_class_info"
 	"github.com/Project-IPCA/ipca-backend/services/supervisor"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
@@ -81,8 +82,8 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 	supervisorService := supervisor.NewSupervisorService(initHandler.server.DB)
 
 	userId, err := userService.CreateQuick(
-		"noppo",
-		"noppo",
+		"oot1234",
+		"oot1234",
 		"Noppo",
 		"Mummum",
 		constants.Gender.Male,
@@ -97,4 +98,24 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
 	}
 	return responses.MessageResponse(c, http.StatusOK, "Init Supervisor Success.")
+}
+
+// @Description Init Lab Class Info
+// @ID init-lab-class-info
+// @Tags Init
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Router			/api/init/labclassinfo [post]
+func (initHandler *InitHandler) InitClassInfo (c echo.Context) error {
+	labClassInfoService := labclassinfo.NewLabClassInfoService(initHandler.server.DB)
+	labClassInfoService.Create(
+		0,
+		"Introduction",
+		10,
+		5,
+	)
+	return responses.MessageResponse(c, http.StatusOK, "Init Lab Class Info Success.")
 }
