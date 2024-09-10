@@ -1,0 +1,53 @@
+services:
+  ipca-api:
+    container_name: ipca-api
+    build: .
+    ports:
+      - ${SERVER_EXPOSE_PORT}:${SERVER_PORT}
+    restart: on-failure
+    volumes:
+      - ./:/app/
+    depends_on:
+      - ipca-mysql
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "mysql://${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=True&loc=Local"
+    networks:
+      - ipca-stack
+    privileged: true
+    cap_add:
+      - ALL
+    security_opt:
+      - seccomp:unconfined
+
+  ipca-mysql:
+    image: mysql:8.0
+    container_name: ipca-db
+    ports:
+      - ${DB_EXPOSE_PORT}:${DB_PORT}
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - database_mysql:/var/lib/mysql
+    networks:
+      - ipca-stack
+  
+  redis:
+    image: redis:7.0.15-alpine
+    container_name: ipca-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_EXPOSE_PORT}:${REDIS_PORT}"
+    networks:
+      - ipca-stack
+
+volumes:
+  database_mysql:
+
+networks:
+  ipca-stack:
+    driver: bridge
