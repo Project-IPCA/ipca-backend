@@ -58,4 +58,4 @@ jobs:
         run: docker compose -f docker-compose.prod.yml up -d --build && docker system prune -f
 
       - name: Set Permissions
-        run: sudo chown -R $USER:$USER /home/github/actions-runner/_work/ipca-backend/ipca-backend
+        run: sudo chown -R $USER:$USER /home/fair/actions-runner/_work/ipca-backend
