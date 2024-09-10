@@ -9,6 +9,8 @@ services:
       - ./:/app/
     depends_on:
       - ipca-mysql
+      - rabbitmq
+      - redis
     env_file:
       - .env
     environment:
@@ -44,10 +46,30 @@ services:
       - "${REDIS_EXPOSE_PORT}:${REDIS_PORT}"
     networks:
       - ipca-stack
+    
+  rabbitmq:
+    image: rabbitmq:3.12.11-management-alpine
+    container_name: ipca-rabbitmq
+    tty: true
+    ports:
+      - 5673:5672
+      - 15673:15672
+    environment:
+      TZ: Asia/Bangkok
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER} # Set default RabbitMQ user
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD} # Set default RabbitMQ password
+    volumes:
+      - rabbitmq-data-ipca:/var/lib/rabbitmq
+    depends_on:
+      - ipca-mysql
+    networks:
+      - ipca-stack
 
 volumes:
   database_mysql:
+  rabbitmq-data-ipca:
 
 networks:
   ipca-stack:
+    name: ipca-stack
     driver: bridge
