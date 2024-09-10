@@ -19,7 +19,7 @@ jobs:
       - name: Set up environment
         run: |
           # Backend
-          echo "SERVER_EXPOSED_PORT=${{ secrets.SERVER_EXPOSED_PORT }}" >> .env
+          echo "SERVER_EXPOSE_PORT=${{ secrets.SERVER_EXPOSE_PORT }}" >> .env
           echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> .env
           echo "SERVER_HOST=${{ secrets.SERVER_HOST }}" >> .env
           echo "DB_HOST"=${{ secrets.DB_HOST }} >> .env
@@ -39,8 +39,8 @@ jobs:
           echo "REDIS_PASSWORD"=${{ secrets.REDIS_PASSWORD }} >> .env
 
           #RABBITMQ
-          echo "RABBITMQ_HOST"= ${{ secrets.RABBITMQ_HOST }} >> .env
-          echo "RABBITMQ_PORT"= ${{ secrets.RABBITMQ_PORT }} >> .env
+          echo "RABBITMQ_HOST"=${{ secrets.RABBITMQ_HOST }} >> .env
+          echo "RABBITMQ_PORT"=${{ secrets.RABBITMQ_PORT }} >> .env
           echo "RABBITMQ_EXPOSE_PORT"=${{ secrets.RABBITMQ_EXPOSE_PORT }} >> .env
           echo "RABBITMQ_USER"=${{ secrets.RABBITMQ_USER }} >> .env
           echo "RABBITMQ_PASSWORD"=${{ secrets.RABBITMQ_PASSWORD }} >> .env
@@ -56,3 +56,6 @@ jobs:
 
       - name: Deploy Web Application
         run: docker compose -f docker-compose.prod.yml up -d --build && docker system prune -f
+
+      - name: Set Permissions
+        run: sudo chown -R $USER:$USER /home/github/actions-runner/_work/ipca-backend/ipca-backend
