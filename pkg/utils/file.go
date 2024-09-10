@@ -166,3 +166,21 @@ func CleanupIsolate() error {
     }
     return nil
 }
+
+func CreateSupervisorSourcecode (filename string,sourceCode string)error{
+	createPath := filepath.Join("./bucket/supervisor",filename)
+	err := os.WriteFile(createPath,[]byte(sourceCode),0644)
+	if(err!=nil){
+		return fmt.Errorf("error while write file %v",err)
+	}
+    return nil
+}
+
+func GetSupervisorSourcecode (filename string) (string,error) {
+    createPath := filepath.Join("./bucket/supervisor",filename)
+    content, err := os.ReadFile(createPath)
+    if(err!=nil){
+		return "",fmt.Errorf("error while read file %v",err)
+	}
+    return string(content),nil
+}
