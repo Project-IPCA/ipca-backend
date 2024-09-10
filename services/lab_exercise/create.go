@@ -27,3 +27,23 @@ func (labExerciseService *Service) Create(
 	labExerciseService.DB.Create(&labExercise)
 	return exerciseId, nil
 }
+
+func (labExerciseService *Service) CreateWithoutSourceCode(
+	request *requests.CreateLabExerciseRequest,
+	supervisorId *uuid.UUID,
+	supervisorName string,
+) (uuid.UUID, error) {
+	exerciseId := uuid.New()
+	labExercise := builders.NewLabExerciseBuilder().
+		SetExerciseID(exerciseId).
+		SetChapterID(request.ChapterID).
+		SetLevel(&request.Level).
+		SetName(&request.Name).
+		SetContent(&request.Content).
+		SetAddedBy(&supervisorName).
+		SetCreatedBy(supervisorId).
+		Build()
+
+	labExerciseService.DB.Create(&labExercise)
+	return exerciseId, nil
+}

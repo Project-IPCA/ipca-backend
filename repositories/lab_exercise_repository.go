@@ -29,3 +29,11 @@ func (labExerciesRepository *LabExerciseRepository) GetLabExerciseOrderByChapter
 		Order("lab_class_infos.chapter_index ASC, lab_exercises.level ASC").
 		Find(labExercises)
 }
+
+func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(exerciseId string,labExercise *models.LabExercise) {
+	labExerciesRepository.DB.Preload("Chapter").Where("exercise_id = ?",exerciseId).First(labExercise)
+}
+
+func (labExerciesRepository *LabExerciseRepository) UpdateLabExerciseSourcecode(exerciseId string,filename string){
+	labExerciesRepository.DB.Model(&models.LabExercise{}).Where("exercise_id = ?",exerciseId).Update("sourcecode",filename)
+}
