@@ -40,3 +40,7 @@ func (repo *ExerciseTestcaseRepository) UpsertExerciseTestcaseID (testcase model
 		return saveTestcase.TestcaseID
 	}
 }
+
+func (repo *ExerciseTestcaseRepository) GetTestcasesByExerciseID (exerciseId uuid.UUID,testcases *[]models.ExerciseTestcase){
+	repo.DB.Where("exercise_id = ? ",exerciseId).Find(testcases)
+}

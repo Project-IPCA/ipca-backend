@@ -598,7 +598,8 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 
 	filename := fmt.Sprintf("exercise_"+exerciseId.String()+".py")
-	err = utils.CreateSupervisorSourcecode(filename,createLabExerciseReq.Sourcecode)
+	//TODO dir path to env
+	err = utils.CreateSourcecode("./bucket/supervisor",filename,createLabExerciseReq.Sourcecode)
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -707,7 +708,8 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		}
 	}
 
-	sourcecode,err := utils.GetSupervisorSourcecode(*labExercise.Sourcecode)
+	//TODO dir path to env
+	sourcecode,err := utils.GetSourcecode("./bucket/supervisor",*labExercise.Sourcecode)
 	if(err!= nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Get Data From Sourcecode File")
 	}
@@ -726,5 +728,3 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 	}
 	return responses.MessageResponse(c,http.StatusOK,"Testcases Are Being Run")
 }
-
-//TODO Submit code but in student handle
