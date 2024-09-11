@@ -8,6 +8,7 @@ import (
 
 	"github.com/Project-IPCA/ipca-backend/config"
 	"github.com/Project-IPCA/ipca-backend/db"
+	"github.com/Project-IPCA/ipca-backend/rabbitmq_client"
 	"github.com/Project-IPCA/ipca-backend/redis_client"
 )
 
@@ -25,7 +26,7 @@ func NewServer(cfg *config.Config) *Server {
 		DB:     db.Init(cfg),
 		Config: cfg,
 		Redis:  redis_client.RedisClient(cfg),
-		// RabitMQ: rabbitmq_client.RabbitMQClient(cfg),
+		RabitMQ: rabbitmq_client.RabbitMQClient(cfg),
 	}
 }
 

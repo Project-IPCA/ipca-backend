@@ -5,11 +5,11 @@ import (
 )
 
 type LabClassInfo struct {
-	ChapterID               uuid.UUID                `gorm:"type:varchar(36);primaryKey"`
-	ChapterIndex            int                      `gorm:"not null"`
-	Name                    string                   `gorm:"type:varchar(256);not null"`
-	FullMark                int                      `gorm:"not null"`
-	NoItems                 int                      `gorm:"not null;default:5"`
+	ChapterID               uuid.UUID                `gorm:"column:chapter_id;type:varchar(36);primaryKey"`
+	ChapterIndex            int                      `gorm:"column:chapter_index;not null"`
+	Name                    string                   `gorm:"column:name;type:varchar(256);not null"`
+	FullMark                int                      `gorm:"column:fullmark;not null"`
+	NoItems                 int                      `gorm:"column:no_items;not null;default:5"`
 	LabExercises            []LabExercise            `gorm:"foreignKey:ChapterID"`
 	GroupChapterPermissions []GroupChapterPermission `gorm:"foreignKey:ChapterID"`
 }

@@ -15,6 +15,8 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
+
+	"github.com/Project-IPCA/ipca-backend/rabbitmq_client"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
@@ -590,9 +592,23 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
-	labExerciseService.Create(createLabExerciseReq, &existUser.UserID, existUser.Username)
+	exerciseId,err := labExerciseService.CreateWithoutSourceCode(createLabExerciseReq, &existUser.UserID, existUser.Username)
+	if(err!= nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Create Exercise Fail")
+	}
 
-	return nil
+	filename := fmt.Sprintf("exercise_"+exerciseId.String()+".py")
+	err = utils.CreateSupervisorSourcecode(filename,createLabExerciseReq.Sourcecode)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.UpdateLabExerciseSourcecode(exerciseId.String(),filename)
+	var labExerciseData models.LabExercise
+	labExerciseRepo.GetLabExerciseByID(exerciseId.String(),&labExerciseData)
+	
+	return responses.Response(c,http.StatusOK,labExerciseData)
 }
 
 //
@@ -609,3 +625,106 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 // 	}
 // 	return nil
 // }
+
+// @Description Save Exercise Testcase
+// @ID supervisor-save-excercise-testcase
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.SaveExerciseTestcaseRequest	true	"Save Exercise Testcase"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/save_exercise_testcase [post]
+func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context) error{
+	saveExerciseTesetcaseReq := new(requests.SaveExerciseTestcaseRequest)
+	if err:= c.Bind(saveExerciseTesetcaseReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := saveExerciseTesetcaseReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var labExercise models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(saveExerciseTesetcaseReq.ExerciseID,&labExercise)
+
+	if(labExercise.CreatedBy != nil && *labExercise.CreatedBy != userId){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Not Have Permission To Do This!")
+	}
+
+	exerciseTestcaseRepo := repositories.NewExerciseTestcaseRepository(supervisorHandler.server.DB)
+	if(len(saveExerciseTesetcaseReq.RemoveList)>0){
+		exerciseTestcaseRepo.DeleteExerciseTetscaseID(saveExerciseTesetcaseReq.RemoveList)
+	}
+
+	for i := range saveExerciseTesetcaseReq.TestCaseList {
+		saveExerciseTesetcaseReq.TestCaseList[i].IsReady = "no"
+		if(saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID == nil){
+			fmt.Println("nil condition")
+			exerciseUuid,_ := uuid.Parse(string(saveExerciseTesetcaseReq.TestCaseList[i].ExerciseID))
+			convertSaveTestcase := models.ExerciseTestcase{
+				ExerciseID: exerciseUuid,
+				IsReady: saveExerciseTesetcaseReq.TestCaseList[i].IsReady,
+				TestcaseContent: saveExerciseTesetcaseReq.TestCaseList[i].TestcaseContent,
+				IsActive: &saveExerciseTesetcaseReq.TestCaseList[i].IsActive,
+				IsShowStudent: &saveExerciseTesetcaseReq.TestCaseList[i].IsShowStudent,
+				TestcaseNote: &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseNote,
+				TestcaseOutput: &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseOutput,
+				TestcaseError: &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseError,
+			}
+			saveId := exerciseTestcaseRepo.UpsertExerciseTestcaseID(convertSaveTestcase)
+			saveIdString := saveId.String()
+			if(saveId != nil){
+				saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID = &saveIdString
+			}
+		}else{
+			fmt.Println("not nil")
+			exerciseUuid,_ := uuid.Parse(string(saveExerciseTesetcaseReq.TestCaseList[i].ExerciseID))
+			testcaseUuid,_ := uuid.Parse(string(*saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID))
+			convertSaveTestcase := models.ExerciseTestcase{
+				ExerciseID: exerciseUuid,
+				TestcaseID: &testcaseUuid,
+				IsReady: saveExerciseTesetcaseReq.TestCaseList[i].IsReady,
+				TestcaseContent: saveExerciseTesetcaseReq.TestCaseList[i].TestcaseContent,
+				IsActive: &saveExerciseTesetcaseReq.TestCaseList[i].IsActive,
+				IsShowStudent: &saveExerciseTesetcaseReq.TestCaseList[i].IsShowStudent,
+				TestcaseNote: &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseNote,
+				TestcaseOutput: &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseOutput,
+				TestcaseError: &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseError,
+			}
+			exerciseTestcaseRepo.UpsertExerciseTestcaseID(convertSaveTestcase)
+		}
+	}
+
+	sourcecode,err := utils.GetSupervisorSourcecode(*labExercise.Sourcecode)
+	if(err!= nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Get Data From Sourcecode File")
+	}
+	
+	rabbit := rabbitmq_client.NewRabbitMQAction(supervisorHandler.server.RabitMQ,supervisorHandler.server.Config)
+	message := requests.AddTestcaseRabitMessage{
+		JobId: saveExerciseTesetcaseReq.JobID,
+		JobType: "upsert-testcase",
+		ExerciseId: saveExerciseTesetcaseReq.ExerciseID,
+		TestcaseList: saveExerciseTesetcaseReq.TestCaseList,
+		Sourcecode: sourcecode,
+	}
+	err = rabbit.SendQueue(message)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Send Queue RabbitMQ")
+	}
+	return responses.MessageResponse(c,http.StatusOK,"Testcases Are Being Run")
+}
+
+//TODO Submit code but in student handle

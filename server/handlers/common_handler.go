@@ -98,7 +98,7 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 // @Tags Common
 // @Accept json
 // @Produce json
-// @Param params body	requests.GetKeywordListRequest	true	"Creaet Get Keyword List Request"
+// @Param params body	requests.GetKeywordListRequest	true	"Get Keyword List Request"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Router			/api/common/get_keyword_list [post]
@@ -130,7 +130,7 @@ func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error{
 // @Tags Common
 // @Accept json
 // @Produce json
-// @Param params body	requests.GetKeywordListRequest	true	"Creaet Get Keyword List Request"
+// @Param params body	requests.CheckKeywordRequest	true	"Keyword Check"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Router			/api/common/keyword_check [post]
