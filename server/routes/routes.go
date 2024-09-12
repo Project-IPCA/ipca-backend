@@ -2,6 +2,7 @@ package routes
 
 import (
 	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 
@@ -13,10 +14,12 @@ import (
 func ConfigureRoutes(server *s.Server) {
 	testHandler := handlers.NewTestHandler(server)
 	supervisorHandler := handlers.NewSupervisorHandler(server)
+	studentHandler := handlers.NewStudentHandle(server)
 	authHandler := handlers.NewAuthHandler(server)
 	commonHandler := handlers.NewCommonHandler(server)
 	initHandler := handlers.NewInitHandler(server)
 
+	server.Echo.IPExtractor = echo.ExtractIPFromXFFHeader()
 	server.Echo.Static("/static","bucket")
   
 	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
@@ -51,6 +54,11 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.GET("/my_group_info/:group_id", supervisorHandler.GetMyGroupInfo)
 	supervisorAuthGroup.PUT("/my_group_info/:group_id", supervisorHandler.UpdateMyGroupInfo)
 	supervisorAuthGroup.POST("/save_exercise_testcase",supervisorHandler.SaveExerciseTestcase)
+
+	// Student
+	studentGroup := apiGroup.Group("/student")
+	studentGroup.Use(echojwt.WithConfig(jwtConfig))
+	studentGroup.POST("/exercise_submit",studentHandler.ExerciseSubmit)
 
 	// Auth
 	authGroup := apiGroup.Group("/auth")

@@ -39,3 +39,7 @@ func (studentRepository *StudentRepository) GetStudentByStuID(
 ) {
 	studentRepository.DB.Where("stu_id = ?", stuId).Find(student)
 }
+
+func (studentRepository *StudentRepository) GetStudentAssignedExerciseId(stuId uuid.UUID,chapterId uuid.UUID,itemId uuid.UUID){
+	//TODO implement later
+}

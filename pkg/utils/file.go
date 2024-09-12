@@ -167,8 +167,9 @@ func CleanupIsolate() error {
     return nil
 }
 
-func CreateSupervisorSourcecode (filename string,sourceCode string)error{
-	createPath := filepath.Join("./bucket/supervisor",filename)
+//TODO implement create to minio
+func CreateSourcecode (dirPath string,filename string,sourceCode string)error{
+	createPath := filepath.Join(dirPath,filename)
 	err := os.WriteFile(createPath,[]byte(sourceCode),0644)
 	if(err!=nil){
 		return fmt.Errorf("error while write file %v",err)
@@ -176,8 +177,9 @@ func CreateSupervisorSourcecode (filename string,sourceCode string)error{
     return nil
 }
 
-func GetSupervisorSourcecode (filename string) (string,error) {
-    createPath := filepath.Join("./bucket/supervisor",filename)
+//TODO implement read from minio
+func GetSourcecode (dirPath string,filename string) (string,error) {
+    createPath := filepath.Join(dirPath,filename)
     content, err := os.ReadFile(createPath)
     if(err!=nil){
 		return "",fmt.Errorf("error while read file %v",err)

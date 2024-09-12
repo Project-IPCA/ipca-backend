@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 	"github.com/Project-IPCA/ipca-backend/server/builders"
 )
@@ -17,7 +18,7 @@ func (activityLogService *Service) Create(
 	agent *string,
 	pageName string,
 	action string,
-) error {
+) (models.ActivityLog, error) {
 	logId := utils.NewULID()
 	activityLog := builders.NewActivityLogBuilder().
 		SetLogID(logId).
@@ -31,5 +32,5 @@ func (activityLogService *Service) Create(
 		SetAction(action).
 		Build()
 	activityLogService.DB.Create(&activityLog)
-	return nil
+	return activityLog,nil
 }
