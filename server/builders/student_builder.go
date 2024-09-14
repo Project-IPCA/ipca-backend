@@ -11,7 +11,6 @@ type StudentBuilder struct {
 	KmitlID   string
 	GroupID   *uuid.UUID
 	Note      *string
-	DeptID    *uuid.UUID
 	MidCore   float64
 	CanSubmit bool
 }
@@ -40,11 +39,6 @@ func (studentBuilder *StudentBuilder) SetNote(note string) (us *StudentBuilder) 
 	return studentBuilder
 }
 
-func (studentBuilder *StudentBuilder) SetDeptID(deptId uuid.UUID) (us *StudentBuilder) {
-	studentBuilder.DeptID = &deptId
-	return studentBuilder
-}
-
 func (studentBuilder *StudentBuilder) SetMidCore(
 	midCore float64,
 ) (us *StudentBuilder) {
@@ -66,7 +60,6 @@ func (studentBuilder *StudentBuilder) Build() models.Student {
 		GroupID:   studentBuilder.GroupID,
 		Note:      studentBuilder.Note,
 		MidCore:   studentBuilder.MidCore,
-		DeptID:    studentBuilder.DeptID,
 		CanSubmit: studentBuilder.CanSubmit,
 	}
 	return student

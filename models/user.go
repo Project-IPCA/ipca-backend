@@ -30,6 +30,8 @@ type User struct {
 	Supervisor *Supervisor `gorm:"foreignKey:SupervisorID"`
 	Student    *Student    `gorm:"foreignKey:StuID"`
 	TA         *TA         `gorm:"foreignKey:TaID"`
+	DeptID     *uuid.UUID  `gorm:"type:varchar(36);default:null"`
+	Dept       *Department `gorm:"foreignKey:DeptID;references:DeptID"`
 }
 
 func (User) TableName() string {
