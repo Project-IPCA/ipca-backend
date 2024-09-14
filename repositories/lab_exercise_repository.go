@@ -30,10 +30,21 @@ func (labExerciesRepository *LabExerciseRepository) GetLabExerciseOrderByChapter
 		Find(labExercises)
 }
 
-func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(exerciseId string,labExercise *models.LabExercise) {
-	labExerciesRepository.DB.Preload("Chapter").Where("exercise_id = ?",exerciseId).First(labExercise)
+func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(
+	exerciseId string,
+	labExercise *models.LabExercise,
+) {
+	labExerciesRepository.DB.Preload("Chapter").
+		Preload("ExerciseTestcases").
+		Where("exercise_id = ?", exerciseId).
+		First(labExercise)
 }
 
-func (labExerciesRepository *LabExerciseRepository) UpdateLabExerciseSourcecode(exerciseId string,filename string){
-	labExerciesRepository.DB.Model(&models.LabExercise{}).Where("exercise_id = ?",exerciseId).Update("sourcecode",filename)
+func (labExerciesRepository *LabExerciseRepository) UpdateLabExerciseSourcecode(
+	exerciseId string,
+	filename string,
+) {
+	labExerciesRepository.DB.Model(&models.LabExercise{}).
+		Where("exercise_id = ?", exerciseId).
+		Update("sourcecode", filename)
 }
