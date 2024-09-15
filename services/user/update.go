@@ -39,6 +39,10 @@ func (userService *Service) UpdateUserInfo(
 		user.Avatar = request.Avatar
 	}
 
+	if request.DeptID != nil {
+		user.DeptID = request.DeptID
+	}
+
 	if request.Nickname != nil {
 		user.Nickname = request.Nickname
 	}
