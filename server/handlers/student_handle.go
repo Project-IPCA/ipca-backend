@@ -186,3 +186,24 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 
 	return responses.MessageResponse(c,http.StatusOK,"Submission are being run")
 }
+
+func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
+	stuId := c.QueryParam("stu_id")
+	stuUuid,err:= uuid.Parse(stuId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Userid")
+	}
+
+	var labClassInfos []models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(StudentHandler.server.DB)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+
+	studentRepo := repositories.NewStudentRepository(StudentHandler.server.DB)
+	for _, item := range labClassInfos{
+		var studentAssignChapterItems []models.StudentAssignmentChapterItem
+		studentRepo.GetStudentAssignChapter(&studentAssignChapterItems,stuUuid,item.ChapterID)
+		if(len(studentAssignChapterItems) < item.NoItems){
+			maxIdx := utils.FindMax(studentAssignChapterItems,"item_id")
+		}
+	}
+}
