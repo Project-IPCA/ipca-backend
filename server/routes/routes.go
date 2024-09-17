@@ -57,8 +57,9 @@ func ConfigureRoutes(server *s.Server) {
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
-	studentGroup.Use(echojwt.WithConfig(jwtConfig))
+	// studentGroup.Use(echojwt.WithConfig(jwtConfig))
 	studentGroup.POST("/exercise_submit",studentHandler.ExerciseSubmit)
+	studentGroup.GET("/get_chapter_list/:stu_id",studentHandler.GetChapterList)
 
 	// Auth
 	authGroup := apiGroup.Group("/auth")

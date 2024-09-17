@@ -41,5 +41,9 @@ func (studentRepository *StudentRepository) GetStudentByStuID(
 }
 
 func (studentRepository *StudentRepository) GetStudentAssignChapter(studentAssignChapterItems *[]models.StudentAssignmentChapterItem,stuId uuid.UUID,chapterId uuid.UUID){
-	studentRepository.DB.Where("stu_id = ? AND chapter_id = ?",stuId,chapterId).Find(studentAssignChapterItems)
+	studentRepository.DB.Where("stu_id = ? AND chapter_id = ?",stuId,chapterId).Order("item_id ASC").Find(studentAssignChapterItems)
+}
+
+func (studentRepository *StudentRepository) GetAllStudentAssignChapter(studentAssignChapterItems *[]models.StudentAssignmentChapterItem,stuId uuid.UUID){
+	studentRepository.DB.Where("stu_id = ?",stuId).Find(studentAssignChapterItems)
 }

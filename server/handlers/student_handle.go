@@ -16,6 +16,7 @@ import (
 	s "github.com/Project-IPCA/ipca-backend/server"
 	activitylog "github.com/Project-IPCA/ipca-backend/services/activity_log"
 	exercisesubmission "github.com/Project-IPCA/ipca-backend/services/exercise_submission"
+	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
 	"github.com/Project-IPCA/ipca-backend/services/token"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -187,23 +188,71 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	return responses.MessageResponse(c,http.StatusOK,"Submission are being run")
 }
 
+// @Description Get Chapter List
+// @ID student-get-chapter-list
+// @Tags Student
+// @Accept json
+// @Produce json
+// @Param stu_id path string true "Student ID"
+// @Success 200		{array}	responses.GetChapterListResponse
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/student/get_chapter_list/{stu_id} [get]
 func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
-	stuId := c.QueryParam("stu_id")
+	stuId := c.Param("stu_id")
 	stuUuid,err:= uuid.Parse(stuId)
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Userid")
+	}
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,stuUuid)
+	if(*existUser.Role != constants.Role.Student){
+		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(StudentHandler.server.DB)
 	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
 
+	var groupChapterPermission []models.GroupChapterPermission
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(&groupChapterPermission,*existUser.Student.GroupID)
+
 	studentRepo := repositories.NewStudentRepository(StudentHandler.server.DB)
 	for _, item := range labClassInfos{
 		var studentAssignChapterItems []models.StudentAssignmentChapterItem
 		studentRepo.GetStudentAssignChapter(&studentAssignChapterItems,stuUuid,item.ChapterID)
 		if(len(studentAssignChapterItems) < item.NoItems){
-			maxIdx := utils.FindMax(studentAssignChapterItems,"item_id")
+			maxIdxItem := 0
+			if(len(studentAssignChapterItems) > 0){
+				maxIdxItem = studentAssignChapterItems[len(studentAssignChapterItems)-1].ItemID
+			}
+			var chapter models.GroupChapterPermission
+			for _, chapterPermission := range groupChapterPermission{
+				if(chapterPermission.ChapterID == item.ChapterID){
+					chapter = chapterPermission
+				}
+			}
+			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(StudentHandler.server.DB)
+			for i:= maxIdxItem; i < item.NoItems; i++ {
+				studentAssignChapterItemService.Create(stuUuid,chapter.ChapterID,i+1,nil,item.FullMark,0,chapter.TimeStart,chapter.TimeEnd)
+			}
 		}
 	}
+
+	var allGroupChapterItems []models.GroupAssignmentChapterItem
+	groupChapterItemRepo := repositories.NewGroupAssignmentChapterItemRepository(StudentHandler.server.DB)
+	groupChapterItemRepo.GetAllGroupAssignmentChapterItemsByGroupId(&allGroupChapterItems,*existUser.Student.GroupID)
+
+	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
+	studentRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,stuUuid)
+	
+	response := responses.NewGetChapterListResponse(
+		groupChapterPermission,
+		allGroupChapterItems,
+		allStudentAssignChapterItems,
+	)
+
+	return responses.Response(c,http.StatusOK,response)
 }

@@ -9,7 +9,7 @@ import (
 type StudentAssignmentChapterItem struct {
 	StuID      uuid.UUID    `gorm:"type:varchar(36);primary_key;column:stu_id"`
 	ChapterID  uuid.UUID    `gorm:"type:varchar(36);primary_key;column:chapter_id"`
-	ItemID     uuid.UUID    `gorm:"type:varchar(36);primary_key;column:item_id"`
+	ItemID     int    `gorm:"type:varchar(36);primary_key;column:item_id"`
 	ExerciseID *uuid.UUID    `gorm:"type:varchar(36);primary_key;column:exercise_id"`
 	FullMark   int       `gorm:"type:int;not null;default:0;column:full_mark"`
 	Marking    int       `gorm:"type:int;not null;default:0;column:marking"`
