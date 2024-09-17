@@ -28,3 +28,12 @@ func (groupAssignmentChapterItemRepository *GroupAssignmentChapterItemRepository
 		Where("item_id = ?", itemId).
 		Find(groupAssignmentChapterItem)
 }
+
+func (groupAssignmentChapterItemRepository *GroupAssignmentChapterItemRepository) GetAllGroupAssignmentChapterItemsByGroupId(
+	groupAssignmentChapterItem *[]models.GroupAssignmentChapterItem,
+	groupId uuid.UUID,
+) {
+	groupAssignmentChapterItemRepository.DB.Where("group_id = ?", groupId).
+		Where("group_id = ?", groupId).
+		Find(groupAssignmentChapterItem)
+}
