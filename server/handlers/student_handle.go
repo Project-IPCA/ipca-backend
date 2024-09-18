@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
@@ -255,4 +256,45 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 	)
 
 	return responses.Response(c,http.StatusOK,response)
+}
+
+func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context) error {
+	stuId := c.QueryParam("stu_id")
+	chapterId := c.QueryParam("chapter_id")
+	itemId := c.QueryParam("item_id")
+
+	stuUuid,err := uuid.Parse(stuId)
+	if(err!= nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Student id")
+	}
+	
+	chapterUuid,err := uuid.Parse(chapterId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse chapter id")
+	}
+
+	itemInt,err := strconv.Atoi(itemId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't convert item id")
+	}
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,stuUuid)
+
+	var studentAssignChapterItems models.StudentAssignmentChapterItem
+	studentRepo := repositories.NewStudentRepository(StudentHandler.server.DB)
+	studentRepo.GetStudentAssignChapterItem(&studentAssignChapterItems,stuUuid,chapterUuid,itemInt)
+
+	if(studentAssignChapterItems.ExerciseID == nil){
+		var selectItem []models.GroupChapterSelectedItem
+		groupChapterSelectedItemRepo := repositories.NewGroupChapterSelectedItemRepository(StudentHandler.server.DB)
+		groupChapterSelectedItemRepo.GetSelectedItemByGroupChapterItemId(&selectItem,*existUser.Student.GroupID,chapterUuid,itemInt)
+		if(len(selectItem) < 1){
+			
+		}
+
+	}
+
+	return nil
 }
