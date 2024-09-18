@@ -32,7 +32,9 @@ func (userService *Service) UpdateUserInfo(
 		if err == nil {
 			dob = &dobParse
 		}
-		user.DOB = dob
+		if dob != nil {
+			user.DOB = dob
+		}
 	}
 
 	if request.Avatar != nil {
