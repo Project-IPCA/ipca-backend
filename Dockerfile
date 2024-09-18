@@ -46,6 +46,6 @@ RUN chmod +x /wait
 
 #Command to run the executable
 CMD swag init -g cmd/main.go\
-  && chmod -R 777 /docs
+  && chmod -R 777 /docs \
   && /wait \
   && CompileDaemon --build="go build cmd/main.go"  --command="./main" --color
