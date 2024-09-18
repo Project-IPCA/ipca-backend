@@ -55,4 +55,5 @@ jobs:
           echo "REFRESH_SECRET"=${{ secrets.REFRESH_SECRET }} >> .env
 
       - name: Deploy Web Application
-        run: docker compose -f docker-compose.prod.yml up -d --build && docker system prune -f
+        run: docker compose -f docker-compose.prod.yml up -d --build --force-recreate && docker system prune -f
+
