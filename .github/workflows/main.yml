@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ipca-test
 
     steps:
       - name: Checkout code
@@ -56,6 +56,3 @@ jobs:
 
       - name: Deploy Web Application
         run: docker compose -f docker-compose.prod.yml up -d --build && docker system prune -f
-
-      - name: Set Permissions
-        run: sudo chown -R $USER:$USER /home/fair/actions-runner/_work/ipca-backend
