@@ -96,7 +96,13 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 	userService := userservice.NewUserService(commonHandler.server.DB)
 	userService.UpdateUserInfo(&existUser, updateUserInfoReq)
 
-	return responses.MessageResponse(c, http.StatusOK, "Update User Info Successful")
+	var allDepts []models.Department
+	deptRepository := repositories.NewDepartmentRepository(commonHandler.server.DB)
+	deptRepository.GetAllDepts(&allDepts)
+
+	response := responses.NewUserInfoResponse(existUser, allDepts)
+
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Get Keyword List
