@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	HTTP HTTPConfig
-	DB   DBConfig
-	Auth AuthConfig
-	Redis RedisConfig
+	HTTP     HTTPConfig
+	DB       DBConfig
+	Auth     AuthConfig
+	Redis    RedisConfig
 	RabbitMQ RabbitMQConfig
+	Minio    MinioConfig
 }
 
 func NewConfig() *Config {
@@ -20,10 +21,11 @@ func NewConfig() *Config {
 		log.Println("Error loading .env file")
 	}
 	return &Config{
-		Auth: LoadAuthConfig(),
-		HTTP: LoadHTTPConfig(),
-		DB:   LoadDBConfig(),
-		Redis : LoadRedisConfig(),
+		Auth:     LoadAuthConfig(),
+		HTTP:     LoadHTTPConfig(),
+		DB:       LoadDBConfig(),
+		Redis:    LoadRedisConfig(),
 		RabbitMQ: LoadRabbitMQConfig(),
+		Minio:    LoadMinioConfig(),
 	}
 }
