@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/google/uuid"
 )
 
@@ -91,4 +92,65 @@ func NewGetChapterListResponse(
 	}
 
 	return &getChapterList
+}
+
+type StudentAssignmentItemResponse struct{
+	ExerciseID             uuid.UUID        `json:"exercise_id"`
+	ChapterIdx              int       `json:"chapter_index"`
+	Level                  string          `json:"level"`
+	Name                   string          `json:"name"`
+	Content                string          `json:"content"`
+	Testcase               string           `json:"testcase"`
+	FullMark               int              `json:"full_mark"`
+	UserDefinedConstraints *string `json:"user_defined_constraints"`
+	SuggestedConstraints   *string `json:"suggested_constraints"`
+	TestcaseList		   []TestcaseResponse `json:"testcase_list"`
+}
+
+type TestcaseResponse struct{
+	TestcaseID       *uuid.UUID `json:"testcase_id"`
+	TestcaseContent  string `json:"testcase_content"`
+	IsShowStudent    *bool   `json:"show_to_student"`
+	TestcaseNote     *string `json:"testcase_note"`
+	TestcaseOutput   *string `json:"testcase_output"`
+}
+
+func NewGetStudentAssignmentItemResponse(labExercise models.LabExercise)*StudentAssignmentItemResponse{
+	testcaseListResponse := make([]TestcaseResponse,0)
+	testcaseValid := constants.Testcase.NoInput
+
+	if(labExercise.Testcase == constants.Testcase.Yes){
+		testcaseValid = constants.Testcase.Yes
+		for _,testcase := range labExercise.TestcaseList{
+			if(testcase.IsReady == "yes" && *testcase.IsActive){
+				testcaseContent := "Hidden"
+				testcaseOutput := "Hidden"
+				if(*testcase.IsShowStudent){
+					testcaseContent = testcase.TestcaseContent
+					testcaseOutput = *testcase.TestcaseOutput
+				}
+				testcaseListResponse = append(testcaseListResponse, TestcaseResponse{
+					TestcaseID: testcase.TestcaseID,
+					TestcaseContent: testcaseContent,
+					IsShowStudent: testcase.IsShowStudent,
+					TestcaseOutput: &testcaseOutput,
+					TestcaseNote: testcase.TestcaseNote,
+				})
+			}
+		}
+	}
+	
+	response := StudentAssignmentItemResponse{
+		ExerciseID: labExercise.ExerciseID,
+		ChapterIdx: labExercise.Chapter.ChapterIndex,
+		Level: *labExercise.Level,
+		Name: *labExercise.Name,
+		Content: *labExercise.Content,
+		Testcase: testcaseValid,
+		FullMark: labExercise.FullMark,
+		UserDefinedConstraints: nil,
+		SuggestedConstraints: nil,
+		TestcaseList: testcaseListResponse,
+	}
+	return &response
 }

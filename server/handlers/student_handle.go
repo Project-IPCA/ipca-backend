@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
@@ -219,10 +221,10 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
 	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(&groupChapterPermission,*existUser.Student.GroupID)
 
-	studentRepo := repositories.NewStudentRepository(StudentHandler.server.DB)
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
 	for _, item := range labClassInfos{
 		var studentAssignChapterItems []models.StudentAssignmentChapterItem
-		studentRepo.GetStudentAssignChapter(&studentAssignChapterItems,stuUuid,item.ChapterID)
+		studentAssignItemRepo.GetStudentAssignChapter(&studentAssignChapterItems,stuUuid,item.ChapterID)
 		if(len(studentAssignChapterItems) < item.NoItems){
 			maxIdxItem := 0
 			if(len(studentAssignChapterItems) > 0){
@@ -246,13 +248,87 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 	groupChapterItemRepo.GetAllGroupAssignmentChapterItemsByGroupId(&allGroupChapterItems,*existUser.Student.GroupID)
 
 	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
-	studentRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,stuUuid)
+	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,stuUuid)
 	
 	response := responses.NewGetChapterListResponse(
 		groupChapterPermission,
 		allGroupChapterItems,
 		allStudentAssignChapterItems,
 	)
+
+	return responses.Response(c,http.StatusOK,response)
+}
+
+// @Description Get Assigned Exercxise
+// @ID student-get-assigned-exercise
+// @Tags Student
+// @Accept json
+// @Produce json
+// @Param stu_id query string false "stu_id"
+// @Param chapter_id query string false "chapter_id"
+// @Param item_id query string false "item_id"
+// @Success 200		{object}	responses.StudentAssignmentItemResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/student/get_assigned_exercise [get]
+func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context) error {
+	stuId := c.QueryParam("stu_id")
+	chapterId := c.QueryParam("chapter_id")
+	itemId := c.QueryParam("item_id")
+
+	stuUuid,err := uuid.Parse(stuId)
+	if(err!= nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Student ID")
+	}
+	
+	chapterUuid,err := uuid.Parse(chapterId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Chapter ID")
+	}
+
+	itemInt,err := strconv.Atoi(itemId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Item ID")
+	}
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,stuUuid)
+
+	if(*existUser.Role != constants.Role.Student){
+		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
+	}
+
+	var studentAssignChapterItems models.StudentAssignmentChapterItem
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
+	studentAssignItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItems,stuUuid,chapterUuid,itemInt)
+
+	if(studentAssignChapterItems.ExerciseID == nil){
+		var selectItem []models.GroupChapterSelectedItem
+		groupChapterSelectedItemRepo := repositories.NewGroupChapterSelectedItemRepository(StudentHandler.server.DB)
+		groupChapterSelectedItemRepo.GetSelectedItemByGroupChapterItemId(&selectItem,*existUser.Student.GroupID,chapterUuid,itemInt)
+		noSelectItem := len(selectItem)
+		if(noSelectItem < 1){
+			return responses.ErrorResponse(c, http.StatusBadRequest, "No Exercise Available")
+		}else {
+			studentAssigmItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(StudentHandler.server.DB)
+			if(noSelectItem== 1){
+				studentAssigmItemService.UpdateAssignExercise(&studentAssignChapterItems,&selectItem[0].ExerciseID)
+			}else{
+				idx := rand.Intn(noSelectItem - 1)
+				studentAssigmItemService.UpdateAssignExercise(&studentAssignChapterItems,&selectItem[idx].ExerciseID)
+			}
+			studentAssignItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItems,stuUuid,chapterUuid,itemInt)
+		}
+	}
+	
+	var labExercise models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(StudentHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItems.ExerciseID.String(),&labExercise)
+	
+	response := responses.NewGetStudentAssignmentItemResponse(labExercise)
 
 	return responses.Response(c,http.StatusOK,response)
 }
