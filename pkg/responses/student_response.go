@@ -95,7 +95,16 @@ func NewGetChapterListResponse(
 }
 
 type StudentAssignmentItemResponse struct{
-	
+	ExerciseID             uuid.UUID        `json:"exercise_id"`
+	ChapterIdx              int       `json:"chapter_index"`
+	Level                  string          `json:"level"`
+	Name                   string          `json:"name"`
+	Content                string          `json:"content"`
+	Testcase               string           `json:"testcase"`
+	FullMark               int              `json:"full_mark"`
+	UserDefinedConstraints *string `json:"user_defined_constraints"`
+	SuggestedConstraints   *string `json:"suggested_constraints"`
+	TestcaseList		   []TestcaseResponse `json:"testcase_list"`
 }
 
 type TestcaseResponse struct{
@@ -106,10 +115,12 @@ type TestcaseResponse struct{
 	TestcaseOutput   *string `json:"testcase_output"`
 }
 
-func NewGetStudentAssignmentItemResponse(labExercise models.LabExercise){
+func NewGetStudentAssignmentItemResponse(labExercise models.LabExercise)*StudentAssignmentItemResponse{
 	testcaseListResponse := make([]TestcaseResponse,0)
+	testcaseValid := constants.Testcase.NoInput
 
 	if(labExercise.Testcase == constants.Testcase.Yes){
+		testcaseValid = constants.Testcase.Yes
 		for _,testcase := range labExercise.TestcaseList{
 			if(testcase.IsReady == "yes" && *testcase.IsActive){
 				testcaseContent := "Hidden"
@@ -126,7 +137,20 @@ func NewGetStudentAssignmentItemResponse(labExercise models.LabExercise){
 					TestcaseNote: testcase.TestcaseNote,
 				})
 			}
-			
 		}
 	}
+	
+	response := StudentAssignmentItemResponse{
+		ExerciseID: labExercise.ExerciseID,
+		ChapterIdx: labExercise.Chapter.ChapterIndex,
+		Level: *labExercise.Level,
+		Name: *labExercise.Name,
+		Content: *labExercise.Content,
+		Testcase: testcaseValid,
+		FullMark: labExercise.FullMark,
+		UserDefinedConstraints: nil,
+		SuggestedConstraints: nil,
+		TestcaseList: testcaseListResponse,
+	}
+	return &response
 }

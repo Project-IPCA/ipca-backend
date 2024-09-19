@@ -20,5 +20,9 @@ func (groupChapterSelectedItemRepo *GroupChapterSelectedItemRepository) GetSelec
 	chapterId uuid.UUID,
 	itemId	int,
 ){
-	groupChapterSelectedItemRepo.DB.Preload("LabExercise").Where("group_id = ? AND chapter_id = ? AND item_id = ?",groupId,chapterId,itemId).Find(selectedItems)
+	groupChapterSelectedItemRepo.DB.
+	Preload("ClassSchedule").
+    Preload("LabClassInfo").
+    Preload("LabExercise").
+	Where("group_id = ? AND chapter_id = ? AND item_id = ?",groupId,chapterId,itemId).Find(selectedItems)
 }

@@ -9,6 +9,6 @@ func (studentAssignmentItemService *Service) UpdateAssignExercise (
 	studentAssignmentChapterItem *models.StudentAssignmentChapterItem,
 	exerciseId *uuid.UUID,
 	){
+		studentAssignmentItemService.DB.Model(studentAssignmentChapterItem).Update("exercise_id",exerciseId)
 		studentAssignmentChapterItem.ExerciseID = exerciseId
-		studentAssignmentItemService.DB.Save(studentAssignmentChapterItem)
 }

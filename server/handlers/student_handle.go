@@ -259,6 +259,20 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 	return responses.Response(c,http.StatusOK,response)
 }
 
+// @Description Get Assigned Exercxise
+// @ID student-get-assigned-exercise
+// @Tags Student
+// @Accept json
+// @Produce json
+// @Param stu_id query string false "stu_id"
+// @Param chapter_id query string false "chapter_id"
+// @Param item_id query string false "item_id"
+// @Success 200		{object}	responses.StudentAssignmentItemResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/student/get_assigned_exercise [get]
 func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context) error {
 	stuId := c.QueryParam("stu_id")
 	chapterId := c.QueryParam("chapter_id")
@@ -313,10 +327,8 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context
 	var labExercise models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(StudentHandler.server.DB)
 	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItems.ExerciseID.String(),&labExercise)
+	
+	response := responses.NewGetStudentAssignmentItemResponse(labExercise)
 
-	
-	
-	
-
-	return nil
+	return responses.Response(c,http.StatusOK,response)
 }
