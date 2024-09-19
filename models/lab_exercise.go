@@ -23,6 +23,7 @@ type LabExercise struct {
 	AddedBy                *string          `gorm:"type:varchar(40)"`
 	CreatedBy              *uuid.UUID       `gorm:"type:varchar(36)"`
 	Chapter                LabClassInfo     `gorm:"foreignKey:ChapterID"`
+	TestcaseList		   []ExerciseTestcase `gorm:"foreignKey:ExerciseID"`
 }
 
 func (LabExercise) TableName() string {

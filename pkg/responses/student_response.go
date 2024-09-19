@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/google/uuid"
 )
 
@@ -91,4 +92,41 @@ func NewGetChapterListResponse(
 	}
 
 	return &getChapterList
+}
+
+type StudentAssignmentItemResponse struct{
+	
+}
+
+type TestcaseResponse struct{
+	TestcaseID       *uuid.UUID `json:"testcase_id"`
+	TestcaseContent  string `json:"testcase_content"`
+	IsShowStudent    *bool   `json:"show_to_student"`
+	TestcaseNote     *string `json:"testcase_note"`
+	TestcaseOutput   *string `json:"testcase_output"`
+}
+
+func NewGetStudentAssignmentItemResponse(labExercise models.LabExercise){
+	testcaseListResponse := make([]TestcaseResponse,0)
+
+	if(labExercise.Testcase == constants.Testcase.Yes){
+		for _,testcase := range labExercise.TestcaseList{
+			if(testcase.IsReady == "yes" && *testcase.IsActive){
+				testcaseContent := "Hidden"
+				testcaseOutput := "Hidden"
+				if(*testcase.IsShowStudent){
+					testcaseContent = testcase.TestcaseContent
+					testcaseOutput = *testcase.TestcaseOutput
+				}
+				testcaseListResponse = append(testcaseListResponse, TestcaseResponse{
+					TestcaseID: testcase.TestcaseID,
+					TestcaseContent: testcaseContent,
+					IsShowStudent: testcase.IsShowStudent,
+					TestcaseOutput: &testcaseOutput,
+					TestcaseNote: testcase.TestcaseNote,
+				})
+			}
+			
+		}
+	}
 }

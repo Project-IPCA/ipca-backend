@@ -31,7 +31,7 @@ func (labExerciesRepository *LabExerciseRepository) GetLabExerciseOrderByChapter
 }
 
 func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(exerciseId string,labExercise *models.LabExercise) {
-	labExerciesRepository.DB.Preload("Chapter").Where("exercise_id = ?",exerciseId).First(labExercise)
+	labExerciesRepository.DB.Preload("Chapter").Preload("TestCaseList").Where("exercise_id = ?",exerciseId).First(labExercise)
 }
 
 func (labExerciesRepository *LabExerciseRepository) UpdateLabExerciseSourcecode(exerciseId string,filename string){
