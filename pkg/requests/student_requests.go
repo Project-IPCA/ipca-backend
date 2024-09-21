@@ -19,7 +19,7 @@ func (asr AddStudentsTextRequest) Validate() error {
 type ExcerciseSubmitRequest struct {
 	StudentId string `json:"stu_id" validate:"required"`
 	ChapterID string `json:"chapter_id" validate:"required"`
-	ItemId 	  string `json:"item_id" validate:"required"`
+	ItemId 	  int `json:"item_id" validate:"required"`
 	Sourcecode string `json:"sourcecode" validate:"required"`
 	JobID		string `json:"job_id" validate:"required"`
 }
