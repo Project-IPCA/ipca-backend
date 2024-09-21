@@ -111,11 +111,16 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 // @Router			/api/init/labclassinfo [post]
 func (initHandler *InitHandler) InitClassInfo (c echo.Context) error {
 	labClassInfoService := labclassinfo.NewLabClassInfoService(initHandler.server.DB)
-	labClassInfoService.Create(
-		0,
-		"Introduction",
-		10,
-		5,
-	)
+	chapterName := [17]string{"Introduction","Variables Expression Statement","Conditional Execution","'Loop while","Loop for","List","String","Function","Dictionary","Files","Best Practice 1","Best Practice 2","Quiz #1 (chapter 01 - 03)","Quiz #2 (chapter 01 - 06)","Quiz #3 (chapter 01 - 09)","Reserve #1","Reserve #2"}
+
+	for i := 0; i<=len(chapterName); i++{
+		labClassInfoService.Create(
+			i+1,
+			chapterName[i],
+			10,
+			5,
+		)
+	}
+	
 	return responses.MessageResponse(c, http.StatusOK, "Init Lab Class Info Success.")
 }
