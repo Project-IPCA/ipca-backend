@@ -174,6 +174,18 @@ func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
 	return responses.Response(c, http.StatusOK, checkKeyword)
 }
 
+// @Description Get Student Submission
+// @ID common-get-student-submission
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Param stu_id query string false "stu_id"
+// @Param chapter_id query string false "chapter_id"
+// @Param item_id query string false "item_id"
+// @Success 200		{array}		responses.ExerciseSubmission
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/common/student_submission [get]
 func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	stuId := c.QueryParam("stu_id")
 	chapterId := c.QueryParam("chapter_id")
