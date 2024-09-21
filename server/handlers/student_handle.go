@@ -69,12 +69,15 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Submmit Now")
 	}
 
-	//TODO add validate group permission and assign chapter item
-
 	chaperUuid,err := uuid.Parse(exerciseSubmitReq.ChapterID)
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "GroupID Is Not UUID")
 	}
+
+	//TODO add validate group permission and assign chapter item
+	var studentAssignChapterItem models.StudentAssignmentChapterItem
+	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(studentHandler.server.DB)
+	studentAssignChapterItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItem,userId,chaperUuid,exerciseSubmitReq.ItemId)
 
 	var submissionList []models.ExerciseSubmission
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(studentHandler.server.DB)
@@ -87,16 +90,12 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
-	exerciseUuid,err := uuid.Parse(exerciseSubmitReq.ItemId)
-	if(err!=nil){
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "ItemID Is Not UUID")
-	}
 
 	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(studentHandler.server.DB)
 	isInfLoop := false
 	submissionId, err := exerciseSubmissionService.Create(
 		existUser.UserID,
-		exerciseUuid,
+		*studentAssignChapterItem.ExerciseID,
 		filename,
 		0,
 		&isInfLoop,
@@ -110,7 +109,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 
 	exerciseTestcaseRepo := repositories.NewExerciseTestcaseRepository(studentHandler.server.DB)
 	var testcaseList []models.ExerciseTestcase
-	exerciseTestcaseRepo.GetTestcasesByExerciseID(exerciseUuid,&testcaseList)
+	exerciseTestcaseRepo.GetTestcasesByExerciseID(*studentAssignChapterItem.ExerciseID,&testcaseList)
 
 	filterTestcase := make([]models.ExerciseTestcase, 0)
     for _, testcase := range testcaseList {
@@ -121,7 +120,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 
 	labExerciseRepo := repositories.NewLabExerciseRepository(studentHandler.server.DB)
 	var labExercise models.LabExercise
-	labExerciseRepo.GetLabExerciseByID(exerciseSubmitReq.ItemId,&labExercise)
+	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItem.ExerciseID.String(),&labExercise)
 
 	logAction := models.LogExerciseSubmissionAction{
 		StuId: existUser.UserID,
