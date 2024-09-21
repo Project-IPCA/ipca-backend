@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -173,10 +174,9 @@ func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
 }
 
 func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
-	// TODO Implement to query exercise submission from chapterId and Item Id
 	stuId := c.QueryParam("stu_id")
 	chapterId := c.QueryParam("chapter_id")
-	// itemId := c.QueryParam("item_id")
+	itemId := c.QueryParam("item_id")
 
 	stuUuid, err := uuid.Parse(stuId)
 	if err != nil {
@@ -196,9 +196,22 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		)
 	}
 
+	itemIdInt,err := strconv.Atoi(itemId)
+	if(err!=nil){
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Error While Convert String To Int %s", err),
+		)
+	}
+
+	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(commonHandle.server.DB)
+	var assignItem models.StudentAssignmentChapterItem 
+	studentAssignChapterItemRepo.GetStudentAssignChapterItem(&assignItem,stuUuid,chapterUuid,itemIdInt)
+
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(commonHandle.server.DB)
 	var exerciseSubmissionList []models.ExerciseSubmission
-	exerciseSubmissionRepo.GetStudentSubmission(stuUuid, chapterUuid, &exerciseSubmissionList)
+	exerciseSubmissionRepo.GetStudentSubmission(stuUuid, *assignItem.ExerciseID, &exerciseSubmissionList)
 
 	return responses.Response(c, http.StatusOK, exerciseSubmissionList)
 }
