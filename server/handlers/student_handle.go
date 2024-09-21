@@ -190,25 +190,23 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	return responses.MessageResponse(c,http.StatusOK,"Submission are being run")
 }
 
-// @Description Get Chapter List
-// @ID student-get-chapter-list
+// @Description Get All Chapter
+// @ID student-get-all-chapter
 // @Tags Student
 // @Accept json
 // @Produce json
-// @Param stu_id path string true "Student ID"
-// @Success 200		{array}	responses.GetChapterListResponse
+// @Success 200		{array}	responses.GetAllChapterResponse
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/student/get_chapter_list/{stu_id} [get]
-func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
-	stuId := c.Param("stu_id")
-	stuUuid,err:= uuid.Parse(stuId)
-	if(err!=nil){
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Userid")
-	}
+// @Router			/api/student/all_chapter [get]
+func (StudentHandler *StudentHandler) GetALLChapter (c echo.Context) error {
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
 	var existUser models.User
 	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser,stuUuid)
+	userRepo.GetUserByUserID(&existUser,userId)
 	if(*existUser.Role != constants.Role.Student){
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
@@ -224,7 +222,7 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
 	for _, item := range labClassInfos{
 		var studentAssignChapterItems []models.StudentAssignmentChapterItem
-		studentAssignItemRepo.GetStudentAssignChapter(&studentAssignChapterItems,stuUuid,item.ChapterID)
+		studentAssignItemRepo.GetStudentAssignChapter(&studentAssignChapterItems,userId,item.ChapterID)
 		if(len(studentAssignChapterItems) < item.NoItems){
 			maxIdxItem := 0
 			if(len(studentAssignChapterItems) > 0){
@@ -238,17 +236,57 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 			}
 			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(StudentHandler.server.DB)
 			for i:= maxIdxItem; i < item.NoItems; i++ {
-				studentAssignChapterItemService.Create(stuUuid,chapter.ChapterID,i+1,nil,item.FullMark,0,chapter.TimeStart,chapter.TimeEnd)
+				studentAssignChapterItemService.Create(userId,chapter.ChapterID,i+1,nil,item.FullMark,0,chapter.TimeStart,chapter.TimeEnd)
 			}
 		}
 	}
+
+	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
+	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,userId)
+	
+	response := responses.NewGetAllChapter(
+		groupChapterPermission,
+		allStudentAssignChapterItems,
+	)
+
+	return responses.Response(c,http.StatusOK,response)
+}
+
+// @Description Get Chapter List
+// @ID student-get-chapter-list
+// @Tags Student
+// @Accept json
+// @Produce json
+// @Success 200		{array}	responses.GetChapterListResponse
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/student/chapter_list [get]
+func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role != constants.Role.Student){
+		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
+	}
+
+	var labClassInfos []models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(StudentHandler.server.DB)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+
+	var groupChapterPermission []models.GroupChapterPermission
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(&groupChapterPermission,*existUser.Student.GroupID)
 
 	var allGroupChapterItems []models.GroupAssignmentChapterItem
 	groupChapterItemRepo := repositories.NewGroupAssignmentChapterItemRepository(StudentHandler.server.DB)
 	groupChapterItemRepo.GetAllGroupAssignmentChapterItemsByGroupId(&allGroupChapterItems,*existUser.Student.GroupID)
 
 	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
-	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,stuUuid)
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
+	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,userId)
 	
 	response := responses.NewGetChapterListResponse(
 		groupChapterPermission,
@@ -272,7 +310,7 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/student/get_assigned_exercise [get]
+// @Router			/api/student/assigned_exercise [get]
 func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context) error {
 	stuId := c.QueryParam("stu_id")
 	chapterId := c.QueryParam("chapter_id")

@@ -182,7 +182,7 @@ func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
 // @Param stu_id query string false "stu_id"
 // @Param chapter_id query string false "chapter_id"
 // @Param item_id query string false "item_id"
-// @Success 200		{array}		responses.ExerciseSubmission
+// @Success 200		{array}		models.ExerciseSubmission
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/common/student_submission [get]
