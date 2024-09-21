@@ -8,22 +8,23 @@ import (
 func (studentAssignmentChapterItemService *Service) Create (
 	stuID      uuid.UUID,
     chapterID  uuid.UUID,
-    itemID     uuid.UUID,
+    itemID     int,
     exerciseID *uuid.UUID,
     fullMark   int,
     marking    int,
     timeStart  *string,
     timeEnd    *string,
 ) error {
+	
 	studentAssignmentChapterItem := builders.NewStudentAssignmentChapterItemBuilder().
 		SetStuID(stuID).
 		SetChapterID(chapterID).
 		SetItemID(itemID).
-		SetExerciseID(*exerciseID).
+		SetExerciseID(exerciseID).
 		SetFullMark(fullMark).
 		SetMarking(marking).
-		SetTimeStart(*timeStart).
-		SetTimeEnd(*timeEnd).
+		SetTimeStart(timeStart).
+		SetTimeEnd(timeEnd).
 		Build()
 	studentAssignmentChapterItemService.DB.Create(&studentAssignmentChapterItem)
 	return nil

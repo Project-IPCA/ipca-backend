@@ -22,7 +22,8 @@ type LabExercise struct {
 	SuggestedConstraints   *json.RawMessage `gorm:"type:json"`
 	AddedBy                *string          `gorm:"type:varchar(40)"`
 	CreatedBy              *uuid.UUID       `gorm:"type:varchar(36)"`
-	Chapter                LabClassInfo     `gorm:"foreignKey:ChapterID"`
+	Chapter                LabClassInfo     `gorm:"foreignKey:ChapterID;references:ChapterID"`
+	TestcaseList		   []ExerciseTestcase `gorm:"foreignKey:ExerciseID;references:ExerciseID"`
 }
 
 func (LabExercise) TableName() string {

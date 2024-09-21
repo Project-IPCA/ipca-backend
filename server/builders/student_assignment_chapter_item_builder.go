@@ -10,7 +10,7 @@ import (
 type StudentAssignmentChapterItemsBuilder struct {
     StuID      uuid.UUID
     ChapterID  uuid.UUID
-    ItemID     uuid.UUID
+    ItemID     int
     ExerciseID *uuid.UUID
     FullMark   int
     Marking    int
@@ -33,13 +33,13 @@ func (b *StudentAssignmentChapterItemsBuilder) SetChapterID(chapterID uuid.UUID)
     return b
 }
 
-func (b *StudentAssignmentChapterItemsBuilder) SetItemID(itemID uuid.UUID) *StudentAssignmentChapterItemsBuilder {
+func (b *StudentAssignmentChapterItemsBuilder) SetItemID(itemID int) *StudentAssignmentChapterItemsBuilder {
     b.ItemID = itemID
     return b
 }
 
-func (b *StudentAssignmentChapterItemsBuilder) SetExerciseID(exerciseID uuid.UUID) *StudentAssignmentChapterItemsBuilder {
-    b.ExerciseID = &exerciseID
+func (b *StudentAssignmentChapterItemsBuilder) SetExerciseID(exerciseID *uuid.UUID) *StudentAssignmentChapterItemsBuilder {
+    b.ExerciseID = exerciseID
     return b
 }
 
@@ -58,13 +58,13 @@ func (b *StudentAssignmentChapterItemsBuilder) SetAddedDate(addedDate time.Time)
     return b
 }
 
-func (b *StudentAssignmentChapterItemsBuilder) SetTimeStart(timeStart string) *StudentAssignmentChapterItemsBuilder {
-    b.TimeStart = &timeStart
+func (b *StudentAssignmentChapterItemsBuilder) SetTimeStart(timeStart *string) *StudentAssignmentChapterItemsBuilder {
+    b.TimeStart = timeStart
     return b
 }
 
-func (b *StudentAssignmentChapterItemsBuilder) SetTimeEnd(timeEnd string) *StudentAssignmentChapterItemsBuilder {
-    b.TimeEnd = &timeEnd
+func (b *StudentAssignmentChapterItemsBuilder) SetTimeEnd(timeEnd *string) *StudentAssignmentChapterItemsBuilder {
+    b.TimeEnd = timeEnd
     return b
 }
 

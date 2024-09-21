@@ -30,6 +30,7 @@ func (userRepository *UserRepository) GetUserByUserID(
 ) {
 	userRepository.DB.Preload("Student").
 		Preload("Supervisor").
+		Preload("Dept").
 		Where("user_id = ?", userId).
 		Find(user)
 }

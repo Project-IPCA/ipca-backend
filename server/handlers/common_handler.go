@@ -36,7 +36,12 @@ func NewCommonHandler(server *s.Server) *CommonHandler {
 func (commonHandler *CommonHandler) GetUserInfo(c echo.Context) error {
 	userRepository := repositories.NewUserRepository(commonHandler.server.DB)
 	existUser := utils.GetUserClaims(c, *userRepository)
-	response := responses.NewUserInfoResponse(existUser)
+
+	var allDepts []models.Department
+	deptRepository := repositories.NewDepartmentRepository(commonHandler.server.DB)
+	deptRepository.GetAllDepts(&allDepts)
+
+	response := responses.NewUserInfoResponse(existUser, allDepts)
 	return responses.Response(c, http.StatusOK, response)
 }
 
@@ -91,7 +96,12 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 	userService := userservice.NewUserService(commonHandler.server.DB)
 	userService.UpdateUserInfo(&existUser, updateUserInfoReq)
 
-	response := responses.NewUserInfoResponse(existUser)
+	var allDepts []models.Department
+	deptRepository := repositories.NewDepartmentRepository(commonHandler.server.DB)
+	deptRepository.GetAllDepts(&allDepts)
+
+	response := responses.NewUserInfoResponse(existUser, allDepts)
+
 	return responses.Response(c, http.StatusOK, response)
 }
 
@@ -104,7 +114,7 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Router			/api/common/get_keyword_list [post]
-func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error{
+func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error {
 	getKeywordListRequest := new(requests.GetKeywordListRequest)
 	if err := c.Bind(getKeywordListRequest); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
@@ -116,15 +126,15 @@ func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error{
 			"Invalid Request",
 		)
 	}
-	keywordList,err := utils.GetKeywordFromCode(getKeywordListRequest.Sourcecode)
-	if(err!=nil){
+	keywordList, err := utils.GetKeywordFromCode(getKeywordListRequest.Sourcecode)
+	if err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
 			fmt.Sprintf("Error While Running Sourcecode %s", err),
 		)
 	}
-	return responses.Response(c,http.StatusOK,keywordList)
+	return responses.Response(c, http.StatusOK, keywordList)
 }
 
 // @Description Keyword Check
@@ -136,7 +146,7 @@ func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error{
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Router			/api/common/keyword_check [post]
-func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error{
+func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
 	checkKeywordRequest := new(requests.CheckKeywordRequest)
 	if err := c.Bind(checkKeywordRequest); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
@@ -148,25 +158,28 @@ func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error{
 			"Invalid Request",
 		)
 	}
-	checkKeyword,err := utils.KeywordCheck(checkKeywordRequest.Sourcecode,checkKeywordRequest.ExerciseKeywordList)
-	if(err!=nil){
+	checkKeyword, err := utils.KeywordCheck(
+		checkKeywordRequest.Sourcecode,
+		checkKeywordRequest.ExerciseKeywordList,
+	)
+	if err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
 			fmt.Sprintf("Error While Running Sourcecode %s", err),
 		)
 	}
-	return responses.Response(c,http.StatusOK,checkKeyword)
+	return responses.Response(c, http.StatusOK, checkKeyword)
 }
 
-func (commonHandle *CommonHandler)GetStudentSubmission(c echo.Context) error{
-	//TODO Implement to query exercise submission from chapterId and Item Id
+func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
+	// TODO Implement to query exercise submission from chapterId and Item Id
 	stuId := c.QueryParam("stu_id")
 	chapterId := c.QueryParam("chapter_id")
 	// itemId := c.QueryParam("item_id")
 
-	stuUuid,err := uuid.Parse(stuId)
-	if(err!=nil){
+	stuUuid, err := uuid.Parse(stuId)
+	if err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
@@ -174,8 +187,8 @@ func (commonHandle *CommonHandler)GetStudentSubmission(c echo.Context) error{
 		)
 	}
 
-	chapterUuid,err := uuid.Parse(chapterId)
-	if(err!=nil){
+	chapterUuid, err := uuid.Parse(chapterId)
+	if err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
@@ -185,7 +198,7 @@ func (commonHandle *CommonHandler)GetStudentSubmission(c echo.Context) error{
 
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(commonHandle.server.DB)
 	var exerciseSubmissionList []models.ExerciseSubmission
-	exerciseSubmissionRepo.GetStudentSubmission(stuUuid,chapterUuid,&exerciseSubmissionList)
+	exerciseSubmissionRepo.GetStudentSubmission(stuUuid, chapterUuid, &exerciseSubmissionList)
 
-	return responses.Response(c,http.StatusOK,exerciseSubmissionList)
+	return responses.Response(c, http.StatusOK, exerciseSubmissionList)
 }

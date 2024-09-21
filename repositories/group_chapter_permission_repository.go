@@ -27,8 +27,8 @@ func (groupChapterPermissionRepository *GroupChapterPermissionRepository) GetGro
 }
 
 func (groupChapterPermissionRepository *GroupChapterPermissionRepository) GetGroupChapterPermissionByGroupID(
-	groupChapterPermission *models.GroupChapterPermission,
+	groupChapterPermission *[]models.GroupChapterPermission,
 	classId uuid.UUID,
 ) {
-	groupChapterPermissionRepository.DB.Where("class_id = ?", classId).Find(groupChapterPermission)
+	groupChapterPermissionRepository.DB.Preload("LabClassInfo").Where("class_id = ?", classId).Find(groupChapterPermission)
 }
