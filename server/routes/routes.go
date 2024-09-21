@@ -20,11 +20,11 @@ func ConfigureRoutes(server *s.Server) {
 	initHandler := handlers.NewInitHandler(server)
 
 	server.Echo.IPExtractor = echo.ExtractIPFromXFFHeader()
-	server.Echo.Static("/static","bucket")
-  
+	server.Echo.Static("/static", "bucket")
+
 	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
 	server.Echo.Use(middleware.Logger())
-  	server.Echo.Use(middleware.CORS())
+	server.Echo.Use(middleware.CORS())
 
 	authMiddleware := middlewares.NewAuthMiddleware(server)
 	jwtConfig := authMiddleware.GetJwtConfig()
@@ -53,14 +53,14 @@ func ConfigureRoutes(server *s.Server) {
 	)
 	supervisorAuthGroup.GET("/my_group_info/:group_id", supervisorHandler.GetMyGroupInfo)
 	supervisorAuthGroup.PUT("/my_group_info/:group_id", supervisorHandler.UpdateMyGroupInfo)
-	supervisorAuthGroup.POST("/save_exercise_testcase",supervisorHandler.SaveExerciseTestcase)
+	supervisorAuthGroup.POST("/save_exercise_testcase", supervisorHandler.SaveExerciseTestcase)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
 	// studentGroup.Use(echojwt.WithConfig(jwtConfig))
-	studentGroup.POST("/exercise_submit",studentHandler.ExerciseSubmit)
-	studentGroup.GET("/get_chapter_list/:stu_id",studentHandler.GetChapterList)
-	studentGroup.GET("/get_assigned_exercise",studentHandler.GetStudentAssignedExercise)
+	studentGroup.POST("/exercise_submit", studentHandler.ExerciseSubmit)
+	studentGroup.GET("/get_chapter_list/:stu_id", studentHandler.GetChapterList)
+	studentGroup.GET("/get_assigned_exercise", studentHandler.GetStudentAssignedExercise)
 
 	// Auth
 	authGroup := apiGroup.Group("/auth")
@@ -77,7 +77,8 @@ func ConfigureRoutes(server *s.Server) {
 	commonAuthGroup.PUT("/user_info", commonHandler.UpdateUserInfo)
 	commonAuthGroup.POST("/get_keyword_list", commonHandler.GetKeywordList)
 	commonAuthGroup.POST("/keyword_check", commonHandler.KeywordCheck)
-	commonAuthGroup.GET("/student_submission",commonHandler.GetStudentSubmission)
+	commonAuthGroup.GET("/student_submission", commonHandler.GetStudentSubmission)
+	commonAuthGroup.POST("/user_profile", commonHandler.UploadUserProfile)
 
 	// Test
 	apiGroup.GET("/greeting", testHandler.Greeting)

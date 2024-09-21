@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 
+	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
@@ -201,4 +202,41 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	exerciseSubmissionRepo.GetStudentSubmission(stuUuid, chapterUuid, &exerciseSubmissionList)
 
 	return responses.Response(c, http.StatusOK, exerciseSubmissionList)
+}
+
+// @Description Upload User Profile
+// @ID common-upload-user-profile
+// @Tags Common
+// @Accept  multipart/form-data
+// @Produce json
+// @Param file formData file true "Profile Image File"
+// @Success 200 {object} responses.FileResponse
+// @Failure 400 {object} responses.Error
+// @Security BearerAuth
+// @Router /api/common/user_profile [post]
+func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
+	file, err := c.FormFile("file")
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Image Uploaded")
+	}
+
+	minioAction := minioclient.NewMinioAction(commonHandler.server.Minio)
+	imageName, err := minioAction.UploadToMinio(
+		file,
+		commonHandler.server.Config.Minio.BucketProfile,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Failed to Upload Image")
+	}
+
+	imageUrl := fmt.Sprintf(
+		"http://localhost:%s/%s/%s",
+		commonHandler.server.Config.Minio.Port,
+		commonHandler.server.Config.Minio.BucketProfile,
+		imageName,
+	)
+
+	response := responses.NewFileResponse(imageName, imageUrl)
+
+	return responses.Response(c, http.StatusOK, response)
 }
