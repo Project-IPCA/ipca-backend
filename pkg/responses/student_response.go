@@ -10,6 +10,7 @@ import (
 
 type GetAllChapterResponse struct {
 	Index int `json:"index"`
+	ChapterId string `json:"chapter_id"`
 	Name string `json:"name"`
 	Marking int `json:"marking"`
 	FullMark int `json:"full_mark"`
@@ -39,6 +40,7 @@ func NewGetAllChapter (
 		}
 		getAllChapter = append(getAllChapter, GetAllChapterResponse{
 			Index: chapter.LabClassInfo.ChapterIndex,
+			ChapterId: chapter.ChapterID.String(),
 			Name: chapter.LabClassInfo.Name,
 			Marking: marking,
 			FullMark: chapter.LabClassInfo.FullMark,
