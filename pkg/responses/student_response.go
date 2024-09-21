@@ -8,6 +8,46 @@ import (
 	"github.com/google/uuid"
 )
 
+type GetAllChapterResponse struct {
+	Index int `json:"index"`
+	Name string `json:"name"`
+	Marking int `json:"marking"`
+	FullMark int `json:"full_mark"`
+	IsOpen bool `json:"is_open"`
+}
+
+func NewGetAllChapter (
+	chapterPermission []models.GroupChapterPermission,
+	studentChapterItem []models.StudentAssignmentChapterItem,
+)*[]GetAllChapterResponse{
+	getAllChapter := make([]GetAllChapterResponse,0)
+	for _,chapter := range chapterPermission{
+		canAccess := false
+		if(chapter.AllowAccessType == constants.AccessType.Always || chapter.AllowAccessType == constants.AccessType.TimerPaused){
+			canAccess = true
+		}else if (chapter.AllowAccessType == constants.AccessType.Timer || chapter.AllowAccessType == constants.AccessType.DateTime){
+			if(chapter.AccessTimeStart != nil && chapter.AccessTimeEnd != nil ){
+				now := time.Now()
+				canAccess = now.After(*chapter.AccessTimeStart) && now.Before(*chapter.AccessTimeEnd)
+			}
+		}
+		marking := 0
+		for _,studentItem := range studentChapterItem{
+			if(studentItem.ChapterID == chapter.ChapterID){
+				marking = marking + studentItem.Marking
+			}
+		}
+		getAllChapter = append(getAllChapter, GetAllChapterResponse{
+			Index: chapter.LabClassInfo.ChapterIndex,
+			Name: chapter.LabClassInfo.Name,
+			Marking: marking,
+			FullMark: chapter.LabClassInfo.FullMark,
+			IsOpen: canAccess,
+		})
+	}
+	return &getAllChapter
+}
+
 type GetChapterListResponse struct {
 	AccessTimeEnd   *time.Time    `json:"access_time_end"`
 	AccessTimeStart *time.Time    `json:"access_time_start"`
