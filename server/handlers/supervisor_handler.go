@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	// minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
@@ -598,6 +600,17 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 
 	filename := fmt.Sprintf("exercise_"+exerciseId.String()+".py")
+	tempFile,err := utils.CreateTempFile(filename,createLabExerciseReq.Sourcecode)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Create Temp File Fail %s",err))
+	}
+	defer os.Remove(tempFile.Name())
+	
+	// minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	// uploadFileName,err := minioAction.UploadToMinio(
+	// 	tempFile,
+	// 	supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+	// )
 	//TODO dir path to env
 	err = utils.CreateSourcecode("./bucket/supervisor",filename,createLabExerciseReq.Sourcecode)
 	if(err!=nil){
