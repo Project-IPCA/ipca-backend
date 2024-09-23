@@ -3,8 +3,6 @@ name: Deploy Backend
 on:
   push:
     branches: ["master", "dev"]
-  pull_request:
-    branches: ["master", "dev"]
 
   workflow_dispatch:
 
@@ -55,4 +53,9 @@ jobs:
           echo "REFRESH_SECRET"=${{ secrets.REFRESH_SECRET }} >> .env
 
       - name: Deploy Web Application
+        if: github.ref == 'refs/heads/master'
         run: docker compose -f docker-compose.prod.yml up -d --build --force-recreate && docker system prune -f
+
+      - name: Deploy Web Application (Dev)
+        if: github.ref == 'refs/heads/dev'
+        run: docker compose -f docker-compose.yml up -d --build --force-recreate && docker system prune -f
