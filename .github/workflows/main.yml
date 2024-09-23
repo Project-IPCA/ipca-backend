@@ -58,4 +58,4 @@ jobs:
 
       - name: Deploy Web Application (Dev)
         if: github.ref == 'refs/heads/dev'
-        run: docker compose -f docker-compose.yml up -d --build --force-recreate && docker system prune -f
+        run: docker compose -f docker-compose.dev.yml up -d --build --force-recreate && docker system prune -f
