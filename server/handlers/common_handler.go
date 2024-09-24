@@ -249,6 +249,7 @@ func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
 	imageName, err := minioAction.UploadToMinio(
 		file,
 		commonHandler.server.Config.Minio.BucketProfile,
+		false,
 	)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Failed to Upload Image")

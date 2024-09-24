@@ -167,16 +167,6 @@ func CleanupIsolate() error {
     return nil
 }
 
-//TODO implement create to minio
-func CreateSourcecode (dirPath string,filename string,sourceCode string)error{
-	createPath := filepath.Join(dirPath,filename)
-	err := os.WriteFile(createPath,[]byte(sourceCode),0644)
-	if(err!=nil){
-		return fmt.Errorf("error while write file %v",err)
-	}
-    return nil
-}
-
 func CreateTempFile(fileName string, sourceCode string) (*os.File, error) {
     tempFile, err := os.CreateTemp("", fileName)
     if err != nil {
@@ -197,14 +187,4 @@ func CreateTempFile(fileName string, sourceCode string) (*os.File, error) {
         return nil, fmt.Errorf("error while seeking temp file: %v", err)
     }
     return tempFile, nil
-}
-
-//TODO implement read from minio
-func GetSourcecode (dirPath string,filename string) (string,error) {
-    createPath := filepath.Join(dirPath,filename)
-    content, err := os.ReadFile(createPath)
-    if(err!=nil){
-		return "",fmt.Errorf("error while read file %v",err)
-	}
-    return string(content),nil
 }
