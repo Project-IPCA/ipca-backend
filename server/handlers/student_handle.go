@@ -317,7 +317,7 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 // @Tags Student
 // @Accept json
 // @Produce json
-// @Param chapter_id query string false "chapter_idx"
+// @Param chapter_idx query string false "chapter_idx"
 // @Param item_id query string false "item_id"
 // @Success 200		{object}	responses.StudentAssignmentItemResponse
 // @Failure 400		{object}	responses.Error
