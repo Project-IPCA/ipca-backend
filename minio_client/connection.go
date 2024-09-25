@@ -26,7 +26,7 @@ func Init(cfg *config.Config) *minio.Client {
 		panic("failed to list bucket minio: " + err.Error())
 	}
 
-	bucketNames := []string{cfg.Minio.BucketProfile, cfg.Minio.BucketStudentCode}
+	bucketNames := []string{cfg.Minio.BucketProfile, cfg.Minio.BucketStudentCode, cfg.Minio.BucketSupervisorCode}
 	for _, bucketName := range bucketNames {
 		isExist := false
 		for _, bucket := range existBuckets {

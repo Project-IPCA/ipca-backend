@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 
+	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
@@ -84,9 +86,19 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID,chaperUuid,&submissionList)
 
 	attemps := len(submissionList) + 1
-	//TODO Improve filename and dir path to env
-	filename := fmt.Sprintf("%s-%04d.py",existUser.Username,attemps)
-	err = utils.CreateSourcecode("./bucket/student",filename,exerciseSubmitReq.Sourcecode)
+	filename := fmt.Sprintf("%s-%04d*.py",existUser.Username,attemps)
+	tempFile,err := utils.CreateTempFile(filename,exerciseSubmitReq.Sourcecode)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Create Temp File Fail %s",err))
+	}
+	defer os.Remove(tempFile.Name())
+	
+	minioAction := minioclient.NewMinioAction(studentHandler.server.Minio)
+	uploadFileName,err := minioAction.UploadToMinio(
+		tempFile,
+		studentHandler.server.Config.Minio.BucketStudentCode,
+		true,
+	)
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -96,7 +108,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	submissionId, err := exerciseSubmissionService.Create(
 		existUser.UserID,
 		*studentAssignChapterItem.ExerciseID,
-		filename,
+		uploadFileName,
 		0,
 		&isInfLoop,
 		nil,

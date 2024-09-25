@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
@@ -597,15 +600,25 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Create Exercise Fail")
 	}
 
-	filename := fmt.Sprintf("exercise_"+exerciseId.String()+".py")
-	//TODO dir path to env
-	err = utils.CreateSourcecode("./bucket/supervisor",filename,createLabExerciseReq.Sourcecode)
+	filename := fmt.Sprintf("exercise_"+exerciseId.String()+"*.py")
+	tempFile,err := utils.CreateTempFile(filename,createLabExerciseReq.Sourcecode)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Create Temp File Fail %s",err))
+	}
+	defer os.Remove(tempFile.Name())
+	
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	uploadFileName,err := minioAction.UploadToMinio(
+		tempFile,
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		false,
+	)
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
-	labExerciseRepo.UpdateLabExerciseSourcecode(exerciseId.String(),filename)
+	labExerciseRepo.UpdateLabExerciseSourcecode(exerciseId.String(),uploadFileName)
 	var labExerciseData models.LabExercise
 	labExerciseRepo.GetLabExerciseByID(exerciseId.String(),&labExerciseData)
 	
@@ -708,10 +721,17 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		}
 	}
 
-	//TODO dir path to env
-	sourcecode,err := utils.GetSourcecode("./bucket/supervisor",*labExercise.Sourcecode)
-	if(err!= nil){
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Get Data From Sourcecode File")
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	minioFile,err := minioAction.GetFromMinio(supervisorHandler.server.Config.Minio.BucketSupervisorCode,*labExercise.Sourcecode)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Get Data From Minio Object Fail")
+	}
+	defer minioFile.Close()
+
+	var sourcecode strings.Builder
+	_, err = io.Copy(&sourcecode, minioFile)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Copy Data From Minio Object Fail")
 	}
 	
 	rabbit := rabbitmq_client.NewRabbitMQAction(supervisorHandler.server.RabitMQ,supervisorHandler.server.Config)
@@ -720,7 +740,7 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		JobType: "upsert-testcase",
 		ExerciseId: saveExerciseTesetcaseReq.ExerciseID,
 		TestcaseList: saveExerciseTesetcaseReq.TestCaseList,
-		Sourcecode: sourcecode,
+		Sourcecode: sourcecode.String(),
 	}
 	err = rabbit.SendQueue(message)
 	if(err!=nil){

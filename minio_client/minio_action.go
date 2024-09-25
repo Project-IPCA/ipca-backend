@@ -3,7 +3,9 @@ package minioclient
 import (
 	"context"
 	"fmt"
+	"io"
 	"mime/multipart"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -21,33 +23,74 @@ func NewMinioAction(minio *minio.Client) *MinioAction {
 }
 
 func (minioAction *MinioAction) UploadToMinio(
-	file *multipart.FileHeader,
+	file interface{},
 	bucketName string,
+	isNotGenName bool,
 ) (string, error) {
-	fileContent, err := file.Open()
-	if err != nil {
-		return "", err
+	var fileContent io.Reader
+	var fileName string
+	var fileSize int64
+	var contentType string
+
+	switch f := file.(type) {
+	case *multipart.FileHeader:
+		var err error
+		fileContent, err = f.Open()
+		if err != nil {
+			return "", fmt.Errorf("error opening multipart file: %w", err)
+		}
+		defer fileContent.(io.ReadCloser).Close()
+		fileName = f.Filename
+		fileSize = f.Size
+		contentType = f.Header.Get("Content-Type")
+	case *os.File:
+		fileInfo, err := f.Stat()
+		if err != nil {
+			return "", fmt.Errorf("error getting file info: %w", err)
+		}
+		fileContent = f
+		fmt.Println(fileInfo.Name())
+		fileName = fileInfo.Name()
+		fileSize = fileInfo.Size()
+		contentType = "application/octet-stream"
+	default:
+		return "", fmt.Errorf("unsupported file type")
 	}
-	defer fileContent.Close()
 
-	fileExtension := strings.ToLower(filepath.Ext(file.Filename))
-	objectUlid := utils.NewULID()
-	objectName := fmt.Sprintf("%s%s", objectUlid, fileExtension)
+	var objectName string
+	if(isNotGenName){
+		objectName = fileName
+	}else{
+		fileExtension := strings.ToLower(filepath.Ext(fileName))
+		objectUlid := utils.NewULID()
+		objectName = fmt.Sprintf("%s%s", objectUlid, fileExtension)
+	}
 
-	contentType := file.Header.Get("Content-Type")
-	_, err = minioAction.Minio.PutObject(
+	_, err := minioAction.Minio.PutObject(
 		context.Background(),
 		bucketName,
 		objectName,
 		fileContent,
-		file.Size,
+		fileSize,
 		minio.PutObjectOptions{
 			ContentType: contentType,
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error uploading to MinIO: %w", err)
 	}
 
 	return objectName, nil
+}
+
+func (minioAction *MinioAction) GetFromMinio(
+	bucketName string,
+	objectName string,
+) (*minio.Object,error){
+	object, err := minioAction.Minio.GetObject(context.Background(), bucketName,objectName, minio.GetObjectOptions{})
+	if err != nil {
+		fmt.Println(err)
+		return nil,fmt.Errorf("error while getting object from minio : %v",err)
+	}
+	return object,nil
 }

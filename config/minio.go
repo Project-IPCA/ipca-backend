@@ -9,6 +9,7 @@ type MinioConfig struct {
 	Password          string
 	BucketProfile     string
 	BucketStudentCode string
+	BucketSupervisorCode string
 }
 
 func LoadMinioConfig() MinioConfig {
@@ -19,5 +20,6 @@ func LoadMinioConfig() MinioConfig {
 		Password:          os.Getenv("MINIO_ROOT_PASSWORD"),
 		BucketProfile:     os.Getenv("MINIO_BUCKET_PROFILE"),
 		BucketStudentCode: os.Getenv("MINIO_BUCKET_STUDENT_CODE"),
+		BucketSupervisorCode : os.Getenv("MINIO_BUCKET_SUPERVISOR_CODE"),
 	}
 }
