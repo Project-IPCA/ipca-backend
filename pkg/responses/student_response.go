@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"sort"
 	"time"
 
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -15,11 +16,13 @@ type GetAllChapterResponse struct {
 	Marking int `json:"marking"`
 	FullMark int `json:"full_mark"`
 	IsOpen bool `json:"is_open"`
+	LastExerciseSuceess int `json:"last_exercise_success"`
 }
 
 func NewGetAllChapter (
 	chapterPermission []models.GroupChapterPermission,
 	studentChapterItem []models.StudentAssignmentChapterItem,
+	labClassInfos	[]models.LabClassInfo,
 )*[]GetAllChapterResponse{
 	getAllChapter := make([]GetAllChapterResponse,0)
 	for _,chapter := range chapterPermission{
@@ -32,12 +35,39 @@ func NewGetAllChapter (
 				canAccess = now.After(*chapter.AccessTimeStart) && now.Before(*chapter.AccessTimeEnd)
 			}
 		}
+		var labClassInfo models.LabClassInfo
+		for _,labInfo := range labClassInfos{
+			if(labInfo.ChapterID == chapter.ChapterID){
+				labClassInfo = labInfo
+				break
+			}
+		}
 		marking := 0
+		currntItem := 0
+		studentNotDoneItemList := make([]models.StudentAssignmentChapterItem,0)
 		for _,studentItem := range studentChapterItem{
 			if(studentItem.ChapterID == chapter.ChapterID){
 				marking = marking + studentItem.Marking
+				currntItem = currntItem + 1
+				if(studentItem.Marking == 0){
+					studentNotDoneItemList = append(studentNotDoneItemList, studentItem)
+				}
+			}
+			if(currntItem >= labClassInfo.NoItems){
+				break
 			}
 		}
+		
+		minNotDone := 5
+		if(len(studentNotDoneItemList) >0){
+			minNotDone = studentNotDoneItemList[0].ItemID
+			for _,notDone := range studentNotDoneItemList{
+				if(notDone.ItemID < minNotDone){
+					minNotDone = notDone.ItemID
+				}
+			}
+		}
+		
 		getAllChapter = append(getAllChapter, GetAllChapterResponse{
 			Index: chapter.LabClassInfo.ChapterIndex,
 			ChapterId: chapter.ChapterID.String(),
@@ -45,8 +75,12 @@ func NewGetAllChapter (
 			Marking: marking,
 			FullMark: chapter.LabClassInfo.FullMark,
 			IsOpen: canAccess,
+			LastExerciseSuceess: minNotDone,
 		})
 	}
+	sort.Slice(getAllChapter, func(i, j int) bool {
+		return getAllChapter[i].Index < getAllChapter[j].Index
+	})
 	return &getAllChapter
 }
 

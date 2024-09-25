@@ -170,6 +170,9 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 		SubmissionId: submissionId,
 		SourceCode: exerciseSubmitReq.Sourcecode,
 		TestCaseList: filterTestcase,
+		StudentID: userId,
+		ChapterId: chaperUuid,
+		ItemId: exerciseSubmitReq.ItemId,
 	}
 
 	rabbit := rabbitmq_client.NewRabbitMQAction(studentHandler.server.RabitMQ,studentHandler.server.Config)
@@ -258,6 +261,7 @@ func (StudentHandler *StudentHandler) GetALLChapter (c echo.Context) error {
 	response := responses.NewGetAllChapter(
 		groupChapterPermission,
 		allStudentAssignChapterItems,
+		labClassInfos,
 	)
 
 	return responses.Response(c,http.StatusOK,response)
