@@ -29,3 +29,10 @@ func (labClassInfoRepository *LabClassInfoRepository) GetAllLabClassInfos(
 ) {
 	labClassInfoRepository.DB.Order("chapter_index ASC").Find(labClassInfos)
 }
+
+func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndex(
+	labClassInfo *models.LabClassInfo,
+	chapterIdx int,
+){
+	labClassInfoRepository.DB.Where("chapter_index",chapterIdx).Find(labClassInfo)
+}
