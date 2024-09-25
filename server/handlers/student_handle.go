@@ -86,7 +86,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID,chaperUuid,&submissionList)
 
 	attemps := len(submissionList) + 1
-	filename := fmt.Sprintf("%s-%04d.py",existUser.Username,attemps)
+	filename := fmt.Sprintf("%s-%04d*.py",existUser.Username,attemps)
 	tempFile,err := utils.CreateTempFile(filename,exerciseSubmitReq.Sourcecode)
 	if(err!=nil){
 		return responses.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Create Temp File Fail %s",err))
@@ -96,7 +96,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	minioAction := minioclient.NewMinioAction(studentHandler.server.Minio)
 	uploadFileName,err := minioAction.UploadToMinio(
 		tempFile,
-		studentHandler.server.Config.Minio.BucketSupervisorCode,
+		studentHandler.server.Config.Minio.BucketStudentCode,
 		true,
 	)
 	if(err!=nil){
