@@ -36,6 +36,9 @@ type ExerciseSubmissionRabbitMessage struct {
 	SubmissionId uuid.UUID `json:"submission_id"`
 	SourceCode string `json:"sourcecode"`
 	TestCaseList []models.ExerciseTestcase `json:"testcase_list"`
+	StudentID uuid.UUID `json:"stu_id"`
+	ChapterId uuid.UUID `json:"chapter_id"`
+	ItemId int	`json:"item_id"`
 }
 
 type LogDataInfo struct {
