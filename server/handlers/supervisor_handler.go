@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -842,4 +843,60 @@ func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem (c ec
 	}
 
 	return responses.MessageResponse(c,http.StatusOK,"Updated All AssignedChapterItem Successfully'")
+}
+
+// @Description Get Lab Chapter Info
+// @ID supervisor-get-lab-chapter-info
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id query string false "group_id"
+// @Param chapter_idx query string false "chapter_idx"
+// @Success 200		{array}	responses.GetLabChapterInfoResponse
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/get_lab_chapter_info [get]
+func (supervisorHandler *SupervisorHandler) GetLabChapterInfo (c echo.Context) error{
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role != constants.Role.Supervisor){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	groupId := c.QueryParam("group_id")
+	chapterIdx := c.QueryParam("chapter_idx")
+	groupUuid,err := uuid.Parse(groupId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Group_id") 
+	} 
+	chapterIdxInt,err := strconv.Atoi(chapterIdx)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Chapter_idx To Int") 
+	}
+
+	var labClassInfo models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo,chapterIdxInt)
+
+	var groupChapterSelectItem []models.GroupChapterSelectedItem
+	groupChapterSelectItemRepo := repositories.NewGroupChapterSelectedItemRepository(supervisorHandler.server.DB)
+	groupChapterSelectItemRepo.GetSelectedItemByGroupChapterId(&groupChapterSelectItem,groupUuid,labClassInfo.ChapterID)
+
+	var exerciseList []models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByChapterID(&exerciseList,labClassInfo.ChapterID)
+
+	response := responses.NewGetLabChapterInfoResponse(
+		labClassInfo,
+		groupUuid,
+		groupChapterSelectItem,
+		exerciseList,
+	)
+	return responses.Response(c,http.StatusOK,response)
 }
