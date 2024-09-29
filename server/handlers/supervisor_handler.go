@@ -27,6 +27,7 @@ import (
 	groupassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/group_assignment_chapter_item"
 	groupassignmentexercise "github.com/Project-IPCA/ipca-backend/services/group_assignment_exercise"
 	groupchapterpermission "github.com/Project-IPCA/ipca-backend/services/group_chapter_permission"
+	groupchapterselecteditem "github.com/Project-IPCA/ipca-backend/services/group_chapter_selected_item"
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	"github.com/Project-IPCA/ipca-backend/services/token"
@@ -747,4 +748,98 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Send Queue RabbitMQ")
 	}
 	return responses.MessageResponse(c,http.StatusOK,"Testcases Are Being Run")
+}
+
+// @Description Update Group Assigned Chapter Item
+// @ID supervisor-update-group-assigned-chapter-item
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.UpdateGroupAssignedChapterItemRequest	true	"Update Group Assigned Chapter Item"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/update_group_assigned_chapter_item [post]
+func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem (c echo.Context) error{
+	updateGroupAssignedChapterItemReq := new(requests.UpdateGroupAssignedChapterItemRequest)
+	if err:= c.Bind(updateGroupAssignedChapterItemReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := updateGroupAssignedChapterItemReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,updateGroupAssignedChapterItemReq.GroupId)
+
+	var classLabStaff []models.ClassLabStaff
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+	classLabStaffRepo.GetClassLabStaffByGroupID(&classLabStaff,updateGroupAssignedChapterItemReq.GroupId)
+
+	havePermission := false
+	if(userId == *classSchedule.SupervisorID){
+		havePermission = true
+	}else{
+		for _,staff := range classLabStaff{
+			if(staff.StaffID == userId){
+				havePermission = true
+				break
+			}
+		}
+	}
+	
+	if(!havePermission){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission") 
+	}
+
+	var groupChapterSelectedItem []models.GroupChapterSelectedItem
+	groupChapterSelectedItemRepo := repositories.NewGroupChapterSelectedItemRepository(supervisorHandler.server.DB)
+	groupChapterSelectedItemRepo.GetSelectedItemByGroupChapterItemId(&groupChapterSelectedItem,updateGroupAssignedChapterItemReq.GroupId,updateGroupAssignedChapterItemReq.ChapterId,updateGroupAssignedChapterItemReq.ItemId)
+
+	existSelectItem := make(map[uuid.UUID]bool)
+	for _,existItem := range groupChapterSelectedItem{
+		existSelectItem[existItem.ExerciseID] = true
+	}
+
+	groupChapterSelectedItemService := groupchapterselecteditem.NewGroupChapterSelectedItemService(supervisorHandler.server.DB)
+
+	for _,selectItem := range updateGroupAssignedChapterItemReq.SelectedItem{
+		if(!existSelectItem[selectItem]){
+			err := groupChapterSelectedItemService.Create(
+				updateGroupAssignedChapterItemReq.GroupId,
+				updateGroupAssignedChapterItemReq.ChapterId,
+				int64(updateGroupAssignedChapterItemReq.ItemId),
+				selectItem)
+			if(err!=nil){
+				return responses.ErrorResponse(c, http.StatusInternalServerError, "Add Selected Exercise Fail") 
+			}
+		}
+	}
+
+	newExistSelectItem := make(map[uuid.UUID]bool)
+	for _,existItem := range updateGroupAssignedChapterItemReq.SelectedItem{
+		newExistSelectItem[existItem] = true
+	}
+
+	for _,selectItem := range groupChapterSelectedItem{
+		if(!newExistSelectItem[selectItem.ExerciseID]){
+			err := groupChapterSelectedItemService.Delete(&selectItem)
+			if(err!=nil){
+				return responses.ErrorResponse(c, http.StatusInternalServerError, "Delete Selected Exercise Fail") 
+			}
+		}
+	}
+
+	return responses.MessageResponse(c,http.StatusOK,"Updated All AssignedChapterItem Successfully'")
 }
