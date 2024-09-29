@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/google/uuid"
 )
 
 type LabExerciseRepositoryQ interface {
@@ -36,4 +37,8 @@ func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(exerciseI
 
 func (labExerciesRepository *LabExerciseRepository) UpdateLabExerciseSourcecode(exerciseId string,filename string){
 	labExerciesRepository.DB.Model(&models.LabExercise{}).Where("exercise_id = ?",exerciseId).Update("sourcecode",filename)
+}
+
+func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByChapterID(labExercise *[]models.LabExercise,chapterId uuid.UUID) {
+	labExerciesRepository.DB.Where("chapter_id = ?",chapterId).Find(labExercise)
 }

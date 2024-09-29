@@ -14,6 +14,18 @@ func NewGroupChapterSelectedItemRepository(db *gorm.DB) *GroupChapterSelectedIte
 	return &GroupChapterSelectedItemRepository{DB: db}
 }
 
+func (groupChapterSelectedItemRepo *GroupChapterSelectedItemRepository) GetSelectedItemByGroupChapterId(
+	selectedItems *[]models.GroupChapterSelectedItem,
+	groupId uuid.UUID,
+	chapterId uuid.UUID,
+){
+	groupChapterSelectedItemRepo.DB.
+	Preload("ClassSchedule").
+    Preload("LabClassInfo").
+    Preload("LabExercise").
+	Where("group_id = ? AND chapter_id = ?",groupId,chapterId).Find(selectedItems)
+}
+
 func (groupChapterSelectedItemRepo *GroupChapterSelectedItemRepository) GetSelectedItemByGroupChapterItemId(
 	selectedItems *[]models.GroupChapterSelectedItem,
 	groupId uuid.UUID,
