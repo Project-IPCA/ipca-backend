@@ -22,8 +22,8 @@ func (service *Service) Create(
 		Build()
 
 	err := service.DB.Create(&groupChapterSelectedItem)
-	if err != nil {
-		return fmt.Errorf("fail when insert data to group_chapter_select_items : %v",err)
+	if err.Error != nil {
+		return fmt.Errorf("fail when insert data to group_chapter_select_items : %v",err.Error)
 	}
 	
 	return nil

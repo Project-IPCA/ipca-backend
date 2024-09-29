@@ -9,9 +9,9 @@ import (
 func (service *Service) Delete (
 	groupChapterSelectedItem *models.GroupChapterSelectedItem,
 ) error {
-	err := service.DB.Delete(groupChapterSelectedItem)
-	if(err!= nil){
-		return fmt.Errorf("error while delete item : %v" ,err)
+	err := service.DB.Delete(*groupChapterSelectedItem)
+	if(err.Error!= nil){
+		return fmt.Errorf("error while delete item : %v" ,err.Error)
 	}
 	return nil
 }
