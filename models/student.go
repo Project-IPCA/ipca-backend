@@ -11,6 +11,8 @@ type Student struct {
 	Note      *string    `gorm:"type:varchar(64);default:null"`
 	MidCore   float64    `gorm:"not null;default:0"`
 	CanSubmit bool       `gorm:"type:boolean;not null;default:true"`
+	User        *User      `gorm:"foreignKey:StuID;references:UserID"`
+	Assignments []StudentAssignmentChapterItem `gorm:"foreignKey:StuID;"`
 }
 
 func (Student) TableName() string {
