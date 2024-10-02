@@ -900,3 +900,44 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo (c echo.Context) e
 	)
 	return responses.Response(c,http.StatusOK,response)
 }
+
+// @Description Get Student Group List
+// @ID supervisor-get-student-group-list
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id query string false "group_id"
+// @Success 200		{object}	responses.GetStudentWithAssigmentScoreResponse
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/get_student_group_list [get]
+func (supervisorHandler *SupervisorHandler) GetStudentGroupList (c echo.Context) error{
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role != constants.Role.Supervisor){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	groupId := c.QueryParam("group_id")
+	groupUuid,err := uuid.Parse(groupId)
+	if(err!=nil){
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Group_id") 
+	}
+
+	var labClassInfo []models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo)
+
+	var student []models.Student
+	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+	studentRepo.GetStudentsAndAssignmentScoreByGroupID(&student,groupUuid)
+
+	response := responses.NewGetStudentWithAssigmentScoreByGroupID(labClassInfo,student,groupUuid)
+	return responses.Response(c,http.StatusOK,response)
+}

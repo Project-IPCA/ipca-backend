@@ -22,6 +22,20 @@ type StudentRepository struct {
 	DB *gorm.DB
 }
 
+type StudentWithAssignments struct {
+	Username  string
+	FirstName *string
+	LastName  *string
+	Assignments []AssignmentScore
+}
+
+type AssignmentScore struct {
+	ChapterID uuid.UUID
+	ItemID    int
+	ExerciseID *uuid.UUID
+	Marking    int
+}
+
 func NewStudentRepository(db *gorm.DB) *StudentRepository {
 	return &StudentRepository{DB: db}
 }
@@ -38,4 +52,11 @@ func (studentRepository *StudentRepository) GetStudentByStuID(
 	stuId uuid.UUID,
 ) {
 	studentRepository.DB.Where("stu_id = ?", stuId).Find(student)
+}
+
+func (studentRepository *StudentRepository) GetStudentsAndAssignmentScoreByGroupID(
+	student *[]models.Student,
+	groupId uuid.UUID,
+) {
+	studentRepository.DB.Preload("User").Preload("Assignments").Where("group_id = ?", groupId).Find(student)
 }
