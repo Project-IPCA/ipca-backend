@@ -176,6 +176,7 @@ func NewGetChapterListResponse(
 
 type StudentAssignmentItemResponse struct {
 	ExerciseID             uuid.UUID          `json:"exercise_id"`
+	ChapterID              uuid.UUID          `json:"chapter_id"`
 	ChapterIdx             int                `json:"chapter_index"`
 	Level                  string             `json:"level"`
 	Name                   string             `json:"name"`
@@ -224,6 +225,7 @@ func NewGetStudentAssignmentItemResponse(
 
 	response := StudentAssignmentItemResponse{
 		ExerciseID:             labExercise.ExerciseID,
+		ChapterID:              *labExercise.ChapterID,
 		ChapterIdx:             labExercise.Chapter.ChapterIndex,
 		Level:                  *labExercise.Level,
 		Name:                   *labExercise.Name,
