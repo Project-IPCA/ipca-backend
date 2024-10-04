@@ -49,6 +49,7 @@ jobs:
           echo "MINIO_PORT"=${{ secrets.MINIO_PORT }} >> .env
           echo "MINIO_BUCKET_PROFILE"=${{ secrets.MINIO_BUCKET_PROFILE }} >> .env
           echo "MINIO_BUCKET_STUDENT_CODE"=${{ secrets.MINIO_BUCKET_STUDENT_CODE }} >> .env
+          echo "MINIO_BUCKET_SUPERVISOR_CODE=${{ secrets.MINIO_BUCKET_SUPERVISOR_CODE }}" >> .env
           echo "MINIO_ROOT_USER"=${{ secrets.MINIO_ROOT_USER }} >> .env
           echo "MINIO_ROOT_PASSWORD"=${{ secrets.MINIO_ROOT_PASSWORD }} >> .env
 
