@@ -1,9 +1,10 @@
 package requests
 
 import (
-	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+
+	"github.com/Project-IPCA/ipca-backend/models"
 )
 
 type AddStudentsTextRequest struct {
@@ -17,11 +18,9 @@ func (asr AddStudentsTextRequest) Validate() error {
 }
 
 type ExcerciseSubmitRequest struct {
-	StudentId string `json:"stu_id" validate:"required"`
-	ChapterID string `json:"chapter_id" validate:"required"`
-	ItemId 	  int `json:"item_id" validate:"required"`
+	ChapterID  string `json:"chapter_id" validate:"required"`
+	ItemId     int    `json:"item_id"    validate:"required"`
 	Sourcecode string `json:"sourcecode" validate:"required"`
-	JobID		string `json:"job_id" validate:"required"`
 }
 
 func (esr ExcerciseSubmitRequest) Validate() error {
@@ -30,24 +29,23 @@ func (esr ExcerciseSubmitRequest) Validate() error {
 }
 
 type ExerciseSubmissionRabbitMessage struct {
-	JobId string `json:"job_id"`
-	JobType string `json:"job_type"`
-	LogData LogDataInfo `json:"log_data"`
-	SubmissionId uuid.UUID `json:"submission_id"`
-	SourceCode string `json:"sourcecode"`
+	JobId        string                    `json:"job_id"`
+	JobType      string                    `json:"job_type"`
+	LogData      LogDataInfo               `json:"log_data"`
+	SubmissionId uuid.UUID                 `json:"submission_id"`
+	SourceCode   string                    `json:"sourcecode"`
 	TestCaseList []models.ExerciseTestcase `json:"testcase_list"`
-	StudentID uuid.UUID `json:"stu_id"`
-	ChapterId uuid.UUID `json:"chapter_id"`
-	ItemId int	`json:"item_id"`
+	StudentID    uuid.UUID                 `json:"stu_id"`
+	ChapterId    uuid.UUID                 `json:"chapter_id"`
+	ItemId       int                       `json:"item_id"`
 }
 
 type LogDataInfo struct {
-	GroupID    uuid.UUID `json:"group_id"`
-	Username   string     `json:"username"`
-	RemoteIP   string    `json:"remote_ip"`
-	RemotePort int       `json:"remote_port"`
-	Agent      string    `json:"agent"`
-	PageName   string     `json:"page_name"`
-	Action    	models.LogExerciseSubmissionAction    `json:"action"`
+	GroupID    uuid.UUID                          `json:"group_id"`
+	Username   string                             `json:"username"`
+	RemoteIP   string                             `json:"remote_ip"`
+	RemotePort int                                `json:"remote_port"`
+	Agent      string                             `json:"agent"`
+	PageName   string                             `json:"page_name"`
+	Action     models.LogExerciseSubmissionAction `json:"action"`
 }
-

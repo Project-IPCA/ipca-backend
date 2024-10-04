@@ -8,6 +8,10 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
@@ -22,16 +26,13 @@ import (
 	exercisesubmission "github.com/Project-IPCA/ipca-backend/services/exercise_submission"
 	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
 	"github.com/Project-IPCA/ipca-backend/services/token"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 )
 
 type StudentHandler struct {
 	server *s.Server
 }
 
-func NewStudentHandle(server *s.Server) *StudentHandler{
+func NewStudentHandle(server *s.Server) *StudentHandler {
 	return &StudentHandler{server: server}
 }
 
@@ -47,9 +48,9 @@ func NewStudentHandle(server *s.Server) *StudentHandler{
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/student/exercise_submit [post]
-func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
+func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	exerciseSubmitReq := new(requests.ExcerciseSubmitRequest)
-	if err:= c.Bind(exerciseSubmitReq); err != nil {
+	if err := c.Bind(exerciseSubmitReq); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
 	}
 	if err := exerciseSubmitReq.Validate(); err != nil {
@@ -67,43 +68,56 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 	userRepository := repositories.NewUserRepository(studentHandler.server.DB)
 	userRepository.GetUserByUserID(&existUser, userId)
 
-	if(*existUser.Role != constants.Role.Student || !existUser.Student.CanSubmit){
+	if *existUser.Role != constants.Role.Student || !existUser.Student.CanSubmit {
 		return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Submmit Now")
 	}
 
-	chaperUuid,err := uuid.Parse(exerciseSubmitReq.ChapterID)
-	if(err!=nil){
+	chapterUuid, err := uuid.Parse(exerciseSubmitReq.ChapterID)
+	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "GroupID Is Not UUID")
 	}
 
-	//TODO add validate group permission and assign chapter item
+	// TODO add validate group permission and assign chapter item
 	var studentAssignChapterItem models.StudentAssignmentChapterItem
-	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(studentHandler.server.DB)
-	studentAssignChapterItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItem,userId,chaperUuid,exerciseSubmitReq.ItemId)
+	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		studentHandler.server.DB,
+	)
+	studentAssignChapterItemRepo.GetStudentAssignChapterItem(
+		&studentAssignChapterItem,
+		userId,
+		chapterUuid,
+		exerciseSubmitReq.ItemId,
+	)
 
 	var submissionList []models.ExerciseSubmission
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(studentHandler.server.DB)
-	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID,chaperUuid,&submissionList)
+	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID, chapterUuid, &submissionList)
 
 	attemps := len(submissionList) + 1
-	filename := fmt.Sprintf("%s-%04d*.py",existUser.Username,attemps)
-	tempFile,err := utils.CreateTempFile(filename,exerciseSubmitReq.Sourcecode)
-	if(err!=nil){
-		return responses.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Create Temp File Fail %s",err))
+	filename := fmt.Sprintf("%s-%04d*.py", existUser.Username, attemps)
+	tempFile, err := utils.CreateTempFile(filename, exerciseSubmitReq.Sourcecode)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Create Temp File Fail %s", err),
+		)
 	}
 	defer os.Remove(tempFile.Name())
-	
+
 	minioAction := minioclient.NewMinioAction(studentHandler.server.Minio)
-	uploadFileName,err := minioAction.UploadToMinio(
+	uploadFileName, err := minioAction.UploadToMinio(
 		tempFile,
 		studentHandler.server.Config.Minio.BucketStudentCode,
 		true,
 	)
-	if(err!=nil){
+	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(studentHandler.server.DB)
+	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(
+		studentHandler.server.DB,
+	)
 	isInfLoop := false
 	submissionId, err := exerciseSubmissionService.Create(
 		existUser.UserID,
@@ -115,77 +129,89 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 		nil,
 		nil,
 	)
-	if(err!= nil){
+	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	exerciseTestcaseRepo := repositories.NewExerciseTestcaseRepository(studentHandler.server.DB)
 	var testcaseList []models.ExerciseTestcase
-	exerciseTestcaseRepo.GetTestcasesByExerciseID(*studentAssignChapterItem.ExerciseID,&testcaseList)
+	exerciseTestcaseRepo.GetTestcasesByExerciseID(
+		*studentAssignChapterItem.ExerciseID,
+		&testcaseList,
+	)
 
 	filterTestcase := make([]models.ExerciseTestcase, 0)
-    for _, testcase := range testcaseList {
-        if (testcase.IsActive != nil && *testcase.IsActive) {
-            filterTestcase = append(filterTestcase, testcase)
-        }
-    }
+	for _, testcase := range testcaseList {
+		if testcase.IsActive != nil && *testcase.IsActive {
+			filterTestcase = append(filterTestcase, testcase)
+		}
+	}
 
 	labExerciseRepo := repositories.NewLabExerciseRepository(studentHandler.server.DB)
 	var labExercise models.LabExercise
-	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItem.ExerciseID.String(),&labExercise)
+	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItem.ExerciseID.String(), &labExercise)
+
+	jobId := uuid.New().String()
 
 	logAction := models.LogExerciseSubmissionAction{
-		StuId: existUser.UserID,
-		JobId: exerciseSubmitReq.JobID,
-		Status: "Pending",
-		SubmissionId: submissionId,
-		Attempt: fmt.Sprintf("%04d",attemps),
+		StuId:              userId,
+		JobId:              jobId,
+		Status:             "Pending",
+		SubmissionId:       submissionId,
+		Attempt:            fmt.Sprintf("%04d", attemps),
 		SourcecodeFilename: filename,
 	}
 
-	logActionString,err := json.Marshal(logAction)
-	if(err!= nil){
+	logActionString, err := json.Marshal(logAction)
+	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	remoteIP := c.RealIP()
-    if remoteIP == "" {
-        remoteIP = c.Request().RemoteAddr
-    }
+	if remoteIP == "" {
+		remoteIP = c.Request().RemoteAddr
+	}
 	userAgent := c.Request().UserAgent()
 
 	logData := requests.LogDataInfo{
-		GroupID: *existUser.Student.GroupID,
+		GroupID:  *existUser.Student.GroupID,
 		Username: existUser.Username,
 		RemoteIP: remoteIP,
-		Agent: userAgent,
+		Agent:    userAgent,
 		PageName: "exercise_submit",
-		Action: logAction,
+		Action:   logAction,
 	}
 
 	rabbitMessage := requests.ExerciseSubmissionRabbitMessage{
-		JobId: exerciseSubmitReq.JobID,
-		JobType: "exercise-submit",
-		LogData: logData,
+		JobId:        jobId,
+		JobType:      "exercise-submit",
+		LogData:      logData,
 		SubmissionId: submissionId,
-		SourceCode: exerciseSubmitReq.Sourcecode,
+		SourceCode:   exerciseSubmitReq.Sourcecode,
 		TestCaseList: filterTestcase,
-		StudentID: userId,
-		ChapterId: chaperUuid,
-		ItemId: exerciseSubmitReq.ItemId,
+		StudentID:    userId,
+		ChapterId:    chapterUuid,
+		ItemId:       exerciseSubmitReq.ItemId,
 	}
 
-	rabbit := rabbitmq_client.NewRabbitMQAction(studentHandler.server.RabitMQ,studentHandler.server.Config)
+	rabbit := rabbitmq_client.NewRabbitMQAction(
+		studentHandler.server.RabitMQ,
+		studentHandler.server.Config,
+	)
 	err = rabbit.SendQueue(rabbitMessage)
-	if(err!=nil){
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Send Queue RabbitMQ")
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Error While Send Queue RabbitMQ",
+		)
 	}
 
 	mockPort := 0
 
-	//TODO remote port
+	// TODO remote port
 	activitylogService := activitylog.NewActivityLogService(studentHandler.server.DB)
-	insertLog,err := activitylogService.Create(
+	insertLog, err := activitylogService.Create(
 		existUser.Student.GroupID,
 		existUser.Username,
 		remoteIP,
@@ -194,14 +220,16 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 		"exercise-submit",
 		string(logActionString),
 	)
-	if(err!=nil){
+	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Save Activity Log")
 	}
 
 	redis := redis_client.NewRedisAction(studentHandler.server.Redis)
-	redis.PublishMessage(fmt.Sprintf("logs:%s",existUser.Student.GroupID),insertLog)
+	redis.PublishMessage(fmt.Sprintf("logs:%s", existUser.Student.GroupID), insertLog)
 
-	return responses.MessageResponse(c,http.StatusOK,"Submission are being run")
+	response := responses.NewExerciseSubmitResponse(jobId)
+
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Get All Chapter
@@ -213,15 +241,15 @@ func (studentHandler *StudentHandler) ExerciseSubmit (c echo.Context) error {
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/student/all_chapter [get]
-func (StudentHandler *StudentHandler) GetALLChapter (c echo.Context) error {
+func (StudentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 	userJwt := c.Get("user").(*jwt.Token)
 	claims := userJwt.Claims.(*token.JwtCustomClaims)
 	userId := claims.UserID
 
 	var existUser models.User
 	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser,userId)
-	if(*existUser.Role != constants.Role.Student){
+	userRepo.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Student {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
@@ -230,41 +258,63 @@ func (StudentHandler *StudentHandler) GetALLChapter (c echo.Context) error {
 	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
 
 	var groupChapterPermission []models.GroupChapterPermission
-	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
-	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(&groupChapterPermission,*existUser.Student.GroupID)
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
+		StudentHandler.server.DB,
+	)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(
+		&groupChapterPermission,
+		*existUser.Student.GroupID,
+	)
 
-	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
-	for _, item := range labClassInfos{
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		StudentHandler.server.DB,
+	)
+	for _, item := range labClassInfos {
 		var studentAssignChapterItems []models.StudentAssignmentChapterItem
-		studentAssignItemRepo.GetStudentAssignChapter(&studentAssignChapterItems,userId,item.ChapterID)
-		if(len(studentAssignChapterItems) < item.NoItems){
+		studentAssignItemRepo.GetStudentAssignChapter(
+			&studentAssignChapterItems,
+			userId,
+			item.ChapterID,
+		)
+		if len(studentAssignChapterItems) < item.NoItems {
 			maxIdxItem := 0
-			if(len(studentAssignChapterItems) > 0){
+			if len(studentAssignChapterItems) > 0 {
 				maxIdxItem = studentAssignChapterItems[len(studentAssignChapterItems)-1].ItemID
 			}
 			var chapter models.GroupChapterPermission
-			for _, chapterPermission := range groupChapterPermission{
-				if(chapterPermission.ChapterID == item.ChapterID){
+			for _, chapterPermission := range groupChapterPermission {
+				if chapterPermission.ChapterID == item.ChapterID {
 					chapter = chapterPermission
 				}
 			}
-			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(StudentHandler.server.DB)
-			for i:= maxIdxItem; i < item.NoItems; i++ {
-				studentAssignChapterItemService.Create(userId,chapter.ChapterID,i+1,nil,item.FullMark,0,chapter.TimeStart,chapter.TimeEnd)
+			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(
+				StudentHandler.server.DB,
+			)
+			for i := maxIdxItem; i < item.NoItems; i++ {
+				studentAssignChapterItemService.Create(
+					userId,
+					chapter.ChapterID,
+					i+1,
+					nil,
+					item.FullMark,
+					0,
+					chapter.TimeStart,
+					chapter.TimeEnd,
+				)
 			}
 		}
 	}
 
 	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
-	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,userId)
-	
+	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems, userId)
+
 	response := responses.NewGetAllChapter(
 		groupChapterPermission,
 		allStudentAssignChapterItems,
 		labClassInfos,
 	)
 
-	return responses.Response(c,http.StatusOK,response)
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Get Chapter List
@@ -276,14 +326,14 @@ func (StudentHandler *StudentHandler) GetALLChapter (c echo.Context) error {
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/student/chapter_list [get]
-func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
+func (StudentHandler *StudentHandler) GetChapterList(c echo.Context) error {
 	userJwt := c.Get("user").(*jwt.Token)
 	claims := userJwt.Claims.(*token.JwtCustomClaims)
 	userId := claims.UserID
 	var existUser models.User
 	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser,userId)
-	if(*existUser.Role != constants.Role.Student){
+	userRepo.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Student {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
@@ -292,24 +342,36 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
 
 	var groupChapterPermission []models.GroupChapterPermission
-	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
-	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(&groupChapterPermission,*existUser.Student.GroupID)
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
+		StudentHandler.server.DB,
+	)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(
+		&groupChapterPermission,
+		*existUser.Student.GroupID,
+	)
 
 	var allGroupChapterItems []models.GroupAssignmentChapterItem
-	groupChapterItemRepo := repositories.NewGroupAssignmentChapterItemRepository(StudentHandler.server.DB)
-	groupChapterItemRepo.GetAllGroupAssignmentChapterItemsByGroupId(&allGroupChapterItems,*existUser.Student.GroupID)
+	groupChapterItemRepo := repositories.NewGroupAssignmentChapterItemRepository(
+		StudentHandler.server.DB,
+	)
+	groupChapterItemRepo.GetAllGroupAssignmentChapterItemsByGroupId(
+		&allGroupChapterItems,
+		*existUser.Student.GroupID,
+	)
 
 	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
-	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
-	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems,userId)
-	
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		StudentHandler.server.DB,
+	)
+	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems, userId)
+
 	response := responses.NewGetChapterListResponse(
 		groupChapterPermission,
 		allGroupChapterItems,
 		allStudentAssignChapterItems,
 	)
 
-	return responses.Response(c,http.StatusOK,response)
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Get Assigned Exercxise
@@ -325,17 +387,21 @@ func (StudentHandler *StudentHandler) GetChapterList (c echo.Context) error {
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/student/assigned_exercise [get]
-func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context) error {
+func (StudentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context) error {
 	chapterIdx := c.QueryParam("chapter_idx")
 	itemId := c.QueryParam("item_id")
 
-	chapterInt,err := strconv.Atoi(chapterIdx)
-	if(err!=nil){
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Chapter Index")
+	chapterInt, err := strconv.Atoi(chapterIdx)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Can't Convert Chapter Index",
+		)
 	}
 
-	itemInt,err := strconv.Atoi(itemId)
-	if(err!=nil){
+	itemInt, err := strconv.Atoi(itemId)
+	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Item ID")
 	}
 
@@ -345,44 +411,58 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise (c echo.Context
 
 	var existUser models.User
 	userRepo := repositories.NewUserRepository(StudentHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser,userId)
+	userRepo.GetUserByUserID(&existUser, userId)
 
-	if(*existUser.Role != constants.Role.Student){
+	if *existUser.Role != constants.Role.Student {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(StudentHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo,chapterInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
 
 	var studentAssignChapterItems models.StudentAssignmentChapterItem
-	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(StudentHandler.server.DB)
-	studentAssignItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItems,existUser.UserID,labClassInfo.ChapterID,itemInt)
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		StudentHandler.server.DB,
+	)
+	studentAssignItemRepo.GetStudentAssignChapterItem(
+		&studentAssignChapterItems,
+		existUser.UserID,
+		labClassInfo.ChapterID,
+		itemInt,
+	)
 
-	if(studentAssignChapterItems.ExerciseID == nil){
+	if studentAssignChapterItems.ExerciseID == nil {
 		var selectItem []models.GroupChapterSelectedItem
-		groupChapterSelectedItemRepo := repositories.NewGroupChapterSelectedItemRepository(StudentHandler.server.DB)
-		groupChapterSelectedItemRepo.GetSelectedItemByGroupChapterItemId(&selectItem,*existUser.Student.GroupID,labClassInfo.ChapterID,itemInt)
+		groupChapterSelectedItemRepo := repositories.NewGroupChapterSelectedItemRepository(
+			StudentHandler.server.DB,
+		)
+		groupChapterSelectedItemRepo.GetSelectedItemByGroupChapterItemId(
+			&selectItem,
+			*existUser.Student.GroupID,
+			labClassInfo.ChapterID,
+			itemInt,
+		)
 		noSelectItem := len(selectItem)
-		if(noSelectItem < 1){
+		if noSelectItem < 1 {
 			return responses.ErrorResponse(c, http.StatusBadRequest, "No Exercise Available")
-		}else {
+		} else {
 			studentAssigmItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(StudentHandler.server.DB)
-			if(noSelectItem== 1){
-				studentAssigmItemService.UpdateAssignExercise(&studentAssignChapterItems,&selectItem[0].ExerciseID)
-			}else{
+			if noSelectItem == 1 {
+				studentAssigmItemService.UpdateAssignExercise(&studentAssignChapterItems, &selectItem[0].ExerciseID)
+			} else {
 				idx := rand.Intn(noSelectItem - 1)
-				studentAssigmItemService.UpdateAssignExercise(&studentAssignChapterItems,&selectItem[idx].ExerciseID)
+				studentAssigmItemService.UpdateAssignExercise(&studentAssignChapterItems, &selectItem[idx].ExerciseID)
 			}
-			studentAssignItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItems,existUser.UserID,labClassInfo.ChapterID,itemInt)
+			studentAssignItemRepo.GetStudentAssignChapterItem(&studentAssignChapterItems, existUser.UserID, labClassInfo.ChapterID, itemInt)
 		}
 	}
-	
+
 	var labExercise models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(StudentHandler.server.DB)
-	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItems.ExerciseID.String(),&labExercise)
-	
+	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItems.ExerciseID.String(), &labExercise)
+
 	response := responses.NewGetStudentAssignmentItemResponse(labExercise)
 
-	return responses.Response(c,http.StatusOK,response)
+	return responses.Response(c, http.StatusOK, response)
 }
