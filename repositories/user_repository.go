@@ -21,7 +21,7 @@ func (userRepository *UserRepository) GetUserByUsername(
 	user *models.User,
 	username string,
 ) {
-	userRepository.DB.Where("username = ?", username).Find(user)
+	userRepository.DB.Preload("Student").Where("username = ?", username).Find(user)
 }
 
 func (userRepository *UserRepository) GetUserByUserID(
