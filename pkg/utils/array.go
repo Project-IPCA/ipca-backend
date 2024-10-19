@@ -13,6 +13,16 @@ func ContainsUUID(ids []uuid.UUID, id uuid.UUID) bool {
 	return false
 }
 
+func ContainsString(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
+
 func FindMax(arr []map[string]int, key string) int {
     if len(arr) == 0 {
         return 0

@@ -57,6 +57,7 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.POST("/update_group_assigned_chapter_item",supervisorHandler.UpdateGroupAssignedChapterItem)
 	supervisorAuthGroup.GET("/get_lab_chapter_info", supervisorHandler.GetLabChapterInfo)
 	supervisorAuthGroup.GET("/get_student_group_list",supervisorHandler.GetStudentGroupList)
+	supervisorAuthGroup.POST("/set_chapter_permission",supervisorHandler.SetChapterPemission)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")

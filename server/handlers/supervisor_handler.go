@@ -19,6 +19,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
+	"github.com/Project-IPCA/ipca-backend/redis_client"
 
 	"github.com/Project-IPCA/ipca-backend/rabbitmq_client"
 	"github.com/Project-IPCA/ipca-backend/repositories"
@@ -939,5 +940,127 @@ func (supervisorHandler *SupervisorHandler) GetStudentGroupList (c echo.Context)
 	studentRepo.GetStudentsAndAssignmentScoreByGroupID(&student,groupUuid)
 
 	response := responses.NewGetStudentWithAssigmentScoreByGroupID(labClassInfo,student,groupUuid)
+	return responses.Response(c,http.StatusOK,response)
+}
+
+// @Description Set Chapter Permission
+// @ID supervisor-set-chapter-permission
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.SetChapterPemissionRequest	true	"Set Chapter Permission"
+// @Success 200		{object}	responses.SetChapterPermissionResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/set_chapter_permission [post]
+func (supervisorHandler *SupervisorHandler) SetChapterPemission (c echo.Context) error{
+	setPermissionReq := new(requests.SetChapterPemissionRequest)
+	if err:= c.Bind(setPermissionReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := setPermissionReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	fmt.Printf("%+v\n", setPermissionReq)
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role != constants.Role.Supervisor){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	if(!utils.ContainsString(constants.ActionTypeList,setPermissionReq.Permission.Type)){
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Type")
+	}
+
+	var groupChapterPermission models.GroupChapterPermission
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(supervisorHandler.server.DB)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission,setPermissionReq.GroupId,setPermissionReq.ChapterId)
+
+	if(setPermissionReq.Permission.Prefix == constants.PermissionPrefix.Submit){
+		groupChapterPermission.AllowSubmitType = setPermissionReq.Permission.Type
+		if(*setPermissionReq.Sync){
+			groupChapterPermission.AllowAccessType = setPermissionReq.Permission.Type
+		}
+		if(setPermissionReq.Permission.Type == constants.AccessType.Always || setPermissionReq.Permission.Type == constants.AccessType.Deny){
+			groupChapterPermission.SubmitTimeStart = nil
+			groupChapterPermission.SubmitTimeEnd = nil
+			if(*setPermissionReq.Sync){
+				groupChapterPermission.AccessTimeStart = nil
+				groupChapterPermission.AccessTimeEnd = nil
+			}
+		}else if(setPermissionReq.Permission.Type == constants.AccessType.TimerPaused){
+			if(setPermissionReq.Permission.TimeStart == nil){
+				return responses.ErrorResponse(c, http.StatusBadRequest, "Missing Time Satrt")
+			}
+			groupChapterPermission.SubmitTimeStart = setPermissionReq.Permission.TimeStart
+			if(*setPermissionReq.Sync){
+				groupChapterPermission.AccessTimeStart = setPermissionReq.Permission.TimeStart
+			}
+		}else{
+			if(setPermissionReq.Permission.TimeStart == nil || setPermissionReq.Permission.TimeEnd == nil){
+				return responses.ErrorResponse(c, http.StatusBadRequest, "Missing Time Satrt Or Time End")
+			}
+			groupChapterPermission.SubmitTimeStart = setPermissionReq.Permission.TimeStart
+			groupChapterPermission.SubmitTimeEnd = setPermissionReq.Permission.TimeEnd
+			if(*setPermissionReq.Sync){
+				groupChapterPermission.AccessTimeStart = setPermissionReq.Permission.TimeStart
+				groupChapterPermission.AccessTimeEnd = setPermissionReq.Permission.TimeEnd
+			}
+		}
+	}else{
+		groupChapterPermission.AllowAccessType = setPermissionReq.Permission.Type
+		if(*setPermissionReq.Sync){
+			groupChapterPermission.AllowSubmitType = setPermissionReq.Permission.Type
+		}
+		if(setPermissionReq.Permission.Type == constants.AccessType.Always || setPermissionReq.Permission.Type == constants.AccessType.Deny){
+			groupChapterPermission.AccessTimeStart = nil
+			groupChapterPermission.AccessTimeEnd = nil
+			if(*setPermissionReq.Sync){
+				groupChapterPermission.SubmitTimeStart = nil
+				groupChapterPermission.SubmitTimeEnd = nil
+			}
+		}else if(setPermissionReq.Permission.Type == constants.AccessType.TimerPaused){
+			if(setPermissionReq.Permission.TimeStart == nil){
+				return responses.ErrorResponse(c, http.StatusBadRequest, "Missing Time Satrt")
+			}
+			groupChapterPermission.AccessTimeStart = setPermissionReq.Permission.TimeStart
+			if(*setPermissionReq.Sync){
+				groupChapterPermission.SubmitTimeStart = setPermissionReq.Permission.TimeStart
+			}
+		}else{
+			if(setPermissionReq.Permission.TimeStart == nil || setPermissionReq.Permission.TimeEnd == nil){
+				return responses.ErrorResponse(c, http.StatusBadRequest, "Missing Time Satrt Or Time End")
+			}
+			groupChapterPermission.AccessTimeStart = setPermissionReq.Permission.TimeStart
+			groupChapterPermission.AccessTimeEnd = setPermissionReq.Permission.TimeEnd
+			if(*setPermissionReq.Sync){
+				groupChapterPermission.SubmitTimeStart = setPermissionReq.Permission.TimeStart
+				groupChapterPermission.SubmitTimeEnd = setPermissionReq.Permission.TimeEnd
+			}
+		}
+	}
+
+	groupChapterPermissionService := groupchapterpermission.NewGroupChapterPermissionService(supervisorHandler.server.DB)
+	err := groupChapterPermissionService.UpdateByModel(&groupChapterPermission)
+	if(err!=nil){
+		return responses.ErrorResponse(c,http.StatusInternalServerError,err.Error())
+	}
+	redis := redis_client.NewRedisAction(supervisorHandler.server.Redis)
+	redis.PublishMessage(fmt.Sprintf("chapter-permission:%s",setPermissionReq.GroupId),groupChapterPermission)
+
+	response := responses.NewSetChapterPermissionResponse(groupChapterPermission)
 	return responses.Response(c,http.StatusOK,response)
 }
