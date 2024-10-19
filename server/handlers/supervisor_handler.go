@@ -1064,3 +1064,38 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission (c echo.Context)
 	response := responses.NewSetChapterPermissionResponse(groupChapterPermission)
 	return responses.Response(c,http.StatusOK,response)
 }
+
+func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin (c echo.Context) error{
+	setAllowGroupLoginReq := new(requests.SetAllowGroupLoginRequest)
+	if err:= c.Bind(setAllowGroupLoginReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := setAllowGroupLoginReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	fmt.Printf("%+v\n", setAllowGroupLoginReq)
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role != constants.Role.Supervisor){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule,setAllowGroupLoginReq.GroupID)
+
+	fmt.Println("data")
+	fmt.Println(classSchedule.ClassLabStaffs)
+	return responses.MessageResponse(c,http.StatusOK,"ok")
+}

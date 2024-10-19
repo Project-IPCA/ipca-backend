@@ -82,10 +82,10 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 	supervisorService := supervisor.NewSupervisorService(initHandler.server.DB)
 
 	userId, err := userService.CreateQuick(
-		"oot1234",
-		"oot1234",
-		"Noppo",
-		"Mummum",
+		"test1",
+		"test1",
+		"test1",
+		"test1",
 		constants.Gender.Male,
 		constants.Role.Supervisor,
 	)
@@ -141,4 +141,36 @@ func (initHandler *InitHandler) InitClassInfo(c echo.Context) error {
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Init Lab Class Info Success.")
+}
+
+// @Description Init TA
+// @ID init-ta
+// @Tags Init
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Router			/api/init/ta [post]
+func (initHandler *InitHandler) InitTA(c echo.Context) error {
+	userService := userservice.NewUserService(initHandler.server.DB)
+	supervisorService := supervisor.NewSupervisorService(initHandler.server.DB)
+
+	userId, err := userService.CreateQuick(
+		"ootTa",
+		"ootTa",
+		"TaOot",
+		"Handsome",
+		constants.Gender.Male,
+		constants.Role.Ta,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
+	}
+
+	err = supervisorService.Create(userId, "คอมพิวเตอร์")
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Init Supervisor Success.")
 }
