@@ -36,6 +36,7 @@ func ConfigureRoutes(server *s.Server) {
 	initGroup.POST("/department", initHandler.InitDepartment)
 	initGroup.POST("/supervisor", initHandler.InitSupervisor)
 	initGroup.POST("/labclassinfo", initHandler.InitClassInfo)
+	initGroup.POST("/ta",initHandler.InitTA)
 
 	// Supervisor
 	supervisorGroup := apiGroup.Group("/supervisor")
@@ -58,6 +59,7 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.GET("/get_lab_chapter_info", supervisorHandler.GetLabChapterInfo)
 	supervisorAuthGroup.GET("/get_student_group_list",supervisorHandler.GetStudentGroupList)
 	supervisorAuthGroup.POST("/set_chapter_permission",supervisorHandler.SetChapterPemission)
+	supervisorAuthGroup.POST("/set_allow_group_login",supervisorHandler.SetAllowGroupLogin)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")

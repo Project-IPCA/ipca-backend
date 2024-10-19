@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `supervisors` (
 
 CREATE TABLE IF NOT EXISTS `tas` (
   ta_id VARCHAR(36) NOT NULL,
-  group_id INT DEFAULT NULL,
+  group_id VARCHAR(36) DEFAULT NULL,
   note VARCHAR(64) DEFAULT NULL,
   PRIMARY KEY (ta_id),
   KEY fk_user_ta_class_schedule1_idx (group_id),

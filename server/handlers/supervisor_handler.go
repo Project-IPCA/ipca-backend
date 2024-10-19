@@ -1064,3 +1064,65 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission (c echo.Context)
 	response := responses.NewSetChapterPermissionResponse(groupChapterPermission)
 	return responses.Response(c,http.StatusOK,response)
 }
+
+// @Description Set Allow Group Login
+// @ID supervisor-set-allow-group-login
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.SetAllowGroupLoginRequest	true	"Set Allow Group Login"
+// @Success 200		{object}	responses.SetAllowGroupLoginRequest
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/set_allow_group_login [post]
+func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin (c echo.Context) error{
+	setAllowGroupLoginReq := new(requests.SetAllowGroupLoginRequest)
+	if err:= c.Bind(setAllowGroupLoginReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := setAllowGroupLoginReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	fmt.Printf("%+v\n", setAllowGroupLoginReq)
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role != constants.Role.Supervisor || *existUser.Role != constants.Role.Ta){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule,setAllowGroupLoginReq.GroupID)
+
+	isStaff := false
+	for _,staff := range classSchedule.ClassLabStaffs{
+		if(staff.StaffID == userId){
+			isStaff = true
+			break
+		}
+	}
+	if(userId == *classSchedule.SupervisorID){
+		isStaff = true
+	}
+	
+	if(!isStaff){
+		return responses.ErrorResponse(c, http.StatusForbidden, "You Aren't Staff")
+	}
+
+	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
+	classScheduleService.UpdateAllowLogin(&classSchedule,setAllowGroupLoginReq.AllowLogin)
+
+	return responses.MessageResponse(c,http.StatusOK,"Setting Updated Successfully")
+}

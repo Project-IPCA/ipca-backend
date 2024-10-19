@@ -13,6 +13,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/services/department"
 	labclassinfo "github.com/Project-IPCA/ipca-backend/services/lab_class_info"
 	"github.com/Project-IPCA/ipca-backend/services/supervisor"
+	"github.com/Project-IPCA/ipca-backend/services/ta"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -82,10 +83,10 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 	supervisorService := supervisor.NewSupervisorService(initHandler.server.DB)
 
 	userId, err := userService.CreateQuick(
-		"oot1234",
-		"oot1234",
-		"Noppo",
-		"Mummum",
+		"test1",
+		"test1",
+		"test1",
+		"test1",
 		constants.Gender.Male,
 		constants.Role.Supervisor,
 	)
@@ -141,4 +142,36 @@ func (initHandler *InitHandler) InitClassInfo(c echo.Context) error {
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Init Lab Class Info Success.")
+}
+
+// @Description Init TA
+// @ID init-ta
+// @Tags Init
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Router			/api/init/ta [post]
+func (initHandler *InitHandler) InitTA(c echo.Context) error {
+	userService := userservice.NewUserService(initHandler.server.DB)
+	taService := ta.NewTaService(initHandler.server.DB)
+
+	userId, err := userService.CreateQuick(
+		"ootTa",
+		"ootTa",
+		"TaOot",
+		"Handsome",
+		constants.Gender.Male,
+		constants.Role.Ta,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
+	}
+
+	err = taService.CreateTa(userId,nil,nil)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Init Ta Success.")
 }

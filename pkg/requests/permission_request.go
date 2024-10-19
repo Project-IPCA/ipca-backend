@@ -35,3 +35,13 @@ type AccessAndSubmitData struct {
 	Type       string `json:"type" validate:"required"`
 	Prefix string `json:"prefix" validate:"required"`
 }
+
+type SetAllowGroupLoginRequest struct {
+	AllowLogin *bool `json:"allow_login" validate:"required"`
+	GroupID uuid.UUID `json:"group_id" validate:"required"`
+}
+
+func (ba SetAllowGroupLoginRequest) Validate() error {
+	validate := validator.New()
+	return validate.Struct(&ba)
+}
