@@ -13,6 +13,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/services/department"
 	labclassinfo "github.com/Project-IPCA/ipca-backend/services/lab_class_info"
 	"github.com/Project-IPCA/ipca-backend/services/supervisor"
+	"github.com/Project-IPCA/ipca-backend/services/ta"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -154,7 +155,7 @@ func (initHandler *InitHandler) InitClassInfo(c echo.Context) error {
 // @Router			/api/init/ta [post]
 func (initHandler *InitHandler) InitTA(c echo.Context) error {
 	userService := userservice.NewUserService(initHandler.server.DB)
-	supervisorService := supervisor.NewSupervisorService(initHandler.server.DB)
+	taService := ta.NewTaService(initHandler.server.DB)
 
 	userId, err := userService.CreateQuick(
 		"ootTa",
@@ -168,9 +169,9 @@ func (initHandler *InitHandler) InitTA(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
 	}
 
-	err = supervisorService.Create(userId, "คอมพิวเตอร์")
+	err = taService.CreateTa(userId,nil,nil)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
 	}
-	return responses.MessageResponse(c, http.StatusOK, "Init Supervisor Success.")
+	return responses.MessageResponse(c, http.StatusOK, "Init Ta Success.")
 }
