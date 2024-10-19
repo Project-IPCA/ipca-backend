@@ -2,6 +2,7 @@ package responses
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/google/uuid"
@@ -68,4 +69,41 @@ func NewGetLabChapterInfoResponse(
 		GroupSelectedLabs: groupSelectedLabs,
 		LabList:           labList,
 	}
+}
+
+type SetChapterPermissionResponse struct {
+	ClassID         uuid.UUID     `json:"group_id"`
+	ChapterID       uuid.UUID     `json:"chapter_id"`
+	AllowAccessType string        `json:"allow_access_type"`
+	AccessTimeStart *time.Time    `json:"access_time_start"`
+	AccessTimeEnd   *time.Time    `json:"access_time_end"`
+	AllowSubmitType string        `json:"allow_submit_type"`
+	SubmitTimeStart *time.Time    `json:"submit_time_start"`
+	SubmitTimeEnd   *time.Time    `json:"submit_time_end"`
+	AllowSubmit     bool          `json:"allow_submit"`
+	Status          string        `json:"status"`
+	AllowAccess     bool          `json:"allow_access"`
+	TimeStart       *string       `json:"time_start"`
+	TimeEnd         *string       `json:"time_end"`
+}
+
+func NewSetChapterPermissionResponse (
+	groupChapterPermission models.GroupChapterPermission,
+) SetChapterPermissionResponse{
+	response := SetChapterPermissionResponse{
+		ClassID: groupChapterPermission.ClassID,
+		ChapterID: groupChapterPermission.ChapterID,
+		AllowAccessType: groupChapterPermission.AllowAccessType,
+		AccessTimeStart: groupChapterPermission.AccessTimeStart,
+		AccessTimeEnd: groupChapterPermission.AccessTimeEnd,
+		AllowSubmitType: groupChapterPermission.AllowSubmitType,
+		SubmitTimeStart: groupChapterPermission.SubmitTimeStart,
+		SubmitTimeEnd: groupChapterPermission.SubmitTimeEnd,
+		AllowSubmit: groupChapterPermission.AllowSubmit,
+		Status: groupChapterPermission.Status,
+		AllowAccess: groupChapterPermission.AllowAccess,
+		TimeStart: groupChapterPermission.TimeStart,
+		TimeEnd: groupChapterPermission.TimeEnd,
+	}
+	return response
 }
