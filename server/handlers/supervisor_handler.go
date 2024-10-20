@@ -1071,7 +1071,7 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission (c echo.Context)
 // @Accept json
 // @Produce json
 // @Param params body	requests.SetAllowGroupLoginRequest	true	"Set Allow Group Login"
-// @Success 200		{object}	responses.SetAllowGroupLoginRequest
+// @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
