@@ -27,3 +27,11 @@ func (classScheduleService *Service) UpdateAllowLogin(
 	classSchedule.AllowLogin = *allowLogin
 	classScheduleService.DB.Save(classSchedule)
 }
+
+func (classScheduleService *Service) UpdateAllowUploadPicture(
+	classSchedule *models.ClassSchedule,
+	allowUploadPicture *bool,
+){
+	classSchedule.AllowUploadPic = *allowUploadPicture
+	classScheduleService.DB.Save(classSchedule)
+}

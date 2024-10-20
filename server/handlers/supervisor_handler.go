@@ -1089,8 +1089,6 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin (c echo.Context) 
 		)
 	}
 
-	fmt.Printf("%+v\n", setAllowGroupLoginReq)
-
 	userJwt := c.Get("user").(*jwt.Token)
 	claims := userJwt.Claims.(*token.JwtCustomClaims)
 	userId := claims.UserID
@@ -1098,7 +1096,7 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin (c echo.Context) 
 	var existUser models.User
 	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
 	userRepo.GetUserByUserID(&existUser,userId)
-	if(*existUser.Role != constants.Role.Supervisor || *existUser.Role != constants.Role.Ta){
+	if(*existUser.Role == constants.Role.Student || *existUser.Role == constants.Role.Admin){
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -1123,6 +1121,66 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin (c echo.Context) 
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
 	classScheduleService.UpdateAllowLogin(&classSchedule,setAllowGroupLoginReq.AllowLogin)
+
+	return responses.MessageResponse(c,http.StatusOK,"Setting Updated Successfully")
+}
+
+// @Description Set Allow Group Upload Picture
+// @ID supervisor-set-allow-group-upload-picture
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.SetAllowGroupUploadPictureRequest	true	"Set Allow Group Upload Picture"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/set_allow_group_upload_picture [post]
+func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture (c echo.Context) error{
+	setAllowGroupUploadPictureRequest := new(requests.SetAllowGroupUploadPictureRequest)
+	if err:= c.Bind(setAllowGroupUploadPictureRequest); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := setAllowGroupUploadPictureRequest.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser,userId)
+	if(*existUser.Role == constants.Role.Student || *existUser.Role == constants.Role.Admin){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule,setAllowGroupUploadPictureRequest.GroupID)
+
+	isStaff := false
+	for _,staff := range classSchedule.ClassLabStaffs{
+		if(staff.StaffID == userId){
+			isStaff = true
+			break
+		}
+	}
+	if(userId == *classSchedule.SupervisorID){
+		isStaff = true
+	}
+	
+	if(!isStaff){
+		return responses.ErrorResponse(c, http.StatusForbidden, "You Aren't Staff")
+	}
+
+	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
+	classScheduleService.UpdateAllowUploadPicture(&classSchedule,setAllowGroupUploadPictureRequest.AllowUploadPicture)
 
 	return responses.MessageResponse(c,http.StatusOK,"Setting Updated Successfully")
 }

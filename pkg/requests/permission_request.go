@@ -45,3 +45,13 @@ func (ba SetAllowGroupLoginRequest) Validate() error {
 	validate := validator.New()
 	return validate.Struct(&ba)
 }
+
+type SetAllowGroupUploadPictureRequest struct {
+	AllowUploadPicture *bool `json:"allow_upload_picture" validate:"required"`
+	GroupID uuid.UUID `json:"group_id" validate:"required"`
+}
+
+func (ba SetAllowGroupUploadPictureRequest) Validate() error {
+	validate := validator.New()
+	return validate.Struct(&ba)
+}
