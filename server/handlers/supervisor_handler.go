@@ -846,6 +846,102 @@ func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem (c ec
 	return responses.MessageResponse(c,http.StatusOK,"Updated All AssignedChapterItem Successfully'")
 }
 
+// @Description Update All Group Assigned Chapter Item
+// @ID supervisor-update-all-group-assigned-chapter-item
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.UpdateAllGroupAssignedChapterItemRequest	true	"Update All Group Assigned Chapter Item"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/update_all_group_assigned_chapter_item [post]
+func (supervisorHandler *SupervisorHandler) UpdateAllGroupAssignedChapterItem (c echo.Context) error{
+	updateAllGroupAssignedChapterItemReq := new(requests.UpdateAllGroupAssignedChapterItemRequest)
+	if err:= c.Bind(updateAllGroupAssignedChapterItemReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+	}
+	if err := updateAllGroupAssignedChapterItemReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,updateAllGroupAssignedChapterItemReq.GroupId)
+
+	var classLabStaff []models.ClassLabStaff
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+	classLabStaffRepo.GetClassLabStaffByGroupID(&classLabStaff,updateAllGroupAssignedChapterItemReq.GroupId)
+
+	havePermission := false
+	if(userId == *classSchedule.SupervisorID){
+		havePermission = true
+	}else{
+		for _,staff := range classLabStaff{
+			if(staff.StaffID == userId){
+				havePermission = true
+				break
+			}
+		}
+	}
+	
+	if(!havePermission){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission") 
+	}
+
+	for _,data := range updateAllGroupAssignedChapterItemReq.UpdatePool{
+		var groupChapterSelectedItem []models.GroupChapterSelectedItem
+		groupChapterSelectedItemRepo := repositories.NewGroupChapterSelectedItemRepository(supervisorHandler.server.DB)
+		groupChapterSelectedItemRepo.GetSelectedItemByGroupChapterItemId(&groupChapterSelectedItem,updateAllGroupAssignedChapterItemReq.GroupId,updateAllGroupAssignedChapterItemReq.ChapterId,data.ItemId)
+
+		existSelectItem := make(map[uuid.UUID]bool)
+		for _,existItem := range groupChapterSelectedItem{
+			existSelectItem[existItem.ExerciseID] = true
+		}
+
+		groupChapterSelectedItemService := groupchapterselecteditem.NewGroupChapterSelectedItemService(supervisorHandler.server.DB)
+
+		for _,selectItem := range data.SelectedItem{
+			if(!existSelectItem[selectItem]){
+				err := groupChapterSelectedItemService.Create(
+					updateAllGroupAssignedChapterItemReq.GroupId,
+					updateAllGroupAssignedChapterItemReq.ChapterId,
+					int64(data.ItemId),
+					selectItem)
+				if(err!=nil){
+					return responses.ErrorResponse(c, http.StatusInternalServerError, "Add Selected Exercise Fail") 
+				}
+			}
+		}
+
+		newExistSelectItem := make(map[uuid.UUID]bool)
+		for _,existItem := range data.SelectedItem{
+			newExistSelectItem[existItem] = true
+		}
+
+		for _,selectItem := range groupChapterSelectedItem{
+			if(!newExistSelectItem[selectItem.ExerciseID]){
+				err := groupChapterSelectedItemService.Delete(&selectItem)
+				if(err!=nil){
+					return responses.ErrorResponse(c, http.StatusInternalServerError, "Delete Selected Exercise Fail") 
+				}
+			}
+		}
+	}
+
+	return responses.MessageResponse(c,http.StatusOK,"Updated All AssignedChapterItem Successfully'")
+}
+
 // @Description Get Lab Chapter Info
 // @ID supervisor-get-lab-chapter-info
 // @Tags Supervisor
