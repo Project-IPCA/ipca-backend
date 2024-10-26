@@ -151,11 +151,9 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	var labExercise models.LabExercise
 	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItem.ExerciseID.String(), &labExercise)
 
-	jobId := uuid.New().String()
-
 	logAction := models.LogExerciseSubmissionAction{
 		StuId:              userId,
-		JobId:              jobId,
+		JobId:              exerciseSubmitReq.JobId,
 		Status:             "Pending",
 		SubmissionId:       submissionId,
 		Attempt:            fmt.Sprintf("%04d", attemps),
@@ -183,7 +181,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	}
 
 	rabbitMessage := requests.ExerciseSubmissionRabbitMessage{
-		JobId:        jobId,
+		JobId:        exerciseSubmitReq.JobId,
 		JobType:      "exercise-submit",
 		LogData:      logData,
 		SubmissionId: submissionId,
@@ -227,7 +225,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	redis := redis_client.NewRedisAction(studentHandler.server.Redis)
 	redis.PublishMessage(fmt.Sprintf("logs:%s", existUser.Student.GroupID), insertLog)
 
-	response := responses.NewExerciseSubmitResponse(jobId)
+	response := responses.NewExerciseSubmitResponse(exerciseSubmitReq.JobId)
 
 	return responses.Response(c, http.StatusOK, response)
 }
