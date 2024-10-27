@@ -1,10 +1,19 @@
 package responses
 
 import (
+	"math"
+	"strconv"
+
 	"github.com/google/uuid"
 
 	"github.com/Project-IPCA/ipca-backend/models"
 )
+
+type Pagination struct {
+	Page     int `json:"page"`
+	PageSize int `json:"page_size"`
+	Pages    int `json:"pages"`
+}
 
 type ClassStaff struct {
 	SupervisorID uuid.UUID `json:"supervisor_id"`
@@ -105,43 +114,52 @@ func NewClassSchedulesResponse(
 	}
 }
 
-type MyClassSchedule struct {
-	GroupID    uuid.UUID `json:"group_id"`
-	GroupNo    int       `json:"group_no"`
-	Department string    `json:"department"`
-	Year       *int      `json:"year"`
-	Semester   *int      `json:"semester"`
-	Day        *string   `json:"day"`
-	TimeStart  *string   `json:"time_start"`
-	TimeEnd    *string   `json:"time_end"`
-}
-
 type MyGroupFilter struct {
-	Year []*int
+	Year []*int `json:"year"`
 }
 
 type MyGroupResponse struct {
-	MyGroups []MyClassSchedule `json:"my_groups"`
-	Filter   MyGroupFilter     `json:"filters"`
+	MyGroups   []ClassSchedule `json:"my_groups"`
+	Filter     MyGroupFilter   `json:"filters"`
+	Pagination Pagination      `json:"pagination"`
 }
 
 func NewMyClassSchedulesResponse(
 	filteredClassSchedules []models.ClassSchedule,
 	allClassSchedules []models.ClassSchedule,
+	page string,
+	pageSize string,
+	totalClassScheduls int,
 ) *MyGroupResponse {
-	myClassSchedules := make([]MyClassSchedule, 0)
+	classSchedules := make([]ClassSchedule, 0)
 	for _, classSchedule := range filteredClassSchedules {
-		myClassSchedules = append(myClassSchedules, MyClassSchedule{
-			GroupID:    classSchedule.GroupID,
-			GroupNo:    *classSchedule.Number,
-			Department: classSchedule.Department.Name,
-			Year:       classSchedule.Year,
-			Semester:   classSchedule.Semester,
-			Day:        classSchedule.Day,
-			TimeStart:  classSchedule.TimeStart,
-			TimeEnd:    classSchedule.TimeEnd,
+		classStaffResponse := make([]ClassStaff, 0)
+		for _, labStaff := range classSchedule.ClassLabStaffs {
+			classStaffResponse = append(classStaffResponse, ClassStaff{
+				SupervisorID: labStaff.Supervisor.SupervisorID,
+				FirstName:    *labStaff.Supervisor.User.FirstName,
+				LastName:     *labStaff.Supervisor.User.LastName,
+			})
+		}
+		classSchedules = append(classSchedules, ClassSchedule{
+			GroupID:       classSchedule.GroupID,
+			GroupNo:       *classSchedule.Number,
+			Department:    classSchedule.Department.Name,
+			Year:          classSchedule.Year,
+			Semester:      classSchedule.Semester,
+			Day:           classSchedule.Day,
+			TimeStart:     classSchedule.TimeStart,
+			TimeEnd:       classSchedule.TimeEnd,
+			StudentAmount: len(classSchedule.Students),
+			Instructor: Instructor{
+				SupervisorID: classSchedule.Supervisor.SupervisorID,
+				FirstName:    *classSchedule.Supervisor.User.FirstName,
+				LastName:     *classSchedule.Supervisor.User.LastName,
+			},
+			Staff: classStaffResponse,
 		})
 	}
+
 	yearMap := make(map[int]bool)
 
 	for _, classSchedule := range allClassSchedules {
@@ -153,10 +171,27 @@ func NewMyClassSchedulesResponse(
 		uniqueYears = append(uniqueYears, &year)
 	}
 
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = 1
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = 10
+	}
+
+	pages := int(math.Ceil(float64(totalClassScheduls) / float64(pageSizeInt)))
+
 	return &MyGroupResponse{
-		MyGroups: myClassSchedules,
+		MyGroups: classSchedules,
 		Filter: MyGroupFilter{
 			Year: uniqueYears,
+		},
+		Pagination: Pagination{
+			Page:     pageInt,
+			PageSize: pageSizeInt,
+			Pages:    pages,
 		},
 	}
 }
