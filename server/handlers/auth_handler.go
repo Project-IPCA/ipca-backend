@@ -198,27 +198,33 @@ func (authHandler *AuthHandler) Logout(c echo.Context) error {
 
 	userService.UpdateIsOnline(&existsUser, false)
 
-	redis := redis_client.NewRedisAction(authHandler.server.Redis)
-	redisCnl := fmt.Sprintf(
-		"%s:%s",
-		constants.RedisChannel.OnlineStudent,
-		existsUser.Student.GroupID,
-	)
-	redisMsg := redis.NewMessage("logout", existsUser.UserID)
-	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error")
+	if existsUser.Role == &constants.Role.Student {
+		redis := redis_client.NewRedisAction(authHandler.server.Redis)
+		redisCnl := fmt.Sprintf(
+			"%s:%s",
+			constants.RedisChannel.OnlineStudent,
+			existsUser.Student.GroupID,
+		)
+		redisMsg := redis.NewMessage("logout", existsUser.UserID)
+		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
+		activityLogService := activitylog.NewActivityLogService(authHandler.server.DB)
+		ip, port, userAgent := utils.GetNetworkRequest(c)
+		activityLogService.Create(
+			existsUser.Student.GroupID,
+			existsUser.Username,
+			ip,
+			&port,
+			&userAgent,
+			constants.LogPage.Login,
+			constants.LogAction.Logout,
+		)
 	}
 
-	activityLogService := activitylog.NewActivityLogService(authHandler.server.DB)
-	ip, port, userAgent := utils.GetNetworkRequest(c)
-	activityLogService.Create(
-		existsUser.Student.GroupID,
-		existsUser.Username,
-		ip,
-		&port,
-		&userAgent,
-		constants.LogPage.Login,
-		constants.LogAction.Logout,
-	)
 	return responses.MessageResponse(c, http.StatusOK, "Logout successful")
 }
