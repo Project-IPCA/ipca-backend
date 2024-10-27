@@ -133,8 +133,13 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 	year string,
 	page string,
 	pageSize string,
-) {
-	query := classScheduleRepository.DB.Preload("Department")
+) int64 {
+	baseQuery := classScheduleRepository.DB.Model(&models.ClassSchedule{}).
+		Preload("Department").
+		Preload("Supervisor.User").
+		Preload("Department").
+		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("Students")
 
 	defaultPage := 1
 	defaultPageSize := 10
@@ -150,14 +155,17 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 	}
 
 	yearInt, err := strconv.Atoi(year)
-	if err != nil && year != "" {
-		query = query.Where("year = ?", yearInt)
+	if err == nil && year != "" {
+		baseQuery = baseQuery.Where("year = ?", yearInt)
 	}
 
+	baseQuery = baseQuery.Where("supervisor_id = ?", supervisorId)
+
+	var totalClassSchedules int64
+	baseQuery.Count(&totalClassSchedules)
+
 	offset := (pageInt - 1) * pageSizeInt
+	baseQuery.Offset(offset).Limit(pageSizeInt).Find(classSchedules)
 
-	query = query.Where("supervisor_id = ?", supervisorId).Offset(offset).
-		Limit(pageSizeInt)
-
-	query.Find(classSchedules)
+	return totalClassSchedules
 }
