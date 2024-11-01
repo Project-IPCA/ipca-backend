@@ -36,7 +36,7 @@ func ConfigureRoutes(server *s.Server) {
 	initGroup.POST("/department", initHandler.InitDepartment)
 	initGroup.POST("/supervisor", initHandler.InitSupervisor)
 	initGroup.POST("/labclassinfo", initHandler.InitClassInfo)
-	initGroup.POST("/ta",initHandler.InitTA)
+	initGroup.POST("/ta", initHandler.InitTA)
 
 	// Supervisor
 	supervisorGroup := apiGroup.Group("/supervisor")
@@ -55,19 +55,28 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.GET("/my_group_info/:group_id", supervisorHandler.GetMyGroupInfo)
 	supervisorAuthGroup.PUT("/my_group_info/:group_id", supervisorHandler.UpdateMyGroupInfo)
 	supervisorAuthGroup.POST("/save_exercise_testcase", supervisorHandler.SaveExerciseTestcase)
-	supervisorAuthGroup.POST("/update_group_assigned_chapter_item",supervisorHandler.UpdateGroupAssignedChapterItem)
-	supervisorAuthGroup.POST("/update_all_group_assigned_chapter_item",supervisorHandler.UpdateAllGroupAssignedChapterItem)
+	supervisorAuthGroup.POST(
+		"/update_group_assigned_chapter_item",
+		supervisorHandler.UpdateGroupAssignedChapterItem,
+	)
+	supervisorAuthGroup.POST(
+		"/update_all_group_assigned_chapter_item",
+		supervisorHandler.UpdateAllGroupAssignedChapterItem,
+	)
 	supervisorAuthGroup.GET("/get_lab_chapter_info", supervisorHandler.GetLabChapterInfo)
-	supervisorAuthGroup.GET("/get_student_group_list",supervisorHandler.GetStudentGroupList)
-	supervisorAuthGroup.POST("/set_chapter_permission",supervisorHandler.SetChapterPemission)
-	supervisorAuthGroup.POST("/set_allow_group_login",supervisorHandler.SetAllowGroupLogin)
-	supervisorAuthGroup.POST("/set_allow_group_upload_picture",supervisorHandler.SetAllowGroupUploadPicture)
+	supervisorAuthGroup.GET("/get_student_group_list", supervisorHandler.GetStudentGroupList)
+	supervisorAuthGroup.POST("/set_chapter_permission", supervisorHandler.SetChapterPemission)
+	supervisorAuthGroup.POST("/set_allow_group_login", supervisorHandler.SetAllowGroupLogin)
+	supervisorAuthGroup.POST(
+		"/set_allow_group_upload_picture",
+		supervisorHandler.SetAllowGroupUploadPicture,
+	)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
 	studentGroup.Use(echojwt.WithConfig(jwtConfig))
 	studentGroup.POST("/exercise_submit", studentHandler.ExerciseSubmit)
-	studentGroup.GET("/all_chapter",studentHandler.GetALLChapter)
+	studentGroup.GET("/all_chapter", studentHandler.GetALLChapter)
 	studentGroup.GET("/chapter_list", studentHandler.GetChapterList)
 	studentGroup.GET("/assigned_exercise", studentHandler.GetStudentAssignedExercise)
 
@@ -88,6 +97,7 @@ func ConfigureRoutes(server *s.Server) {
 	commonAuthGroup.POST("/keyword_check", commonHandler.KeywordCheck)
 	commonAuthGroup.GET("/student_submission", commonHandler.GetStudentSubmission)
 	commonAuthGroup.POST("/user_profile", commonHandler.UploadUserProfile)
+	commonAuthGroup.GET("/departments", commonHandler.GetDepartments)
 
 	// Test
 	apiGroup.GET("/greeting", testHandler.Greeting)
