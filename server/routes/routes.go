@@ -98,6 +98,7 @@ func ConfigureRoutes(server *s.Server) {
 	commonAuthGroup.GET("/student_submission", commonHandler.GetStudentSubmission)
 	commonAuthGroup.POST("/user_profile", commonHandler.UploadUserProfile)
 	commonAuthGroup.GET("/departments", commonHandler.GetDepartments)
+	commonAuthGroup.GET("/staffs", commonHandler.GetStaffs)
 
 	// Test
 	apiGroup.GET("/greeting", testHandler.Greeting)

@@ -293,3 +293,19 @@ func (commonHandler *CommonHandler) GetDepartments(c echo.Context) error {
 	response := responses.NewDepartmentsResponse(depts)
 	return responses.Response(c, http.StatusOK, response)
 }
+
+// @Description Get Staffs
+// @ID common-get-staffs
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Success 200 {array} responses.SupervisorsResponse
+// @Security BearerAuth
+// @Router /api/common/staffs [get]
+func (commonHandler *CommonHandler) GetStaffs(c echo.Context) error {
+	var supervisors []models.Supervisor
+	supervRepo := repositories.NewSupervisorRepository(commonHandler.server.DB)
+	supervRepo.GetAllSupervisors(&supervisors)
+	response := responses.NewSupervisorsResponse(supervisors)
+	return responses.Response(c, http.StatusOK, response)
+}
