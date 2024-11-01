@@ -209,8 +209,8 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		)
 	}
 
-	itemIdInt,err := strconv.Atoi(itemId)
-	if(err!=nil){
+	itemIdInt, err := strconv.Atoi(itemId)
+	if err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
@@ -218,13 +218,24 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		)
 	}
 
-	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(commonHandle.server.DB)
-	var assignItem models.StudentAssignmentChapterItem 
-	studentAssignChapterItemRepo.GetStudentAssignChapterItem(&assignItem,stuUuid,chapterUuid,itemIdInt)
+	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		commonHandle.server.DB,
+	)
+	var assignItem models.StudentAssignmentChapterItem
+	studentAssignChapterItemRepo.GetStudentAssignChapterItem(
+		&assignItem,
+		stuUuid,
+		chapterUuid,
+		itemIdInt,
+	)
 
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(commonHandle.server.DB)
 	var exerciseSubmissionList []models.ExerciseSubmission
-	exerciseSubmissionRepo.GetStudentSubmission(stuUuid, *assignItem.ExerciseID, &exerciseSubmissionList)
+	exerciseSubmissionRepo.GetStudentSubmission(
+		stuUuid,
+		*assignItem.ExerciseID,
+		&exerciseSubmissionList,
+	)
 
 	return responses.Response(c, http.StatusOK, exerciseSubmissionList)
 }
@@ -264,5 +275,21 @@ func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
 
 	response := responses.NewFileResponse(imageName, imageUrl)
 
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get Departments
+// @ID common-get-departments
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Success 200 {array} responses.DepartmentResponse
+// @Security BearerAuth
+// @Router /api/common/departments [get]
+func (commonHandler *CommonHandler) GetDepartments(c echo.Context) error {
+	var depts []models.Department
+	deptRepo := repositories.NewDepartmentRepository(commonHandler.server.DB)
+	deptRepo.GetAllDepts(&depts)
+	response := responses.NewDepartmentsResponse(depts)
 	return responses.Response(c, http.StatusOK, response)
 }
