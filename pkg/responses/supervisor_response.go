@@ -4,17 +4,18 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/google/uuid"
+
+	"github.com/Project-IPCA/ipca-backend/models"
 )
 
 type GetLabChapterInfoResponse struct {
-	ChapterName       string                 `json:"chapter_name"`
-	ChapterId         string                 `json:"chapter_id"`
-	ChapterIdx        int                    `json:"chapter_idx"`
-	GroupId           uuid.UUID              `json:"group_id"`
-	GroupSelectedLabs map[string][]string    `json:"group_selected_labs"`
-	LabList           map[string][]LabData   `json:"lab_list"`
+	ChapterName       string               `json:"chapter_name"`
+	ChapterId         string               `json:"chapter_id"`
+	ChapterIdx        int                  `json:"chapter_idx"`
+	GroupId           uuid.UUID            `json:"group_id"`
+	GroupSelectedLabs map[string][]string  `json:"group_selected_labs"`
+	LabList           map[string][]LabData `json:"lab_list"`
 }
 
 type LabData struct {
@@ -42,7 +43,10 @@ func NewGetLabChapterInfoResponse(
 	for _, item := range groupChapterSelectItems {
 		itemIdStr := strconv.Itoa(int(item.ItemID))
 		if _, exists := groupSelectedLabs[itemIdStr]; exists {
-			groupSelectedLabs[itemIdStr] = append(groupSelectedLabs[itemIdStr], item.ExerciseID.String())
+			groupSelectedLabs[itemIdStr] = append(
+				groupSelectedLabs[itemIdStr],
+				item.ExerciseID.String(),
+			)
 		}
 	}
 
@@ -72,38 +76,56 @@ func NewGetLabChapterInfoResponse(
 }
 
 type SetChapterPermissionResponse struct {
-	ClassID         uuid.UUID     `json:"group_id"`
-	ChapterID       uuid.UUID     `json:"chapter_id"`
-	AllowAccessType string        `json:"allow_access_type"`
-	AccessTimeStart *time.Time    `json:"access_time_start"`
-	AccessTimeEnd   *time.Time    `json:"access_time_end"`
-	AllowSubmitType string        `json:"allow_submit_type"`
-	SubmitTimeStart *time.Time    `json:"submit_time_start"`
-	SubmitTimeEnd   *time.Time    `json:"submit_time_end"`
-	AllowSubmit     bool          `json:"allow_submit"`
-	Status          string        `json:"status"`
-	AllowAccess     bool          `json:"allow_access"`
-	TimeStart       *string       `json:"time_start"`
-	TimeEnd         *string       `json:"time_end"`
+	ClassID         uuid.UUID  `json:"group_id"`
+	ChapterID       uuid.UUID  `json:"chapter_id"`
+	AllowAccessType string     `json:"allow_access_type"`
+	AccessTimeStart *time.Time `json:"access_time_start"`
+	AccessTimeEnd   *time.Time `json:"access_time_end"`
+	AllowSubmitType string     `json:"allow_submit_type"`
+	SubmitTimeStart *time.Time `json:"submit_time_start"`
+	SubmitTimeEnd   *time.Time `json:"submit_time_end"`
+	AllowSubmit     bool       `json:"allow_submit"`
+	Status          string     `json:"status"`
+	AllowAccess     bool       `json:"allow_access"`
+	TimeStart       *string    `json:"time_start"`
+	TimeEnd         *string    `json:"time_end"`
 }
 
-func NewSetChapterPermissionResponse (
+func NewSetChapterPermissionResponse(
 	groupChapterPermission models.GroupChapterPermission,
-) SetChapterPermissionResponse{
+) SetChapterPermissionResponse {
 	response := SetChapterPermissionResponse{
-		ClassID: groupChapterPermission.ClassID,
-		ChapterID: groupChapterPermission.ChapterID,
+		ClassID:         groupChapterPermission.ClassID,
+		ChapterID:       groupChapterPermission.ChapterID,
 		AllowAccessType: groupChapterPermission.AllowAccessType,
 		AccessTimeStart: groupChapterPermission.AccessTimeStart,
-		AccessTimeEnd: groupChapterPermission.AccessTimeEnd,
+		AccessTimeEnd:   groupChapterPermission.AccessTimeEnd,
 		AllowSubmitType: groupChapterPermission.AllowSubmitType,
 		SubmitTimeStart: groupChapterPermission.SubmitTimeStart,
-		SubmitTimeEnd: groupChapterPermission.SubmitTimeEnd,
-		AllowSubmit: groupChapterPermission.AllowSubmit,
-		Status: groupChapterPermission.Status,
-		AllowAccess: groupChapterPermission.AllowAccess,
-		TimeStart: groupChapterPermission.TimeStart,
-		TimeEnd: groupChapterPermission.TimeEnd,
+		SubmitTimeEnd:   groupChapterPermission.SubmitTimeEnd,
+		AllowSubmit:     groupChapterPermission.AllowSubmit,
+		Status:          groupChapterPermission.Status,
+		AllowAccess:     groupChapterPermission.AllowAccess,
+		TimeStart:       groupChapterPermission.TimeStart,
+		TimeEnd:         groupChapterPermission.TimeEnd,
 	}
 	return response
+}
+
+type SupervisorsResponse struct {
+	SupervisorID uuid.UUID `json:"supervisor_id"`
+	FirstName    string    `json:"f_name"`
+	LastName     string    `json:"l_name"`
+}
+
+func NewSupervisorsResponse(supervisors []models.Supervisor) *[]SupervisorsResponse {
+	response := make([]SupervisorsResponse, 0)
+	for _, supervisor := range supervisors {
+		response = append(response, SupervisorsResponse{
+			SupervisorID: supervisor.SupervisorID,
+			FirstName:    *supervisor.User.FirstName,
+			LastName:     *supervisor.User.LastName,
+		})
+	}
+	return &response
 }

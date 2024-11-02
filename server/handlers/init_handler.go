@@ -169,7 +169,7 @@ func (initHandler *InitHandler) InitTA(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
 	}
 
-	err = taService.CreateTa(userId,nil,nil)
+	err = taService.CreateTa(userId, nil, nil)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
 	}

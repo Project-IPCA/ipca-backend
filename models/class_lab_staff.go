@@ -7,7 +7,7 @@ import (
 type ClassLabStaff struct {
 	ClassID       uuid.UUID     `gorm:"column:class_id;type:varchar(36);primaryKey;not null"`
 	StaffID       uuid.UUID     `gorm:"column:staff_id;type:varchar(36);primaryKey;not null"`
-	Role			string	`gorm:"column:role;type:enum('ADMIN','SUPERVISOR','TA')"`
+	Role          string        `gorm:"column:role;type:enum('ADMIN','SUPERVISOR','TA')"`
 	Supervisor    Supervisor    `gorm:"foreignKey:StaffID;references:SupervisorID"`
 	ClassSchedule ClassSchedule `gorm:"foreignKey:ClassID;references:GroupID"`
 }

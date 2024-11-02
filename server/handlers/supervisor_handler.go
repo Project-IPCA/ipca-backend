@@ -265,6 +265,7 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 
 	classLabStaffService := classlabstaff.NewClassLabStaffService(supervisorHandler.server.DB)
 	for _, item := range createGroupReq.Staffs {
+		fmt.Println(createGroupReq.Staffs)
 		classLabStaffService.Create(groupId, item.StaffID)
 	}
 

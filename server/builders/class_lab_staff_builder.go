@@ -9,6 +9,7 @@ import (
 type ClassLabStaffBuilder struct {
 	ClassID uuid.UUID
 	StaffID uuid.UUID
+	Role    string
 }
 
 func NewClassLabStaffBuilder() *ClassLabStaffBuilder {
@@ -29,10 +30,18 @@ func (classLabStaffBuilder *ClassLabStaffBuilder) SetStaffID(
 	return classLabStaffBuilder
 }
 
+func (classLabStaffBuilder *ClassLabStaffBuilder) SetRole(
+	role string,
+) (cls *ClassLabStaffBuilder) {
+	classLabStaffBuilder.Role = role
+	return classLabStaffBuilder
+}
+
 func (classLabStaffBuilder *ClassLabStaffBuilder) Build() models.ClassLabStaff {
 	classLabStaff := models.ClassLabStaff{
 		ClassID: classLabStaffBuilder.ClassID,
 		StaffID: classLabStaffBuilder.StaffID,
+		Role:    classLabStaffBuilder.Role,
 	}
 	return classLabStaff
 }
