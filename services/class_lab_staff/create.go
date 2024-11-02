@@ -10,6 +10,7 @@ func (classLabStaffService *Service) Create(classId uuid.UUID, staffId uuid.UUID
 	classLabStaff := builders.NewClassLabStaffBuilder().
 		SetClassID(classId).
 		SetStaffID(staffId).
+		SetRole("SUPERVISOR").
 		Build()
 
 	classLabStaffService.DB.Create(&classLabStaff)
