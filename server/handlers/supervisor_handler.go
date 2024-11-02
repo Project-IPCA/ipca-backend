@@ -487,18 +487,8 @@ func (supervisorHandler *SupervisorHandler) GetMyGroupInfo(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
-	var existDepts []models.Department
-	deptRepo := repositories.NewDepartmentRepository(supervisorHandler.server.DB)
-	deptRepo.GetAllDepts(&existDepts)
-
-	var existStaffs []models.Supervisor
-	supervisorRepo := repositories.NewSupervisorRepository(supervisorHandler.server.DB)
-	supervisorRepo.GetAllSupervisors(&existStaffs)
-
 	response := responses.NewMyClassScheduleInfoResponse(
 		existClassSchedule,
-		existDepts,
-		existStaffs,
 	)
 
 	return responses.Response(c, http.StatusOK, response)
