@@ -24,10 +24,10 @@ func (ActivityLog) TableName() string {
 }
 
 type LogExerciseSubmissionAction struct {
-	StuId	uuid.UUID `json:"stu_id"`
-	JobId	string `json:"job_id"`
-	Status	string `json:"status"`
-	SubmissionId uuid.UUID `json:"submission_id"`
-	Attempt	string `json:"attempt"`
-	SourcecodeFilename string `json:"sourcecode_filename"`
+	StuId              uuid.UUID `json:"stu_id"`
+	JobId              uuid.UUID `json:"job_id"`
+	Status             string    `json:"status"`
+	SubmissionId       uuid.UUID `json:"submission_id"`
+	Attempt            string    `json:"attempt"`
+	SourcecodeFilename string    `json:"sourcecode_filename"`
 }

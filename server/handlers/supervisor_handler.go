@@ -628,7 +628,7 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
 	labExerciseRepo.UpdateLabExerciseSourcecode(exerciseId.String(), uploadFileName)
 	var labExerciseData models.LabExercise
-	labExerciseRepo.GetLabExerciseByID(exerciseId.String(), &labExerciseData)
+	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExerciseData)
 
 	return responses.Response(c, http.StatusOK, labExerciseData)
 }
@@ -694,11 +694,8 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		saveExerciseTesetcaseReq.TestCaseList[i].IsReady = "no"
 		if saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID == nil {
 			fmt.Println("nil condition")
-			exerciseUuid, _ := uuid.Parse(
-				string(saveExerciseTesetcaseReq.TestCaseList[i].ExerciseID),
-			)
 			convertSaveTestcase := models.ExerciseTestcase{
-				ExerciseID:      exerciseUuid,
+				ExerciseID:      saveExerciseTesetcaseReq.TestCaseList[i].ExerciseID,
 				IsReady:         saveExerciseTesetcaseReq.TestCaseList[i].IsReady,
 				TestcaseContent: saveExerciseTesetcaseReq.TestCaseList[i].TestcaseContent,
 				IsActive:        &saveExerciseTesetcaseReq.TestCaseList[i].IsActive,
@@ -708,17 +705,14 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 				TestcaseError:   &saveExerciseTesetcaseReq.TestCaseList[i].TestcaseError,
 			}
 			saveId := exerciseTestcaseRepo.UpsertExerciseTestcaseID(convertSaveTestcase)
-			saveIdString := saveId.String()
 			if saveId != nil {
-				saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID = &saveIdString
+				saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID = saveId
 			}
 		} else {
 			fmt.Println("not nil")
-			exerciseUuid, _ := uuid.Parse(string(saveExerciseTesetcaseReq.TestCaseList[i].ExerciseID))
-			testcaseUuid, _ := uuid.Parse(string(*saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID))
 			convertSaveTestcase := models.ExerciseTestcase{
-				ExerciseID:      exerciseUuid,
-				TestcaseID:      &testcaseUuid,
+				ExerciseID:      saveExerciseTesetcaseReq.TestCaseList[i].ExerciseID,
+				TestcaseID:      saveExerciseTesetcaseReq.TestCaseList[i].TestcaseID,
 				IsReady:         saveExerciseTesetcaseReq.TestCaseList[i].IsReady,
 				TestcaseContent: saveExerciseTesetcaseReq.TestCaseList[i].TestcaseContent,
 				IsActive:        &saveExerciseTesetcaseReq.TestCaseList[i].IsActive,
@@ -1391,4 +1385,53 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture(c echo.Co
 	)
 
 	return responses.MessageResponse(c, http.StatusOK, "Setting Updated Successfully")
+}
+
+// @Description Delete Exercise
+// @ID supervisor-delete-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param exercise_id path string true "Exercise ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/exercise/{exercise_id} [delete]
+func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error {
+	exerciseIdStr := c.Param("exercise_id")
+	exerciseId, err := uuid.Parse(exerciseIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser, userId)
+	if *existUser.Role == constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var labExercise models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExercise)
+
+	var exerciseSubmission []models.ExerciseSubmission
+	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(supervisorHandler.server.DB)
+	exerciseSubmissionRepo.GetSubmissionByExerciseID(exerciseId, &exerciseSubmission)
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	for _, submission := range exerciseSubmission {
+		minioAction.DeleteFileInMinio(supervisorHandler.server.Config.Minio.BucketStudentCode, submission.SourcecodeFilename)
+	}
+	minioAction.DeleteFileInMinio(supervisorHandler.server.Config.Minio.BucketSupervisorCode, *labExercise.Sourcecode)
+
+	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
+	labExerciseService.Delete(&labExercise)
+
+	return responses.MessageResponse(c, http.StatusOK, "Delete Exercise Done")
 }

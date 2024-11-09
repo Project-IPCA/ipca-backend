@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -149,7 +150,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 
 	labExerciseRepo := repositories.NewLabExerciseRepository(studentHandler.server.DB)
 	var labExercise models.LabExercise
-	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItem.ExerciseID.String(), &labExercise)
+	labExerciseRepo.GetLabExerciseByID(*studentAssignChapterItem.ExerciseID, &labExercise)
 
 	logAction := models.LogExerciseSubmissionAction{
 		StuId:              userId,
@@ -225,7 +226,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	redis := redis_client.NewRedisAction(studentHandler.server.Redis)
 	redis.PublishMessage(fmt.Sprintf("logs:%s", existUser.Student.GroupID), insertLog)
 
-	response := responses.NewExerciseSubmitResponse(exerciseSubmitReq.JobId)
+	response := responses.NewExerciseSubmitResponse(exerciseSubmitReq.JobId.String())
 
 	return responses.Response(c, http.StatusOK, response)
 }
@@ -289,7 +290,7 @@ func (StudentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 				StudentHandler.server.DB,
 			)
 			for i := maxIdxItem; i < item.NoItems; i++ {
-				studentAssignChapterItemService.Create(
+				_, err := studentAssignChapterItemService.Create(
 					userId,
 					chapter.ChapterID,
 					i+1,
@@ -299,6 +300,9 @@ func (StudentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 					chapter.TimeStart,
 					chapter.TimeEnd,
 				)
+				if err != nil {
+					return responses.ErrorResponse(c, http.StatusInternalServerError, "Create Student Assigned Chapter Item Fail")
+				}
 			}
 		}
 	}
@@ -423,12 +427,39 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
 		StudentHandler.server.DB,
 	)
-	studentAssignItemRepo.GetStudentAssignChapterItem(
+	err = studentAssignItemRepo.GetStudentAssignChapterItem(
 		&studentAssignChapterItems,
 		existUser.UserID,
 		labClassInfo.ChapterID,
 		itemInt,
 	)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			var groupChapterPermission models.GroupChapterPermission
+			groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
+			groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, labClassInfo.ChapterID)
+			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(
+				StudentHandler.server.DB,
+			)
+			createData, err := studentAssignChapterItemService.Create(
+				userId,
+				labClassInfo.ChapterID,
+				itemInt,
+				nil,
+				labClassInfo.FullMark,
+				0,
+				groupChapterPermission.TimeStart,
+				groupChapterPermission.TimeEnd,
+			)
+			if err != nil {
+				return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+			}
+			studentAssignChapterItems = *createData
+		} else {
+			return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+	}
 
 	if studentAssignChapterItems.ExerciseID == nil {
 		var selectItem []models.GroupChapterSelectedItem
@@ -458,7 +489,7 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 
 	var labExercise models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(StudentHandler.server.DB)
-	labExerciseRepo.GetLabExerciseByID(studentAssignChapterItems.ExerciseID.String(), &labExercise)
+	labExerciseRepo.GetLabExerciseByID(*studentAssignChapterItems.ExerciseID, &labExercise)
 
 	response := responses.NewGetStudentAssignmentItemResponse(labExercise)
 
