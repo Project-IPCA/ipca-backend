@@ -58,9 +58,9 @@ func (minioAction *MinioAction) UploadToMinio(
 	}
 
 	var objectName string
-	if(isNotGenName){
+	if isNotGenName {
 		objectName = fileName
-	}else{
+	} else {
 		fileExtension := strings.ToLower(filepath.Ext(fileName))
 		objectUlid := utils.NewULID()
 		objectName = fmt.Sprintf("%s%s", objectUlid, fileExtension)
@@ -86,11 +86,23 @@ func (minioAction *MinioAction) UploadToMinio(
 func (minioAction *MinioAction) GetFromMinio(
 	bucketName string,
 	objectName string,
-) (*minio.Object,error){
-	object, err := minioAction.Minio.GetObject(context.Background(), bucketName,objectName, minio.GetObjectOptions{})
+) (*minio.Object, error) {
+	object, err := minioAction.Minio.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
 	if err != nil {
 		fmt.Println(err)
-		return nil,fmt.Errorf("error while getting object from minio : %v",err)
+		return nil, fmt.Errorf("error while getting object from minio : %v", err)
 	}
-	return object,nil
+	return object, nil
+}
+
+func (minioAction *MinioAction) DeleteFileInMinio(
+	bucketName string,
+	objectName string,
+) error {
+	err := minioAction.Minio.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("error while getting object from minio : %v", err)
+	}
+	return nil
 }

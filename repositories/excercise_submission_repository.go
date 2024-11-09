@@ -11,9 +11,13 @@ type ExerciseSubmissionRepository struct {
 }
 
 func NewExerciseSubmissionRepository(db *gorm.DB) *ExerciseSubmissionRepository {
-	return &ExerciseSubmissionRepository{DB:db}
+	return &ExerciseSubmissionRepository{DB: db}
 }
 
-func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetStudentSubmission(stuId uuid.UUID,exerciseId uuid.UUID,submission *[]models.ExerciseSubmission){
-	exerciseSubmissionRepo.DB.Where("stu_id = ? AND exercise_id = ?",stuId,exerciseId).Order("time_submit ASC").Find(submission)
+func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetStudentSubmission(stuId uuid.UUID, exerciseId uuid.UUID, submission *[]models.ExerciseSubmission) {
+	exerciseSubmissionRepo.DB.Where("stu_id = ? AND exercise_id = ?", stuId, exerciseId).Order("time_submit ASC").Find(submission)
+}
+
+func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByExerciseID(exerciseId uuid.UUID, submission *[]models.ExerciseSubmission) {
+	exerciseSubmissionRepo.DB.Where("exercise_id = ?", exerciseId).Find(submission)
 }

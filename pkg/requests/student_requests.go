@@ -18,10 +18,10 @@ func (asr AddStudentsTextRequest) Validate() error {
 }
 
 type ExcerciseSubmitRequest struct {
-	ChapterID  string `json:"chapter_id" validate:"required"`
-	ItemId     int    `json:"item_id"    validate:"required"`
-	JobId      string `json:"job_id"     validate:"required"`
-	Sourcecode string `json:"sourcecode" validate:"required"`
+	ChapterID  string    `json:"chapter_id" validate:"required"`
+	ItemId     int       `json:"item_id"    validate:"required"`
+	Sourcecode string    `json:"sourcecode" validate:"required"`
+	JobId      uuid.UUID `json:"job_id" validate:"required"`
 }
 
 func (esr ExcerciseSubmitRequest) Validate() error {
@@ -30,7 +30,7 @@ func (esr ExcerciseSubmitRequest) Validate() error {
 }
 
 type ExerciseSubmissionRabbitMessage struct {
-	JobId        string                    `json:"job_id"`
+	JobId        uuid.UUID                 `json:"job_id"`
 	JobType      string                    `json:"job_type"`
 	LogData      LogDataInfo               `json:"log_data"`
 	SubmissionId uuid.UUID                 `json:"submission_id"`
