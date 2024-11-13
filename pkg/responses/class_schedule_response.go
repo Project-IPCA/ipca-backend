@@ -3,6 +3,7 @@ package responses
 import (
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -196,13 +197,19 @@ func NewMyClassSchedulesResponse(
 	}
 }
 
+type Permission struct {
+	Type      string     `json:"type"`
+	TimeStart *time.Time `json:"time_start"`
+	TimeEnd   *time.Time `json:"time_end"`
+}
+
 type GroupChapterPermission struct {
-	ChapterID       uuid.UUID `json:"chapter_id"`
-	ChapterIndex    int       `json:"chapter_index"`
-	Name            string    `json:"name"`
-	AllowAccessType string    `json:"allow_access_type"`
-	AllowSubmitType string    `json:"allow_submit_type"`
-	FullMark        int       `json:"full_mark"`
+	ChapterID    uuid.UUID  `json:"chapter_id"`
+	ChapterIndex int        `json:"chapter_index"`
+	Name         string     `json:"name"`
+	AllowAccess  Permission `json:"allow_access"`
+	AllowSubmit  Permission `json:"allow_submit"`
+	FullMark     int        `json:"full_mark"`
 }
 
 type ClassScheduleInfoResponse struct {
@@ -234,12 +241,20 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 	groupChapterPermResponse := make([]GroupChapterPermission, 0)
 	for _, gcp := range classSchedule.GroupChapterPermissions {
 		groupChapterPermResponse = append(groupChapterPermResponse, GroupChapterPermission{
-			ChapterID:       gcp.ChapterID,
-			ChapterIndex:    gcp.LabClassInfo.ChapterIndex,
-			Name:            gcp.LabClassInfo.Name,
-			AllowAccessType: gcp.AllowAccessType,
-			AllowSubmitType: gcp.AllowSubmitType,
-			FullMark:        gcp.LabClassInfo.FullMark,
+			ChapterID:    gcp.ChapterID,
+			ChapterIndex: gcp.LabClassInfo.ChapterIndex,
+			Name:         gcp.LabClassInfo.Name,
+			AllowAccess: Permission{
+				Type:      gcp.AllowAccessType,
+				TimeStart: gcp.AccessTimeStart,
+				TimeEnd:   gcp.AccessTimeEnd,
+			},
+			AllowSubmit: Permission{
+				Type:      gcp.AllowSubmitType,
+				TimeStart: gcp.SubmitTimeStart,
+				TimeEnd:   gcp.SubmitTimeEnd,
+			},
+			FullMark: gcp.LabClassInfo.FullMark,
 		})
 	}
 	return &ClassScheduleInfoResponse{
