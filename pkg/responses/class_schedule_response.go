@@ -215,6 +215,7 @@ type GroupChapterPermission struct {
 type ClassScheduleInfoResponse struct {
 	GroupID                 uuid.UUID                `json:"group_id"`
 	GroupNo                 int                      `json:"group_no"`
+	Name                    string                   `json:"name"`
 	Department              string                   `json:"department"`
 	Year                    *int                     `json:"year"`
 	Semester                *int                     `json:"semester"`
@@ -260,6 +261,7 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 	return &ClassScheduleInfoResponse{
 		GroupID:       classSchedule.GroupID,
 		GroupNo:       *classSchedule.Number,
+		Name:          classSchedule.Name,
 		Department:    classSchedule.Department.Name,
 		Year:          classSchedule.Year,
 		Semester:      classSchedule.Semester,
