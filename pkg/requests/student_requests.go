@@ -21,7 +21,7 @@ type ExcerciseSubmitRequest struct {
 	ChapterID  string    `json:"chapter_id" validate:"required"`
 	ItemId     int       `json:"item_id"    validate:"required"`
 	Sourcecode string    `json:"sourcecode" validate:"required"`
-	JobId      uuid.UUID `json:"job_id" validate:"required"`
+	JobId      uuid.UUID `json:"job_id"     validate:"required"`
 }
 
 func (esr ExcerciseSubmitRequest) Validate() error {
@@ -49,4 +49,13 @@ type LogDataInfo struct {
 	Agent      string                             `json:"agent"`
 	PageName   string                             `json:"page_name"`
 	Action     models.LogExerciseSubmissionAction `json:"action"`
+}
+
+type CanSubmitRequest struct {
+	CanSubmit bool `json:"can_submit" example:"true" validate:"omitempty"`
+}
+
+func (csr CanSubmitRequest) Validate() error {
+	validate := validator.New()
+	return validate.Struct(&csr)
 }

@@ -72,6 +72,10 @@ func ConfigureRoutes(server *s.Server) {
 		supervisorHandler.SetAllowGroupUploadPicture,
 	)
 	supervisorAuthGroup.DELETE("/exercise/:exercise_id", supervisorHandler.DeleteExercise)
+	supervisorAuthGroup.PUT(
+		"/student_can_submit/:student_id",
+		supervisorHandler.UpdateStudentCanSubmit,
+	)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
