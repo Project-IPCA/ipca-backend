@@ -1,8 +1,6 @@
 package requests
 
 import (
-	"fmt"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
@@ -22,7 +20,6 @@ type BasicUserInfo struct {
 
 func (bui BasicUserInfo) Validate() error {
 	validate := validator.New()
-	fmt.Println(validate.Struct(&bui))
 	return validate.Struct(&bui)
 }
 

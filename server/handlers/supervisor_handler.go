@@ -1421,17 +1421,74 @@ func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error
 	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExercise)
 
 	var exerciseSubmission []models.ExerciseSubmission
-	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(supervisorHandler.server.DB)
+	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(
+		supervisorHandler.server.DB,
+	)
 	exerciseSubmissionRepo.GetSubmissionByExerciseID(exerciseId, &exerciseSubmission)
 
 	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
 	for _, submission := range exerciseSubmission {
-		minioAction.DeleteFileInMinio(supervisorHandler.server.Config.Minio.BucketStudentCode, submission.SourcecodeFilename)
+		minioAction.DeleteFileInMinio(
+			supervisorHandler.server.Config.Minio.BucketStudentCode,
+			submission.SourcecodeFilename,
+		)
 	}
-	minioAction.DeleteFileInMinio(supervisorHandler.server.Config.Minio.BucketSupervisorCode, *labExercise.Sourcecode)
+	minioAction.DeleteFileInMinio(
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		*labExercise.Sourcecode,
+	)
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
 	labExerciseService.Delete(&labExercise)
 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Exercise Done")
+}
+
+// @Description Update Student Can Submit
+// @ID supervisor-update-student-can-submit
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param student_id path string true "Student ID"
+// @Param params body	requests.CanSubmitRequest	true	"Can Submit Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/student_can_submit/{student_id} [put]
+func (supervisorHandler *SupervisorHandler) UpdateStudentCanSubmit(c echo.Context) error {
+	studentIdStr := c.Param("student_id")
+	studentId, err := uuid.Parse(studentIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	canSubmitReq := new(requests.CanSubmitRequest)
+
+	if err := c.Bind(canSubmitReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+
+	if err := canSubmitReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser := utils.GetUserClaims(c, *userRepo)
+	if !utils.IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existStudent := models.Student{}
+	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+	studentRepo.GetStudentByStuID(&existStudent, studentId)
+
+	studentService := student.NewStudentService(supervisorHandler.server.DB)
+	studentService.UpdateCanSubmit(&existStudent, canSubmitReq.CanSubmit)
+
+	return responses.MessageResponse(c, http.StatusOK, "Updated Student Can Submit")
 }
