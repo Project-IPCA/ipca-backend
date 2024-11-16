@@ -256,8 +256,9 @@ type LabInfo struct {
 type StudentWithScore struct {
 	ChapterScore map[string]int `json:"chapter_score"`
 	Active       bool           `json:"active"`
-	FirstName    string         `json:"f_name"`
-	LastName     string         `json:"l_name"`
+	FirstName    *string        `json:"f_name"`
+	LastName     *string        `json:"l_name"`
+	Avatar       *string        `json:"avatar"`
 	CanSubmit    bool           `json:"can_submit"`
 	StuID        uuid.UUID      `json:"stu_id"`
 	KmitlID      string         `json:"kmitl_id"`
@@ -307,8 +308,9 @@ func NewGetStudentWithAssigmentScoreByGroupID(
 		studentScore = append(studentScore, StudentWithScore{
 			ChapterScore: chapterScore,
 			Active:       student.User.IsActive,
-			FirstName:    *student.User.FirstName,
-			LastName:     *student.User.LastName,
+			FirstName:    student.User.FirstName,
+			LastName:     student.User.LastName,
+			Avatar:       student.User.Avatar,
 			CanSubmit:    student.CanSubmit,
 			StuID:        student.StuID,
 			KmitlID:      student.KmitlID,
