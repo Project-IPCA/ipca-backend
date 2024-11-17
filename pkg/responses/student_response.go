@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -243,6 +244,7 @@ type GetStudentWithAssigmentScoreResponse struct {
 	GroupId     uuid.UUID          `json:"group_id"`
 	LabInfo     []LabInfo          `json:"lab_info"`
 	StudentList []StudentWithScore `json:"student_list"`
+	Pagination  Pagination         `json:"pagination"`
 }
 
 type LabInfo struct {
@@ -270,7 +272,22 @@ func NewGetStudentWithAssigmentScoreByGroupID(
 	labClassInfo []models.LabClassInfo,
 	students []models.Student,
 	groupId uuid.UUID,
+	page string,
+	pageSize string,
+	totalStudents int64,
 ) GetStudentWithAssigmentScoreResponse {
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = 1
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = 10
+	}
+
+	pages := int(math.Ceil(float64(totalStudents) / float64(pageSizeInt)))
+
 	labInfo := make([]LabInfo, 0, len(labClassInfo))
 	chapterIdMap := make(map[uuid.UUID]int)
 
@@ -323,6 +340,11 @@ func NewGetStudentWithAssigmentScoreByGroupID(
 		GroupId:     groupId,
 		LabInfo:     labInfo,
 		StudentList: studentScore,
+		Pagination: Pagination{
+			Page:     pageInt,
+			PageSize: pageSizeInt,
+			Pages:    pages,
+		},
 	}
 }
 
