@@ -362,7 +362,6 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 		page,
 		pageSize,
 	)
-	fmt.Println(totalClassSchedules)
 
 	var allClassSchedules []models.ClassSchedule
 	classScheduleR.GetAllClassSchedules(&allClassSchedules)
@@ -1089,12 +1088,16 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 // @Accept json
 // @Produce json
 // @Param group_id query string false "group_id"
+// @Param page query string false "Page"
+// @Param pageSize query string false "Page Size"
 // @Success 200		{object}	responses.GetStudentWithAssigmentScoreResponse
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/supervisor/get_student_group_list [get]
 func (supervisorHandler *SupervisorHandler) GetStudentGroupList(c echo.Context) error {
+	page := c.QueryParam("page")
+	pageSize := c.QueryParam("pageSize")
 	userJwt := c.Get("user").(*jwt.Token)
 	claims := userJwt.Claims.(*token.JwtCustomClaims)
 	userId := claims.UserID
@@ -1118,9 +1121,21 @@ func (supervisorHandler *SupervisorHandler) GetStudentGroupList(c echo.Context) 
 
 	var student []models.Student
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
-	studentRepo.GetStudentsAndAssignmentScoreByGroupID(&student, groupUuid)
+	totalStudents := studentRepo.GetStudentsAndAssignmentScoreByGroupID(
+		&student,
+		groupUuid,
+		page,
+		pageSize,
+	)
 
-	response := responses.NewGetStudentWithAssigmentScoreByGroupID(labClassInfo, student, groupUuid)
+	response := responses.NewGetStudentWithAssigmentScoreByGroupID(
+		labClassInfo,
+		student,
+		groupUuid,
+		page,
+		pageSize,
+		totalStudents,
+	)
 	return responses.Response(c, http.StatusOK, response)
 }
 

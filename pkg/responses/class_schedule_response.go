@@ -10,12 +10,6 @@ import (
 	"github.com/Project-IPCA/ipca-backend/models"
 )
 
-type Pagination struct {
-	Page     int `json:"page"`
-	PageSize int `json:"page_size"`
-	Pages    int `json:"pages"`
-}
-
 type ClassStaff struct {
 	SupervisorID uuid.UUID `json:"supervisor_id"`
 	FirstName    string    `json:"f_name"`

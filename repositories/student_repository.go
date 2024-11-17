@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"strconv"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
@@ -23,15 +25,15 @@ type StudentRepository struct {
 }
 
 type StudentWithAssignments struct {
-	Username  string
-	FirstName *string
-	LastName  *string
+	Username    string
+	FirstName   *string
+	LastName    *string
 	Assignments []AssignmentScore
 }
 
 type AssignmentScore struct {
-	ChapterID uuid.UUID
-	ItemID    int
+	ChapterID  uuid.UUID
+	ItemID     int
 	ExerciseID *uuid.UUID
 	Marking    int
 }
@@ -57,6 +59,31 @@ func (studentRepository *StudentRepository) GetStudentByStuID(
 func (studentRepository *StudentRepository) GetStudentsAndAssignmentScoreByGroupID(
 	student *[]models.Student,
 	groupId uuid.UUID,
-) {
-	studentRepository.DB.Preload("User").Preload("Assignments").Where("group_id = ?", groupId).Find(student)
+	page string,
+	pageSize string,
+) int64 {
+	defaultPage := 1
+	defaultPageSize := 10
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = defaultPage
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = defaultPageSize
+	}
+
+	baseQuery := studentRepository.DB.Model(&models.Student{}).Preload("User").
+		Preload("Assignments").
+		Where("group_id = ?", groupId)
+
+	var totalStudents int64
+	baseQuery.Count(&totalStudents)
+
+	offset := (pageInt - 1) * pageSizeInt
+	baseQuery.Offset(offset).Limit(pageSizeInt).Find(student)
+
+	return totalStudents
 }
