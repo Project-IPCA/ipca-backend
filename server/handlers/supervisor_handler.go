@@ -1517,7 +1517,7 @@ func (supervisorHandler *SupervisorHandler) UpdateStudentCanSubmit(c echo.Contex
 // @Accept json
 // @Produce json
 // @Param student_id path string true "Student ID"
-// @Success 200		{object}	responses.Data
+// @Success 200		{object}	responses.UserStudentInfoResponse
 // @Failure 404		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
