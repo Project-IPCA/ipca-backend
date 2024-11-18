@@ -34,3 +34,14 @@ func (userRepository *UserRepository) GetUserByUserID(
 		Where("user_id = ?", userId).
 		Find(user)
 }
+
+func (userRepository *UserRepository) GetUserStudentAndGroupByUserID(
+	user *models.User,
+	userId uuid.UUID,
+) {
+	userRepository.DB.Preload("Student.Group").
+		Preload("Supervisor").
+		Preload("Dept").
+		Where("user_id = ?", userId).
+		Find(user)
+}
