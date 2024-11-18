@@ -1510,3 +1510,43 @@ func (supervisorHandler *SupervisorHandler) UpdateStudentCanSubmit(c echo.Contex
 
 	return responses.MessageResponse(c, http.StatusOK, "Updated Student Can Submit")
 }
+
+// @Description Get Student Info
+// @ID supervisor-get-student-info
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param student_id path string true "Student ID"
+// @Success 200		{object}	responses.Data
+// @Failure 404		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/student_info/{student_id} [get]
+func (supervisorHandler *SupervisorHandler) GetStudentInfo(c echo.Context) error {
+	studentIdStr := c.Param("student_id")
+	studentId, err := uuid.Parse(studentIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existSupervisor := utils.GetUserClaims(c, *userRepo)
+	if !utils.IsRoleSupervisor(existSupervisor) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	existStudent := models.User{}
+	userRepo.GetUserStudentAndGroupByUserID(&existStudent, studentId)
+
+	if utils.IsRoleSupervisor(existStudent) {
+		return responses.ErrorResponse(c, http.StatusNotFound, "Not found student.")
+	}
+
+	response := responses.NewUserStudentInfoResponse(existStudent)
+
+	if existStudent.UserID != studentId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "Not found student.")
+	}
+
+	return responses.Response(c, http.StatusOK, response)
+}
