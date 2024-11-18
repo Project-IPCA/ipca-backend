@@ -45,12 +45,16 @@ type AvailableGroupFilter struct {
 type AvailableGroupsResponse struct {
 	AvailableGroups []ClassSchedule      `json:"available_groups"`
 	Filter          AvailableGroupFilter `json:"filters"`
+	Pagination      Pagination           `json:"pagination"`
 }
 
 func NewClassSchedulesResponse(
 	filteredClassSchedules []models.ClassSchedule,
 	allClassSchedules []models.ClassSchedule,
 	staffs []models.Supervisor,
+	page string,
+	pageSize string,
+	totalClassSchedules int64,
 ) *AvailableGroupsResponse {
 	classSchedules := make([]ClassSchedule, 0)
 	for _, classSchedule := range filteredClassSchedules {
@@ -99,12 +103,29 @@ func NewClassSchedulesResponse(
 		uniqueYears = append(uniqueYears, &year)
 	}
 
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = 1
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = 10
+	}
+
+	pages := int(math.Ceil(float64(totalClassSchedules) / float64(pageSizeInt)))
+
 	return &AvailableGroupsResponse{
 		AvailableGroups: classSchedules,
 		Filter: AvailableGroupFilter{
 			Years:       uniqueYears,
 			Instructors: allStaffs,
 			Staffs:      allStaffs,
+		},
+		Pagination: Pagination{
+			Page:     pageInt,
+			PageSize: pageSizeInt,
+			Pages:    pages,
 		},
 	}
 }
