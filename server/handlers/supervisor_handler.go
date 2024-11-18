@@ -305,7 +305,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 
 	var existClassSchedules []models.ClassSchedule
 	classSceduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classSceduleR.GetAllClassSchedulesByQuery(
+	totalClassSchedules := classSceduleR.GetAllClassSchedulesByQuery(
 		&existClassSchedules,
 		instructorId,
 		staffIds,
@@ -326,6 +326,9 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 		existClassSchedules,
 		allClassSchedules,
 		allSupervisors,
+		page,
+		pageSize,
+		totalClassSchedules,
 	)
 	return responses.Response(c, http.StatusOK, response)
 }
