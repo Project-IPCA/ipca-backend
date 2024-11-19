@@ -77,6 +77,10 @@ func ConfigureRoutes(server *s.Server) {
 		supervisorHandler.UpdateStudentCanSubmit,
 	)
 	supervisorAuthGroup.GET("/student_info/:student_id", supervisorHandler.GetStudentInfo)
+	supervisorAuthGroup.PUT(
+		"/logout_all_student/:group_id",
+		supervisorHandler.LogoutAllStudentInGroup,
+	)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")

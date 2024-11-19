@@ -216,7 +216,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		remoteIP,
 		&mockPort,
 		&userAgent,
-		"exercise-submit",
+		constants.LogPage.ExerciseSubmit,
 		string(logActionString),
 	)
 	if err != nil {

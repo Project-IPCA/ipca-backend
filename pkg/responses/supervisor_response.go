@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -128,4 +129,32 @@ func NewSupervisorsResponse(supervisors []models.Supervisor) *[]SupervisorsRespo
 		})
 	}
 	return &response
+}
+
+type StudentResponse struct {
+	StudentID uuid.UUID `json:"student_id"`
+	FirstName string    `json:"f_name"`
+	LastName  string    `json:"l_name"`
+}
+
+type LogoutAllStudentResponse struct {
+	Message       string            `json:"message"`
+	StudentLogout []StudentResponse `json:"student_logout"`
+}
+
+func NewLogoutAllStudentResponse(count int, studentList []models.Student) LogoutAllStudentResponse {
+	studentLogout := make([]StudentResponse, 0)
+	for _, student := range studentList {
+		studentLogout = append(studentLogout, StudentResponse{
+			StudentID: student.StuID,
+			FirstName: *student.User.FirstName,
+			LastName:  *student.User.LastName,
+		})
+	}
+	response := LogoutAllStudentResponse{
+		Message:       fmt.Sprintf("Logout %d Students Successfully", count),
+		StudentLogout: studentLogout,
+	}
+
+	return response
 }
