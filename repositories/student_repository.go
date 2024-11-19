@@ -87,3 +87,10 @@ func (studentRepository *StudentRepository) GetStudentsAndAssignmentScoreByGroup
 
 	return totalStudents
 }
+
+func (studentRepository *StudentRepository) GetStudentInGroupID(
+	students *[]models.Student,
+	groupID uuid.UUID,
+) {
+	studentRepository.DB.Where("group_id = ?", groupID).Preload("User").Find(students)
+}

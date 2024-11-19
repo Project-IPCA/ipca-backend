@@ -23,6 +23,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/redis_client"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
+	activitylog "github.com/Project-IPCA/ipca-backend/services/activity_log"
 	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
 	classschedule "github.com/Project-IPCA/ipca-backend/services/class_schedule"
 	groupassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/group_assignment_chapter_item"
@@ -1548,5 +1549,110 @@ func (supervisorHandler *SupervisorHandler) GetStudentInfo(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusNotFound, "Not found student.")
 	}
 
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Logout All Student In Group
+// @ID supervisor-logout-all-student-in-group
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id path string true "Group ID"
+// @Success 200		{object}	responses.LogoutAllStudentResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/logout_all_student/{group_id} [put]
+func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Context) error {
+	groupIdStr := c.Param("group_id")
+	groupId, err := uuid.Parse(groupIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser, userId)
+
+	//TODO Add validate role function
+
+	var studentList []models.Student
+	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+	studentRepo.GetStudentInGroupID(&studentList, groupId)
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+
+	var mu sync.Mutex
+	count := 0
+	stuLogout := make([]models.Student, 0)
+	wg := sync.WaitGroup{}
+	for _, stu := range studentList {
+		if stu.User.IsOnline {
+			wg.Add(1)
+			go func(student models.Student) {
+				defer wg.Done()
+
+				userService.UpdateIsOnline(stu.User, false)
+
+				mu.Lock()
+				count++
+				stuLogout = append(stuLogout, student)
+				mu.Unlock()
+			}(stu)
+		}
+	}
+	wg.Wait()
+
+	ip, port, userAgent := utils.GetNetworkRequest(c)
+
+	activityLogService := activitylog.NewActivityLogService(supervisorHandler.server.DB)
+	newLog, err := activityLogService.Create(
+		&groupId,
+		existUser.Username,
+		ip,
+		&port,
+		&userAgent,
+		constants.LogPage.ManageStudent,
+		constants.LogAction.LogoutAllStudent,
+	)
+
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Insert Log.")
+	}
+
+	redis := redis_client.NewRedisAction(supervisorHandler.server.Redis)
+	redisCnl := fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.OnlineStudent,
+		groupId,
+	)
+	var nilUUID uuid.UUID
+	redisMsg := redis.NewMessage("logout-all", &nilUUID)
+	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
+
+	redisCnl = fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.Log,
+		groupId,
+	)
+	if err := redis.PublishMessage(redisCnl, newLog); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
+
+	response := responses.NewLogoutAllStudentResponse(count, stuLogout)
 	return responses.Response(c, http.StatusOK, response)
 }
