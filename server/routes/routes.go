@@ -81,6 +81,7 @@ func ConfigureRoutes(server *s.Server) {
 		"/logout_all_student/:group_id",
 		supervisorHandler.LogoutAllStudentInGroup,
 	)
+	supervisorAuthGroup.DELETE("/student/:stu_id", supervisorHandler.DeleteStudent)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
