@@ -1415,6 +1415,7 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture(c echo.Co
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/supervisor/exercise/{exercise_id} [delete]
 func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error {
@@ -1431,7 +1432,7 @@ func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error
 	var existUser models.User
 	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
 	userRepo.GetUserByUserID(&existUser, userId)
-	if *existUser.Role == constants.Role.Supervisor {
+	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -1459,6 +1460,9 @@ func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
 	labExerciseService.Delete(&labExercise)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Exercise.") 
+	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Exercise Done")
 }
@@ -1655,4 +1659,63 @@ func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Conte
 
 	response := responses.NewLogoutAllStudentResponse(count, stuLogout)
 	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Delete Student
+// @ID supervisor-delete-student
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param stu_id path string true "Student ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/student/{stu_id} [delete]
+func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error {
+	studentIdStr := c.Param("stu_id")
+	studentId, err := uuid.Parse(studentIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var userInfo models.User
+	userRepo.GetUserByUserID(&userInfo,studentId)
+	if(*userInfo.Role != constants.Role.Student){
+		return responses.ErrorResponse(c, http.StatusForbidden, "This User Isn't Student Can't delete.")
+	}
+
+	var exerciseSubmission []models.ExerciseSubmission
+	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(
+		supervisorHandler.server.DB,
+	)
+	exerciseSubmissionRepo.GetSubmissionByStudentID(studentId, &exerciseSubmission)
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	for _, submission := range exerciseSubmission {
+		minioAction.DeleteFileInMinio(
+			supervisorHandler.server.Config.Minio.BucketStudentCode,
+			submission.SourcecodeFilename,
+		)
+	}
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	err = userService.Delete(&userInfo)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Delete Student.") 
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Delete Student Done.")
 }
