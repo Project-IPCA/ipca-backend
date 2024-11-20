@@ -83,6 +83,7 @@ func ConfigureRoutes(server *s.Server) {
 	)
 	supervisorAuthGroup.DELETE("/student/:stu_id", supervisorHandler.DeleteStudent)
 	supervisorAuthGroup.GET("/get_exercise_data/:exercise_id", supervisorHandler.GetExerciseData)
+	supervisorAuthGroup.PUT("/cancle_student_submission/:submission_id", supervisorHandler.CancleStduentSubmission)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")

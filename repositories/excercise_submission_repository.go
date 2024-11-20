@@ -25,3 +25,7 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByExerc
 func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByStudentID(stuId uuid.UUID, submission *[]models.ExerciseSubmission) {
 	exerciseSubmissionRepo.DB.Where("stu_id = ?", stuId).Find(submission)
 }
+
+func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByID(submissionId uuid.UUID, submission *models.ExerciseSubmission) {
+	exerciseSubmissionRepo.DB.Where("submission_id = ?", submissionId).Preload("LabExercise").Preload("Student").Find(submission)
+}
