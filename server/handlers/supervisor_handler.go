@@ -26,6 +26,7 @@ import (
 	activitylog "github.com/Project-IPCA/ipca-backend/services/activity_log"
 	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
 	classschedule "github.com/Project-IPCA/ipca-backend/services/class_schedule"
+	exercisesubmission "github.com/Project-IPCA/ipca-backend/services/exercise_submission"
 	groupassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/group_assignment_chapter_item"
 	groupassignmentexercise "github.com/Project-IPCA/ipca-backend/services/group_assignment_exercise"
 	groupchapterpermission "github.com/Project-IPCA/ipca-backend/services/group_chapter_permission"
@@ -1720,6 +1721,18 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Student Done.")
 }
 
+// @Description Get Exercise Data
+// @ID supervisor-get-exercise-data
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param exercise_id path string true "Exercise ID"
+// @Success 200		{object}	responses.GetExerciseDataResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/get_exercise_data/{exercise_id} [get]
 func (supervisorHandler *SupervisorHandler) GetExerciseData(c echo.Context) error {
 	exerciseIdStr := c.Param("exercise_id")
 	exerciseId, err := uuid.Parse(exerciseIdStr)
@@ -1765,4 +1778,76 @@ func (supervisorHandler *SupervisorHandler) GetExerciseData(c echo.Context) erro
 
 	response := responses.NewGetExerciseDataResponse(labExerciseData, sourcecode.String())
 	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Cancle Student Submission
+// @ID supervisor-cancle-student-submission
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param submission_id path string true "Submission ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/cancle_student_submission/{submission_id} [put]
+func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Context) error {
+	submissionIdStr := c.Param("submission_id")
+	submissionId, err := uuid.Parse(submissionIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var exerciseSubmissionData models.ExerciseSubmission
+	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(supervisorHandler.server.DB)
+	exerciseSubmissionRepo.GetSubmissionByID(submissionId, &exerciseSubmissionData)
+
+	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(supervisorHandler.server.DB)
+	exerciseSubmissionService.CancleSubmission(&exerciseSubmissionData)
+
+	ip, port, userAgent := utils.GetNetworkRequest(c)
+
+	activityLogService := activitylog.NewActivityLogService(supervisorHandler.server.DB)
+	newLog, err := activityLogService.Create(
+		exerciseSubmissionData.Student.GroupID,
+		existUser.Username,
+		ip,
+		&port,
+		&userAgent,
+		constants.LogPage.ManageStudent,
+		fmt.Sprintf("reject submission #%s stu_id:%s chapter:%s item:%s", submissionId, exerciseSubmissionData.StuID, exerciseSubmissionData.LabExercise.ChapterID, *exerciseSubmissionData.LabExercise.Level),
+	)
+
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Insert Log.")
+	}
+
+	redis := redis_client.NewRedisAction(supervisorHandler.server.Redis)
+	redisCnl := fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.Log,
+		exerciseSubmissionData.Student.GroupID,
+	)
+
+	if err := redis.PublishMessage(redisCnl, newLog); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Submission Canceled Successfully.")
 }

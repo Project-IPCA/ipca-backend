@@ -173,10 +173,6 @@ type GetExerciseDataResponse struct {
 }
 
 func NewGetExerciseDataResponse(labExercise models.LabExercise, sourceCode string) GetExerciseDataResponse {
-	// testcaseList := make([]models.ExerciseTestcase,0)
-	// for _,testcase := range labExercise.TestcaseList {
-	// 	testcaseList = append(testcaseList, testcase)
-	// }
 	response := GetExerciseDataResponse{
 		ExerciseID:             labExercise.ExerciseID,
 		Name:                   *labExercise.Name,
