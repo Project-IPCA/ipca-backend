@@ -1461,7 +1461,7 @@ func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
 	labExerciseService.Delete(&labExercise)
 	if err != nil {
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Exercise.") 
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Exercise.")
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Exercise Done")
@@ -1692,8 +1692,8 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 	}
 
 	var userInfo models.User
-	userRepo.GetUserByUserID(&userInfo,studentId)
-	if(*userInfo.Role != constants.Role.Student){
+	userRepo.GetUserByUserID(&userInfo, studentId)
+	if *userInfo.Role != constants.Role.Student {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Isn't Student Can't delete.")
 	}
 
@@ -1714,8 +1714,55 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 	userService := user.NewUserService(supervisorHandler.server.DB)
 	err = userService.Delete(&userInfo)
 	if err != nil {
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Delete Student.") 
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Delete Student.")
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Student Done.")
+}
+
+func (supervisorHandler *SupervisorHandler) GetExerciseData(c echo.Context) error {
+	exerciseIdStr := c.Param("exercise_id")
+	exerciseId, err := uuid.Parse(exerciseIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser, userId)
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var labExerciseData models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExerciseData)
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	minioFile, err := minioAction.GetFromMinio(supervisorHandler.server.Config.Minio.BucketSupervisorCode, *labExerciseData.Sourcecode)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Get Data From Minio Object Fail",
+		)
+	}
+	defer minioFile.Close()
+
+	var sourcecode strings.Builder
+	_, err = io.Copy(&sourcecode, minioFile)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Copy Data From Minio Object Fail",
+		)
+	}
+
+	response := responses.NewGetExerciseDataResponse(labExerciseData, sourcecode.String())
+	return responses.Response(c, http.StatusOK, response)
 }
