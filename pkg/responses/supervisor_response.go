@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -154,6 +155,38 @@ func NewLogoutAllStudentResponse(count int, studentList []models.Student) Logout
 	response := LogoutAllStudentResponse{
 		Message:       fmt.Sprintf("Logout %d Students Successfully", count),
 		StudentLogout: studentLogout,
+	}
+
+	return response
+}
+
+type GetExerciseDataResponse struct {
+	ExerciseID             uuid.UUID                 `json:"exercise_id"`
+	Name                   string                    `json:"name"`
+	Content                string                    `json:"content"`
+	Sourcecode             string                    `json:"sourcecode"`
+	UserDefinedConstraints *json.RawMessage          `json:"user_defined_constraints"`
+	SuggestedConstraints   *json.RawMessage          `json:"suggested_constraints"`
+	AddedBy                string                    `json:"added_by"`
+	CreatedBy              uuid.UUID                 `json:"created_by"`
+	TestcaseList           []models.ExerciseTestcase `json:"testcase_list"`
+}
+
+func NewGetExerciseDataResponse(labExercise models.LabExercise, sourceCode string) GetExerciseDataResponse {
+	// testcaseList := make([]models.ExerciseTestcase,0)
+	// for _,testcase := range labExercise.TestcaseList {
+	// 	testcaseList = append(testcaseList, testcase)
+	// }
+	response := GetExerciseDataResponse{
+		ExerciseID:             labExercise.ExerciseID,
+		Name:                   *labExercise.Name,
+		Content:                *labExercise.Content,
+		Sourcecode:             sourceCode,
+		UserDefinedConstraints: labExercise.UserDefinedConstraints,
+		SuggestedConstraints:   labExercise.SuggestedConstraints,
+		AddedBy:                *labExercise.AddedBy,
+		CreatedBy:              *labExercise.CreatedBy,
+		TestcaseList:           labExercise.TestcaseList,
 	}
 
 	return response
