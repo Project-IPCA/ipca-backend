@@ -20,7 +20,7 @@ func NewLabClassInfoRepository(db *gorm.DB) *LabClassInfoRepository {
 
 func (labClassInfoRepository *LabClassInfoRepository) GetCount() int64 {
 	var count int64
-	labClassInfoRepository.DB.Find(models.LabClassInfo{}).Count(&count)
+	labClassInfoRepository.DB.Model(models.LabClassInfo{}).Count(&count)
 	return count
 }
 
