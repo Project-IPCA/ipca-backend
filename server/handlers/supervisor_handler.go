@@ -12,6 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -33,6 +34,7 @@ import (
 	groupchapterselecteditem "github.com/Project-IPCA/ipca-backend/services/group_chapter_selected_item"
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
+	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
 	"github.com/Project-IPCA/ipca-backend/services/token"
 	"github.com/Project-IPCA/ipca-backend/services/user"
 )
@@ -1931,6 +1933,128 @@ func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context
 		allGroupChapterItems,
 		allStudentAssignChapterItems,
 	)
+
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get Assgined Student Exercise
+// @ID supervisor-get-assigned-student-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param stu_id query string true "Student_ID"
+// @Param chapter_idx query string true "Chapter Index"
+// @Param item_id query string false "Item ID"
+// @Success 200		{array}	responses.GetAssginStudentExerciseResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/assigned_student_exercise [get]
+func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Context) error {
+	stuIdStr := c.QueryParam("stu_id")
+	chapterIdxStr := c.QueryParam("chapter_idx")
+	itemIdStr := c.QueryParam("item_id")
+
+	if stuIdStr == "" || chapterIdxStr == "" || itemIdStr == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	stuId, err := uuid.Parse(stuIdStr)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Can't Convert Student ID",
+		)
+	}
+
+	chapterInt, err := strconv.Atoi(chapterIdxStr)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Can't Convert Chapter Index",
+		)
+	}
+
+	itemInt, err := strconv.Atoi(itemIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Item ID")
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	var existUser models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserByUserID(&existUser, userId)
+
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
+	}
+
+	var labClassInfo models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
+
+	var studentAssignChapterItems models.StudentAssignmentChapterItem
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		supervisorHandler.server.DB,
+	)
+	err = studentAssignItemRepo.GetStudentAssignChapterItem(
+		&studentAssignChapterItems,
+		stuId,
+		labClassInfo.ChapterID,
+		itemInt,
+	)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			var studentData models.Student
+			studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+			studentRepo.GetStudentByStuID(&studentData,stuId)
+
+			var groupChapterPermission models.GroupChapterPermission
+			groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
+				supervisorHandler.server.DB,
+			)
+			groupChapterPermissionRepo.GetGroupChapterPermissionByPK(
+				&groupChapterPermission,
+				*studentData.GroupID,
+				labClassInfo.ChapterID,
+			)
+			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(
+				supervisorHandler.server.DB,
+			)
+			createData, err := studentAssignChapterItemService.Create(
+				stuId,
+				labClassInfo.ChapterID,
+				itemInt,
+				nil,
+				labClassInfo.FullMark,
+				0,
+				groupChapterPermission.TimeStart,
+				groupChapterPermission.TimeEnd,
+			)
+			if err != nil {
+				return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+			}
+			studentAssignChapterItems = *createData
+		} else {
+			return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	if studentAssignChapterItems.ExerciseID == nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "No Exercise Assigned To This Student.")
+	}
+
+	var labExercise models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(*studentAssignChapterItems.ExerciseID, &labExercise)
+
+	response := responses.NewGetAssginStudentExerciseResponse(labExercise)
 
 	return responses.Response(c, http.StatusOK, response)
 }
