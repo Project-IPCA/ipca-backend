@@ -276,10 +276,6 @@ func (StudentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 			item.ChapterID,
 		)
 		if len(studentAssignChapterItems) < item.NoItems {
-			maxIdxItem := 0
-			if len(studentAssignChapterItems) > 0 {
-				maxIdxItem = studentAssignChapterItems[len(studentAssignChapterItems)-1].ItemID
-			}
 			var chapter models.GroupChapterPermission
 			for _, chapterPermission := range groupChapterPermission {
 				if chapterPermission.ChapterID == item.ChapterID {
@@ -289,23 +285,33 @@ func (StudentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(
 				StudentHandler.server.DB,
 			)
-			for i := maxIdxItem; i < item.NoItems; i++ {
-				_, err := studentAssignChapterItemService.Create(
-					userId,
-					chapter.ChapterID,
-					i+1,
-					nil,
-					item.FullMark,
-					0,
-					chapter.TimeStart,
-					chapter.TimeEnd,
-				)
-				if err != nil {
-					return responses.ErrorResponse(
-						c,
-						http.StatusInternalServerError,
-						"Create Student Assigned Chapter Item Fail",
+
+			numsList := make(map[int]bool)
+			for i := 1; i <= item.NoItems; i++ {
+				numsList[i] = false
+			}
+			for _, studentItem := range studentAssignChapterItems {
+				numsList[studentItem.ItemID] = true
+			}
+			for num, exist := range numsList {
+				if !exist {
+					_, err := studentAssignChapterItemService.Create(
+						userId,
+						chapter.ChapterID,
+						num,
+						nil,
+						item.FullMark,
+						0,
+						chapter.TimeStart,
+						chapter.TimeEnd,
 					)
+					if err != nil {
+						return responses.ErrorResponse(
+							c,
+							http.StatusInternalServerError,
+							"Create Student Assigned Chapter Item Fail",
+						)
+					}
 				}
 			}
 		}
@@ -426,6 +432,14 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(StudentHandler.server.DB)
 	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
+
+	if int64(chapterInt) > labClassInfoRepo.GetCount() || chapterInt < 0 {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Chapter Index Out of Range.")
+	}
+
+	if itemInt > labClassInfo.NoItems || itemInt < 0 {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Item ID Out of Range.")
+	}
 
 	var studentAssignChapterItems models.StudentAssignmentChapterItem
 	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(

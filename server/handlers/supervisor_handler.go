@@ -1999,6 +1999,14 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
 	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
 
+	if int64(chapterInt) > labClassInfoRepo.GetCount() || chapterInt < 0 {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Chapter Index Out of Range.")
+	}
+
+	if itemInt > labClassInfo.NoItems || itemInt < 0 {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Item ID Out of Range.")
+	}
+
 	var studentAssignChapterItems models.StudentAssignmentChapterItem
 	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
 		supervisorHandler.server.DB,
