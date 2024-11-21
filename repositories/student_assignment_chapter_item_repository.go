@@ -22,6 +22,10 @@ func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetAllSt
 	studentAssignChapterItemRepo.DB.Where("stu_id = ?", stuId).Find(studentAssignChapterItems)
 }
 
+func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetAllStudentAssignChapterWithSubmission(studentAssignChapterItems *[]models.StudentAssignmentChapterItem, stuId uuid.UUID) {
+	studentAssignChapterItemRepo.DB.Where("stu_id = ?", stuId).Preload("SubmissionList").Find(studentAssignChapterItems)
+}
+
 func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStudentAssignChapterItem(studentAssignChapterItems *models.StudentAssignmentChapterItem, stuId uuid.UUID, chapterId uuid.UUID, itemId int) error {
 	err := studentAssignChapterItemRepo.DB.Where("stu_id = ? AND chapter_id = ? AND item_id = ?", stuId, chapterId, itemId).First(studentAssignChapterItems)
 	if err.Error != nil {
