@@ -2013,7 +2013,7 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 		if err == gorm.ErrRecordNotFound {
 			var studentData models.Student
 			studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
-			studentRepo.GetStudentByStuID(&studentData,stuId)
+			studentRepo.GetStudentByStuID(&studentData, stuId)
 
 			var groupChapterPermission models.GroupChapterPermission
 			groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
@@ -2047,7 +2047,7 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 	}
 
 	if studentAssignChapterItems.ExerciseID == nil {
-		return responses.ErrorResponse(c, http.StatusBadRequest, "No Exercise Assigned To This Student.")
+		return responses.MessageResponse(c, http.StatusOK, "No Exercise Assigned To This Student.")
 	}
 
 	var labExercise models.LabExercise
