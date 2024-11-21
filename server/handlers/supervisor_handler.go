@@ -1945,7 +1945,7 @@ func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context
 // @Param stu_id query string true "Student_ID"
 // @Param chapter_idx query string true "Chapter Index"
 // @Param item_id query string false "Item ID"
-// @Success 200		{array}	responses.GetAssginStudentExerciseResponse
+// @Success 200		{object}	responses.GetAssginStudentExerciseResponse
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
