@@ -91,6 +91,7 @@ func ConfigureRoutes(server *s.Server) {
 		"/student_chapter_list",
 		supervisorHandler.GetStudentChapterList,
 	)
+	supervisorAuthGroup.GET("/assigned_student_exercise",supervisorHandler.GetAssginStudentExercise)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
