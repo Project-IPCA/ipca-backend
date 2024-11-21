@@ -1926,12 +1926,13 @@ func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context
 	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
 		supervisorHandler.server.DB,
 	)
-	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems, studentId)
+	studentAssignItemRepo.GetAllStudentAssignChapterWithSubmission(&allStudentAssignChapterItems, studentId)
 
 	response := responses.NewGetChapterListResponse(
 		groupChapterPermission,
 		allGroupChapterItems,
 		allStudentAssignChapterItems,
+		true,
 	)
 
 	return responses.Response(c, http.StatusOK, response)

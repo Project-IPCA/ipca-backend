@@ -381,6 +381,7 @@ func (StudentHandler *StudentHandler) GetChapterList(c echo.Context) error {
 		groupChapterPermission,
 		allGroupChapterItems,
 		allStudentAssignChapterItems,
+		false,
 	)
 
 	return responses.Response(c, http.StatusOK, response)

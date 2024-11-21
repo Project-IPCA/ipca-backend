@@ -117,12 +117,15 @@ type ChapterItemsResponse struct {
 	Marking    int     `json:"marking"`
 	TimeEnd    *string `json:"time_end"`
 	TimeStart  *string `json:"time_start"`
+	IsAccess   *bool   `json:"is_access"`
+	IsSubmit   *bool   `json:"is_submit"`
 }
 
 func NewGetChapterListResponse(
 	chapterPermission []models.GroupChapterPermission,
 	assignChapterItem []models.GroupAssignmentChapterItem,
 	studentChapterItem []models.StudentAssignmentChapterItem,
+	getAccessSubmit bool,
 ) *[]GetChapterListResponse {
 	getChapterList := make([]GetChapterListResponse, 0)
 
@@ -131,11 +134,25 @@ func NewGetChapterListResponse(
 
 		for _, item := range assignChapterItem {
 			if item.ChapterID == chapter.ChapterID {
+				var isAccess bool
+				var isSubmit bool
 				studentMarking := 0
 				for _, studentChapter := range studentChapterItem {
 					if studentChapter.ItemID == int(item.ItemID) &&
 						studentChapter.ChapterID == chapter.ChapterID {
 						studentMarking = studentChapter.Marking
+						if getAccessSubmit {
+							if studentChapter.ExerciseID != nil {
+								isAccess = true
+							} else {
+								isAccess = false
+							}
+							if len(*studentChapter.SubmissionList) > 0 {
+								isSubmit = true
+							} else {
+								isSubmit = false
+							}
+						}
 					}
 				}
 				chapterItem := ChapterItemsResponse{
@@ -146,7 +163,10 @@ func NewGetChapterListResponse(
 					Marking:    studentMarking,
 					TimeEnd:    item.TimeEnd,
 					TimeStart:  item.TimeStart,
+					IsAccess: &isAccess,
+					IsSubmit: &isSubmit,
 				}
+
 				itemData = append(itemData, chapterItem)
 			}
 		}
