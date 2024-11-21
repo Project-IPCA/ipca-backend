@@ -9,6 +9,7 @@ import (
 )
 
 type UserInfo struct {
+	UserID     uuid.UUID   `json:"user_id"`
 	Avatar     *string     `json:"avatar"`
 	FirstName  *string     `json:"f_name"`
 	LastName   *string     `json:"l_name"`
@@ -48,6 +49,7 @@ func NewUserInfoResponse(user models.User, allDepartments []models.Department) *
 
 	return &UserInfoResponse{
 		UserInfo: UserInfo{
+			UserID:     user.UserID,
 			Avatar:     user.Avatar,
 			FirstName:  user.FirstName,
 			LastName:   user.LastName,
