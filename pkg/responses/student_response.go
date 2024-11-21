@@ -89,6 +89,7 @@ func NewGetAllChapter(
 }
 
 type GetChapterListResponse struct {
+	ChapterIndex    int                    `json:"chapter_idx"`
 	AccessTimeEnd   *time.Time             `json:"access_time_end"`
 	AccessTimeStart *time.Time             `json:"access_time_start"`
 	AllowAccess     bool                   `json:"allow_access"`
@@ -159,6 +160,7 @@ func NewGetChapterListResponse(
 			AllowSubmitType: chapter.AllowSubmitType,
 			ChapterFullMark: chapter.LabClassInfo.FullMark,
 			ChapterID:       chapter.ChapterID,
+			ChapterIndex:    chapter.LabClassInfo.ChapterIndex,
 			Name:            chapter.LabClassInfo.Name,
 			ClassID:         chapter.ClassID,
 			NoItems:         chapter.LabClassInfo.NoItems,

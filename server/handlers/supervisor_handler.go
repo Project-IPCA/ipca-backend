@@ -1583,7 +1583,7 @@ func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Conte
 	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
 	userRepo.GetUserByUserID(&existUser, userId)
 
-	//TODO Add validate role function
+	// TODO Add validate role function
 
 	var studentList []models.Student
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
@@ -1624,7 +1624,6 @@ func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Conte
 		constants.LogPage.ManageStudent,
 		constants.LogAction.LogoutAllStudent,
 	)
-
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Insert Log.")
 	}
@@ -1695,7 +1694,11 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 	var userInfo models.User
 	userRepo.GetUserByUserID(&userInfo, studentId)
 	if *userInfo.Role != constants.Role.Student {
-		return responses.ErrorResponse(c, http.StatusForbidden, "This User Isn't Student Can't delete.")
+		return responses.ErrorResponse(
+			c,
+			http.StatusForbidden,
+			"This User Isn't Student Can't delete.",
+		)
 	}
 
 	var exerciseSubmission []models.ExerciseSubmission
@@ -1756,7 +1759,10 @@ func (supervisorHandler *SupervisorHandler) GetExerciseData(c echo.Context) erro
 	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExerciseData)
 
 	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
-	minioFile, err := minioAction.GetFromMinio(supervisorHandler.server.Config.Minio.BucketSupervisorCode, *labExerciseData.Sourcecode)
+	minioFile, err := minioAction.GetFromMinio(
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		*labExerciseData.Sourcecode,
+	)
 	if err != nil {
 		return responses.ErrorResponse(
 			c,
@@ -1811,10 +1817,14 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 	}
 
 	var exerciseSubmissionData models.ExerciseSubmission
-	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(supervisorHandler.server.DB)
+	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(
+		supervisorHandler.server.DB,
+	)
 	exerciseSubmissionRepo.GetSubmissionByID(submissionId, &exerciseSubmissionData)
 
-	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(supervisorHandler.server.DB)
+	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(
+		supervisorHandler.server.DB,
+	)
 	exerciseSubmissionService.CancleSubmission(&exerciseSubmissionData)
 
 	ip, port, userAgent := utils.GetNetworkRequest(c)
@@ -1827,9 +1837,14 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 		&port,
 		&userAgent,
 		constants.LogPage.ManageStudent,
-		fmt.Sprintf("reject submission #%s stu_id:%s chapter:%s item:%s", submissionId, exerciseSubmissionData.StuID, exerciseSubmissionData.LabExercise.ChapterID, *exerciseSubmissionData.LabExercise.Level),
+		fmt.Sprintf(
+			"reject submission #%s stu_id:%s chapter:%s item:%s",
+			submissionId,
+			exerciseSubmissionData.StuID,
+			exerciseSubmissionData.LabExercise.ChapterID,
+			*exerciseSubmissionData.LabExercise.Level,
+		),
 	)
-
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Insert Log.")
 	}
@@ -1850,4 +1865,72 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Submission Canceled Successfully.")
+}
+
+// @Description Get Student Chapter List
+// @ID supervisor-get-student-chapter-list
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param studentId query string true "Student ID"
+// @Success 200		{array}	responses.GetChapterListResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/student_chapter_list [get]
+func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context) error {
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existSupervisor := utils.GetUserClaims(c, *userRepo)
+	if !utils.IsRoleSupervisor(existSupervisor) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	studentIdStr := c.QueryParam("studentId")
+	studentId, err := uuid.Parse(studentIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Group_id")
+	}
+
+	existStudent := models.User{}
+	userRepo.GetUserByUserID(&existStudent, studentId)
+	if existStudent.UserID != studentId {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+
+	var labClassInfos []models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+
+	var groupChapterPermission []models.GroupChapterPermission
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
+		supervisorHandler.server.DB,
+	)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByGroupID(
+		&groupChapterPermission,
+		*existStudent.Student.GroupID,
+	)
+
+	var allGroupChapterItems []models.GroupAssignmentChapterItem
+	groupChapterItemRepo := repositories.NewGroupAssignmentChapterItemRepository(
+		supervisorHandler.server.DB,
+	)
+	groupChapterItemRepo.GetAllGroupAssignmentChapterItemsByGroupId(
+		&allGroupChapterItems,
+		*existStudent.Student.GroupID,
+	)
+
+	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
+	studentAssignItemRepo := repositories.NewStudentAssignChapterItemRepository(
+		supervisorHandler.server.DB,
+	)
+	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems, studentId)
+
+	response := responses.NewGetChapterListResponse(
+		groupChapterPermission,
+		allGroupChapterItems,
+		allStudentAssignChapterItems,
+	)
+
+	return responses.Response(c, http.StatusOK, response)
 }
