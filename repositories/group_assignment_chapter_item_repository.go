@@ -34,6 +34,5 @@ func (groupAssignmentChapterItemRepository *GroupAssignmentChapterItemRepository
 	groupId uuid.UUID,
 ) {
 	groupAssignmentChapterItemRepository.DB.Where("group_id = ?", groupId).
-		Where("group_id = ?", groupId).
 		Find(groupAssignmentChapterItem)
 }

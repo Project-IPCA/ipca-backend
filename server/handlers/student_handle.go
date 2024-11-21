@@ -301,7 +301,11 @@ func (StudentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 					chapter.TimeEnd,
 				)
 				if err != nil {
-					return responses.ErrorResponse(c, http.StatusInternalServerError, "Create Student Assigned Chapter Item Fail")
+					return responses.ErrorResponse(
+						c,
+						http.StatusInternalServerError,
+						"Create Student Assigned Chapter Item Fail",
+					)
 				}
 			}
 		}
@@ -433,12 +437,17 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 		labClassInfo.ChapterID,
 		itemInt,
 	)
-
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			var groupChapterPermission models.GroupChapterPermission
-			groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(StudentHandler.server.DB)
-			groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, labClassInfo.ChapterID)
+			groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
+				StudentHandler.server.DB,
+			)
+			groupChapterPermissionRepo.GetGroupChapterPermissionByPK(
+				&groupChapterPermission,
+				*existUser.Student.GroupID,
+				labClassInfo.ChapterID,
+			)
 			studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(
 				StudentHandler.server.DB,
 			)
