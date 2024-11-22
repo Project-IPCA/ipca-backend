@@ -23,7 +23,7 @@ func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetAllSt
 }
 
 func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetAllStudentAssignChapterWithSubmission(studentAssignChapterItems *[]models.StudentAssignmentChapterItem, stuId uuid.UUID) {
-	studentAssignChapterItemRepo.DB.Where("stu_id = ?", stuId).Preload("SubmissionList").Find(studentAssignChapterItems)
+	studentAssignChapterItemRepo.DB.Where("stu_id = ?", stuId).Preload("SubmissionList", "stu_id = ?", stuId).Find(studentAssignChapterItems)
 }
 
 func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStudentAssignChapterItem(studentAssignChapterItems *models.StudentAssignmentChapterItem, stuId uuid.UUID, chapterId uuid.UUID, itemId int) error {
