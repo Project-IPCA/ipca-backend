@@ -147,7 +147,7 @@ func NewGetChapterListResponse(
 							} else {
 								isAccess = false
 							}
-							if len(*studentChapter.SubmissionList) > 0 {
+							if len(studentChapter.SubmissionList) > 0 {
 								isSubmit = true
 							} else {
 								isSubmit = false
@@ -163,8 +163,8 @@ func NewGetChapterListResponse(
 					Marking:    studentMarking,
 					TimeEnd:    item.TimeEnd,
 					TimeStart:  item.TimeStart,
-					IsAccess: &isAccess,
-					IsSubmit: &isSubmit,
+					IsAccess:   &isAccess,
+					IsSubmit:   &isSubmit,
 				}
 
 				itemData = append(itemData, chapterItem)
