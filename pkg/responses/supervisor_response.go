@@ -172,7 +172,10 @@ type GetExerciseDataResponse struct {
 	TestcaseList           []models.ExerciseTestcase `json:"testcase_list"`
 }
 
-func NewGetExerciseDataResponse(labExercise models.LabExercise, sourceCode string) GetExerciseDataResponse {
+func NewGetExerciseDataResponse(
+	labExercise models.LabExercise,
+	sourceCode string,
+) GetExerciseDataResponse {
 	response := GetExerciseDataResponse{
 		ExerciseID:             labExercise.ExerciseID,
 		Name:                   *labExercise.Name,
@@ -189,26 +192,30 @@ func NewGetExerciseDataResponse(labExercise models.LabExercise, sourceCode strin
 }
 
 type GetAssginStudentExerciseResponse struct {
-	ExerciseID uuid.UUID `json:"exercise_id"`
-	ChapterID  uuid.UUID `json:"chapter_id"`
-	ChapterIdx int       `json:"chapter_index"`
-	Level      string    `json:"level"`
-	Name       string    `json:"name"`
-	Content    string    `json:"content"`
-	Testcase   string    `json:"testcase"`
-	FullMark   int       `json:"full_mark"`
+	ExerciseID  uuid.UUID `json:"exercise_id"`
+	ChapterID   uuid.UUID `json:"chapter_id"`
+	ChapterName string    `json:"chapter_name"`
+	ChapterIdx  int       `json:"chapter_index"`
+	Level       string    `json:"level"`
+	Name        string    `json:"name"`
+	Content     string    `json:"content"`
+	Testcase    string    `json:"testcase"`
+	FullMark    int       `json:"full_mark"`
 }
 
-func NewGetAssginStudentExerciseResponse(labExercise models.LabExercise) GetAssginStudentExerciseResponse {
+func NewGetAssginStudentExerciseResponse(
+	labExercise models.LabExercise,
+) GetAssginStudentExerciseResponse {
 	response := GetAssginStudentExerciseResponse{
-		ExerciseID: labExercise.ExerciseID,
-		ChapterID:  *labExercise.ChapterID,
-		ChapterIdx: labExercise.Chapter.ChapterIndex,
-		Level:      *labExercise.Level,
-		Name:       *labExercise.Name,
-		Content:    *labExercise.Content,
-		Testcase:   labExercise.Testcase,
-		FullMark:   labExercise.FullMark,
+		ExerciseID:  labExercise.ExerciseID,
+		ChapterID:   *labExercise.ChapterID,
+		ChapterName: labExercise.Chapter.Name,
+		ChapterIdx:  labExercise.Chapter.ChapterIndex,
+		Level:       *labExercise.Level,
+		Name:        *labExercise.Name,
+		Content:     *labExercise.Content,
+		Testcase:    labExercise.Testcase,
+		FullMark:    labExercise.FullMark,
 	}
 
 	return response
