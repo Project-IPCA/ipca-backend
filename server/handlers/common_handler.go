@@ -5,17 +5,20 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
+	"github.com/Project-IPCA/ipca-backend/services/token"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -180,15 +183,15 @@ func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param stu_id query string false "stu_id"
-// @Param chapter_id query string false "chapter_id"
+// @Param chapter_idx query string false "chapter_idx"
 // @Param item_id query string false "item_id"
-// @Success 200		{array}		models.ExerciseSubmission
+// @Success 200		{array}		responses.StudentSubmssionResponse
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
 // @Router			/api/common/student_submission [get]
 func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	stuId := c.QueryParam("stu_id")
-	chapterId := c.QueryParam("chapter_id")
+	chapterIdx := c.QueryParam("chapter_idx")
 	itemId := c.QueryParam("item_id")
 
 	stuUuid, err := uuid.Parse(stuId)
@@ -200,12 +203,12 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		)
 	}
 
-	chapterUuid, err := uuid.Parse(chapterId)
+	chapterInt, err := strconv.Atoi(chapterIdx)
 	if err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
-			fmt.Sprintf("Error While Parse Student ID %s", err),
+			fmt.Sprintf("Error While Convert Chapter Index String To Int %s", err),
 		)
 	}
 
@@ -214,20 +217,42 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
-			fmt.Sprintf("Error While Convert String To Int %s", err),
+			fmt.Sprintf("Error While Convert Item Id To Int %s", err),
 		)
+	}
+
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomClaims)
+	userId := claims.UserID
+
+	existUser := models.User{}
+	userRepository := repositories.NewUserRepository(commonHandle.server.DB)
+	userRepository.GetUserByUserID(&existUser, userId)
+	if *existUser.Role == constants.Role.Student {
+		if existUser.UserID != stuUuid {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+		}
 	}
 
 	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(
 		commonHandle.server.DB,
 	)
+
+	var labClassInfoData models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfoData, chapterInt)
+
 	var assignItem models.StudentAssignmentChapterItem
 	studentAssignChapterItemRepo.GetStudentAssignChapterItem(
 		&assignItem,
 		stuUuid,
-		chapterUuid,
+		labClassInfoData.ChapterID,
 		itemIdInt,
 	)
+
+	if assignItem.ExerciseID == nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "No Exercise Assigned To This Student.")
+	}
 
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(commonHandle.server.DB)
 	var exerciseSubmissionList []models.ExerciseSubmission
@@ -237,7 +262,9 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		&exerciseSubmissionList,
 	)
 
-	return responses.Response(c, http.StatusOK, exerciseSubmissionList)
+	response := responses.NewStudentSubmssionResponse(exerciseSubmissionList)
+
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Upload User Profile
