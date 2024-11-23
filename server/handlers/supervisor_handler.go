@@ -1808,12 +1808,20 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(
 		supervisorHandler.server.DB,
 	)
-	exerciseSubmissionRepo.GetSubmissionByID(submissionId, &exerciseSubmissionData)
+	err = exerciseSubmissionRepo.GetSubmissionByID(submissionId, &exerciseSubmissionData)
+	if err != nil{
+		if err == gorm.ErrRecordNotFound{
+			return responses.ErrorResponse(c, http.StatusBadRequest, "Not Found Submission.")
+		}
+	}
 
 	exerciseSubmissionService := exercisesubmission.NewExerciseSubmissionService(
 		supervisorHandler.server.DB,
 	)
 	exerciseSubmissionService.CancleSubmission(&exerciseSubmissionData)
+
+	studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(supervisorHandler.server.DB)
+	studentAssignChapterItemService.ResetMarking(exerciseSubmissionData.StuID,*exerciseSubmissionData.LabExercise.ChapterID,*exerciseSubmissionData.LabExercise.Level)
 
 	ip, port, userAgent := utils.GetNetworkRequest(c)
 

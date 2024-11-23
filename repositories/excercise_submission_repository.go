@@ -26,6 +26,10 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByStude
 	exerciseSubmissionRepo.DB.Where("stu_id = ?", stuId).Find(submission)
 }
 
-func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByID(submissionId uuid.UUID, submission *models.ExerciseSubmission) {
-	exerciseSubmissionRepo.DB.Where("submission_id = ?", submissionId).Preload("LabExercise").Preload("Student").Find(submission)
+func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByID(submissionId uuid.UUID, submission *models.ExerciseSubmission) error {
+	err := exerciseSubmissionRepo.DB.Where("submission_id = ?", submissionId).Preload("LabExercise").Preload("Student").First(submission)
+	if err != nil {
+		return err.Error
+	}
+	return nil
 }
