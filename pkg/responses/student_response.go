@@ -379,3 +379,37 @@ func NewExerciseSubmitResponse(jobId string) *ExerciseSubmitResponse {
 		JobID: jobId,
 	}
 }
+
+type StudentSubmssionResponse struct {
+	SubmissionID       uuid.UUID `json:"submission_id"`
+	StuID              uuid.UUID `json:"stu_id"`
+	ExerciseID         uuid.UUID `json:"exercise_id"`
+	Status             string    `json:"status"`
+	SourcecodeFilename string    `json:"sourcecode_filename"`
+	Marking            int       `json:"marking"`
+	TimeSubmit         time.Time `json:"time_submit"`
+	IsInfLoop          *bool     `json:"is_loop"`
+	Output             *string   `json:"output"`
+	Result             *string   `json:"result"`
+	ErrorMessage       *string   `json:"error_message"`
+}
+
+func NewStudentSubmssionResponse(studentSubmission []models.ExerciseSubmission) []StudentSubmssionResponse {
+	response := make([]StudentSubmssionResponse, 0)
+	for _, submission := range studentSubmission {
+		response = append(response, StudentSubmssionResponse{
+			SubmissionID:       submission.SubmissionID,
+			StuID:              submission.StuID,
+			ExerciseID:         submission.ExerciseID,
+			Status:             submission.Status,
+			SourcecodeFilename: submission.SourcecodeFilename,
+			Marking:            submission.Marking,
+			TimeSubmit:         submission.TimeSubmit,
+			IsInfLoop:          submission.IsInfLoop,
+			Output:             submission.Output,
+			Result:             submission.Result,
+			ErrorMessage:       submission.ErrorMessage,
+		})
+	}
+	return response
+}
