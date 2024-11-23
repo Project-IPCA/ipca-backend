@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -18,7 +17,6 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 	"github.com/Project-IPCA/ipca-backend/repositories"
 	s "github.com/Project-IPCA/ipca-backend/server"
-	"github.com/Project-IPCA/ipca-backend/services/token"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -194,13 +192,20 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	chapterIdx := c.QueryParam("chapter_idx")
 	itemId := c.QueryParam("item_id")
 
+	userRepository := repositories.NewUserRepository(commonHandle.server.DB)
+	existUser := utils.GetUserClaims(c, *userRepository)
+
 	stuUuid, err := uuid.Parse(stuId)
-	if err != nil {
+	if err != nil && *existUser.Role != constants.Role.Student {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
 			fmt.Sprintf("Error While Parse Student ID %s", err),
 		)
+	}
+
+	if *existUser.Role == constants.Role.Student {
+		stuUuid = existUser.UserID
 	}
 
 	chapterInt, err := strconv.Atoi(chapterIdx)
@@ -221,19 +226,6 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	existUser := models.User{}
-	userRepository := repositories.NewUserRepository(commonHandle.server.DB)
-	userRepository.GetUserByUserID(&existUser, userId)
-	if *existUser.Role == constants.Role.Student {
-		if existUser.UserID != stuUuid {
-			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-		}
-	}
-
 	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(
 		commonHandle.server.DB,
 	)
@@ -251,7 +243,11 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	)
 
 	if assignItem.ExerciseID == nil {
-		return responses.ErrorResponse(c, http.StatusBadRequest, "No Exercise Assigned To This Student.")
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"No Exercise Assigned To This Student.",
+		)
 	}
 
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(commonHandle.server.DB)
