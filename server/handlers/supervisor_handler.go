@@ -2054,6 +2054,18 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 	return responses.Response(c, http.StatusOK, response)
 }
 
+// @Description Update Exercise
+// @ID supervisor-update-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.UpdateLabExerciseRequest	true	"Update Exercise"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/exercise [put]
 func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error {
 	updateLabExerciseReq := new(requests.UpdateLabExerciseRequest)
 	if err := c.Bind(updateLabExerciseReq); err != nil {
