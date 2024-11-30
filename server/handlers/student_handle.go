@@ -166,18 +166,15 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	remoteIP := c.RealIP()
-	if remoteIP == "" {
-		remoteIP = c.Request().RemoteAddr
-	}
-	userAgent := c.Request().UserAgent()
+	ip, port, userAgent := utils.GetNetworkRequest(c)
 
 	logData := requests.LogDataInfo{
 		GroupID:  *existUser.Student.GroupID,
 		Username: existUser.Username,
-		RemoteIP: remoteIP,
+		RemoteIP: ip,
 		Agent:    userAgent,
-		PageName: "exercise_submit",
+		RemotePort : port,
+		PageName: constants.LogPage.ExerciseSubmit,
 		Action:   logAction,
 	}
 
@@ -206,15 +203,12 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		)
 	}
 
-	mockPort := 0
-
-	// TODO remote port
 	activitylogService := activitylog.NewActivityLogService(studentHandler.server.DB)
 	insertLog, err := activitylogService.Create(
 		existUser.Student.GroupID,
 		existUser.Username,
-		remoteIP,
-		&mockPort,
+		ip,
+		&port,
 		&userAgent,
 		constants.LogPage.ExerciseSubmit,
 		string(logActionString),
