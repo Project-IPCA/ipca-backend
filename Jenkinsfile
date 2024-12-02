@@ -25,6 +25,8 @@ pipeline {
                     sh "cat ${env_file} > .env"
                     // Start services
                     sh "docker compose -f ${docker_compose_file} up -d --build"
+
+                    sh "rm .env"
                 }
             }
         }
