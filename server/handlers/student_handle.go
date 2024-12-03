@@ -92,7 +92,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 
 	var submissionList []models.ExerciseSubmission
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(studentHandler.server.DB)
-	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID, chapterUuid, &submissionList)
+	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID, *studentAssignChapterItem.ExerciseID, &submissionList)
 
 	attemps := len(submissionList) + 1
 	filename := fmt.Sprintf("%s-%04d*.py", existUser.Username, attemps)
@@ -155,7 +155,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	logAction := models.LogExerciseSubmissionAction{
 		StuId:              userId,
 		JobId:              exerciseSubmitReq.JobId,
-		Status:             "Pending",
+		Status:             constants.ExerciseStatus.Pending,
 		SubmissionId:       submissionId,
 		Attempt:            fmt.Sprintf("%04d", attemps),
 		SourcecodeFilename: filename,
@@ -169,13 +169,13 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	ip, port, userAgent := utils.GetNetworkRequest(c)
 
 	logData := requests.LogDataInfo{
-		GroupID:  *existUser.Student.GroupID,
-		Username: existUser.Username,
-		RemoteIP: ip,
-		Agent:    userAgent,
-		RemotePort : port,
-		PageName: constants.LogPage.ExerciseSubmit,
-		Action:   logAction,
+		GroupID:    *existUser.Student.GroupID,
+		Username:   existUser.Username,
+		RemoteIP:   ip,
+		Agent:      userAgent,
+		RemotePort: port,
+		PageName:   constants.LogPage.ExerciseSubmit,
+		Action:     logAction,
 	}
 
 	rabbitMessage := requests.ExerciseSubmissionRabbitMessage{
@@ -508,6 +508,26 @@ func (StudentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 	var labExercise models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(StudentHandler.server.DB)
 	labExerciseRepo.GetLabExerciseByID(*studentAssignChapterItems.ExerciseID, &labExercise)
+
+	ip, port, userAgent := utils.GetNetworkRequest(c)
+
+	activitylogService := activitylog.NewActivityLogService(StudentHandler.server.DB)
+	insertLog, err := activitylogService.Create(
+		existUser.Student.GroupID,
+		existUser.Username,
+		ip,
+		&port,
+		&userAgent,
+		constants.LogPage.LabExercise,
+		fmt.Sprintf("Student::lab_exercise chapter %s item %s", chapterIdx, itemId),
+	)
+
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Save Activity Log")
+	}
+
+	redis := redis_client.NewRedisAction(StudentHandler.server.Redis)
+	redis.PublishMessage(fmt.Sprintf("logs:%s", existUser.Student.GroupID), insertLog)
 
 	response := responses.NewGetStudentAssignmentItemResponse(labExercise)
 

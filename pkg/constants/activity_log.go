@@ -8,20 +8,22 @@ type ActionLogStruct struct {
 }
 
 var LogAction = ActionLogStruct{
-	Login:            "LOGIN",
-	LoginRepeat:      "LOGIN_REPEAT",
-	Logout:           "LOGOUT",
-	LogoutAllStudent: "LOGOUT_ALL",
+	Login:            "Login",
+	LoginRepeat:      "Login Repeat",
+	Logout:           "Logout",
+	LogoutAllStudent: "Logout All",
 }
 
 type PageLogStruct struct {
 	Login          string
 	ManageStudent  string
 	ExerciseSubmit string
+	LabExercise    string
 }
 
 var LogPage = PageLogStruct{
 	Login:          "LOGIN",
 	ManageStudent:  "MANAGE_STUDENT",
 	ExerciseSubmit: "EXERCISE_SUBMIT",
+	LabExercise:    "LAB_EXERCISE",
 }
