@@ -8,6 +8,7 @@ RUN apk update && apk add --no-cache git \
     build-base linux-headers \
     libcap-dev asciidoc gcc make pkgconfig \
     eudev-dev \
+    libsystemd-dev \
     sudo \
     libcap
 
