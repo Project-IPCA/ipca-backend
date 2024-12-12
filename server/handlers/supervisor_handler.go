@@ -2,17 +2,15 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -36,7 +34,6 @@ import (
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
-	"github.com/Project-IPCA/ipca-backend/services/token"
 	"github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -75,7 +72,11 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -169,7 +170,11 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -303,7 +308,11 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 	pageSize := c.QueryParam("pageSize")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -356,7 +365,11 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 	year := c.QueryParam("year")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -402,7 +415,11 @@ func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -442,7 +459,11 @@ func (supervisorHandler *SupervisorHandler) ResetStudentPassword(c echo.Context)
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -478,7 +499,11 @@ func (supervisorHandler *SupervisorHandler) GetMyGroupInfo(c echo.Context) error
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -534,7 +559,11 @@ func (supervisorHandler *SupervisorHandler) UpdateMyGroupInfo(c echo.Context) er
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -591,16 +620,17 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 			"Invalid Request",
 		)
 	}
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
 
-	existUser := models.User{}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepository.GetUserByUserID(&existUser, userId)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
+
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
 	exerciseId, err := labExerciseService.CreateWithoutSourceCode(
 		createLabExerciseReq,
@@ -665,15 +695,21 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.IsRoleSupervisor(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
 
 	var labExercise models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
 	labExerciseRepo.GetLabExerciseByID(saveExerciseTesetcaseReq.ExerciseID, &labExercise)
 
-	if labExercise.CreatedBy != nil && *labExercise.CreatedBy != userId {
+	if labExercise.CreatedBy != nil && *labExercise.CreatedBy != existUser.UserID {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Not Have Permission To Do This!")
 	}
 
@@ -788,9 +824,11 @@ func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem(c ech
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
@@ -807,11 +845,11 @@ func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem(c ech
 	)
 
 	havePermission := false
-	if userId == *classSchedule.SupervisorID {
+	if existUser.UserID == *classSchedule.SupervisorID {
 		havePermission = true
 	} else {
 		for _, staff := range classLabStaff {
-			if staff.StaffID == userId {
+			if staff.StaffID == existUser.UserID {
 				havePermission = true
 				break
 			}
@@ -911,9 +949,11 @@ func (supervisorHandler *SupervisorHandler) UpdateAllGroupAssignedChapterItem(
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
@@ -930,11 +970,11 @@ func (supervisorHandler *SupervisorHandler) UpdateAllGroupAssignedChapterItem(
 	)
 
 	havePermission := false
-	if userId == *classSchedule.SupervisorID {
+	if existUser.UserID == *classSchedule.SupervisorID {
 		havePermission = true
 	} else {
 		for _, staff := range classLabStaff {
-			if staff.StaffID == userId {
+			if staff.StaffID == existUser.UserID {
 				havePermission = true
 				break
 			}
@@ -1022,13 +1062,11 @@ func (supervisorHandler *SupervisorHandler) UpdateAllGroupAssignedChapterItem(
 // @Security BearerAuth
 // @Router			/api/supervisor/get_lab_chapter_info [get]
 func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) error {
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1091,13 +1129,12 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 func (supervisorHandler *SupervisorHandler) GetStudentGroupList(c echo.Context) error {
 	page := c.QueryParam("page")
 	pageSize := c.QueryParam("pageSize")
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1157,15 +1194,12 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission(c echo.Context) 
 		)
 	}
 
-	fmt.Printf("%+v\n", setPermissionReq)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1252,7 +1286,7 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission(c echo.Context) 
 	groupChapterPermissionService := groupchapterpermission.NewGroupChapterPermissionService(
 		supervisorHandler.server.DB,
 	)
-	err := groupChapterPermissionService.UpdateByModel(&groupChapterPermission)
+	err = groupChapterPermissionService.UpdateByModel(&groupChapterPermission)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1290,13 +1324,12 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin(c echo.Context) e
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role == constants.Role.Student || *existUser.Role == constants.Role.Admin {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1310,12 +1343,12 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin(c echo.Context) e
 
 	isStaff := false
 	for _, staff := range classSchedule.ClassLabStaffs {
-		if staff.StaffID == userId {
+		if staff.StaffID == existUser.UserID {
 			isStaff = true
 			break
 		}
 	}
-	if userId == *classSchedule.SupervisorID {
+	if existUser.UserID == *classSchedule.SupervisorID {
 		isStaff = true
 	}
 
@@ -1353,13 +1386,12 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture(c echo.Co
 		)
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role == constants.Role.Student || *existUser.Role == constants.Role.Admin {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1373,12 +1405,12 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture(c echo.Co
 
 	isStaff := false
 	for _, staff := range classSchedule.ClassLabStaffs {
-		if staff.StaffID == userId {
+		if staff.StaffID == existUser.UserID {
 			isStaff = true
 			break
 		}
 	}
-	if userId == *classSchedule.SupervisorID {
+	if existUser.UserID == *classSchedule.SupervisorID {
 		isStaff = true
 	}
 
@@ -1414,13 +1446,12 @@ func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1489,8 +1520,12 @@ func (supervisorHandler *SupervisorHandler) UpdateStudentCanSubmit(c echo.Contex
 		)
 	}
 
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepo)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1523,14 +1558,18 @@ func (supervisorHandler *SupervisorHandler) GetStudentInfo(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existSupervisor := utils.GetUserClaims(c, *userRepo)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existSupervisor, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existSupervisor) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
 	existStudent := models.User{}
-	userRepo.GetUserStudentAndGroupByUserID(&existStudent, studentId)
+	userRepository.GetUserStudentAndGroupByUserID(&existStudent, studentId)
 
 	if utils.IsRoleSupervisor(existStudent) {
 		return responses.ErrorResponse(c, http.StatusNotFound, "Not found student.")
@@ -1563,13 +1602,11 @@ func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Conte
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	// TODO Add validate role function
 
@@ -1668,19 +1705,18 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
 	var userInfo models.User
-	userRepo.GetUserByUserID(&userInfo, studentId)
+	userRepository.GetUserByUserID(&userInfo, studentId)
 	if *userInfo.Role != constants.Role.Student {
 		return responses.ErrorResponse(
 			c,
@@ -1731,13 +1767,12 @@ func (supervisorHandler *SupervisorHandler) GetExerciseData(c echo.Context) erro
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1793,13 +1828,12 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1809,8 +1843,8 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 		supervisorHandler.server.DB,
 	)
 	err = exerciseSubmissionRepo.GetSubmissionByID(submissionId, &exerciseSubmissionData)
-	if err != nil{
-		if err == gorm.ErrRecordNotFound{
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
 			return responses.ErrorResponse(c, http.StatusBadRequest, "Not Found Submission.")
 		}
 	}
@@ -1821,7 +1855,7 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 	exerciseSubmissionService.CancleSubmission(&exerciseSubmissionData)
 
 	studentAssignChapterItemService := studentassignmentchapteritem.NewStudentAssignmentChapterItem(supervisorHandler.server.DB)
-	studentAssignChapterItemService.ResetMarking(exerciseSubmissionData.StuID,*exerciseSubmissionData.LabExercise.ChapterID,*exerciseSubmissionData.LabExercise.Level)
+	studentAssignChapterItemService.ResetMarking(exerciseSubmissionData.StuID, *exerciseSubmissionData.LabExercise.ChapterID, *exerciseSubmissionData.LabExercise.Level)
 
 	ip, port, userAgent := utils.GetNetworkRequest(c)
 
@@ -1876,8 +1910,12 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 // @Security BearerAuth
 // @Router			/api/supervisor/student_chapter_list [get]
 func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context) error {
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existSupervisor := utils.GetUserClaims(c, *userRepo)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existSupervisor, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if !utils.IsRoleSupervisor(existSupervisor) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
@@ -1889,7 +1927,7 @@ func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context
 	}
 
 	existStudent := models.User{}
-	userRepo.GetUserByUserID(&existStudent, studentId)
+	userRepository.GetUserByUserID(&existStudent, studentId)
 	if existStudent.UserID != studentId {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
@@ -1978,13 +2016,11 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Item ID")
 	}
 
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	var existUser models.User
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserByUserID(&existUser, userId)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
@@ -2086,20 +2122,19 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 			"Invalid Request",
 		)
 	}
-	userJwt := c.Get("user").(*jwt.Token)
-	claims := userJwt.Claims.(*token.JwtCustomClaims)
-	userId := claims.UserID
-
-	existUser := models.User{}
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepository.GetUserByUserID(&existUser, userId)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	if *existUser.Role != constants.Role.Supervisor {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
 	var labExerciseData models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
-	err := labExerciseRepo.GetLabExerciseByID(*updateLabExerciseReq.ExerciseID, &labExerciseData)
+	err = labExerciseRepo.GetLabExerciseByID(*updateLabExerciseReq.ExerciseID, &labExerciseData)
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {

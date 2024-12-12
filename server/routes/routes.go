@@ -28,6 +28,7 @@ func ConfigureRoutes(server *s.Server) {
 
 	authMiddleware := middlewares.NewAuthMiddleware(server)
 	jwtConfig := authMiddleware.GetJwtConfig()
+	refreshTokenConfig := authMiddleware.GetRefreshTokenConfig()
 
 	apiGroup := server.Echo.Group("/api")
 
@@ -108,6 +109,9 @@ func ConfigureRoutes(server *s.Server) {
 	authAuthGroup := authGroup
 	authAuthGroup.Use(echojwt.WithConfig(jwtConfig))
 	authAuthGroup.POST("/logout", authHandler.Logout)
+	refreshAuthGroup := authGroup
+	refreshAuthGroup.Use(echojwt.WithConfig(refreshTokenConfig))
+	refreshAuthGroup.POST("/refresh_token", authHandler.RefreshToken)
 
 	// Common
 	commonGroup := apiGroup.Group("/common")
