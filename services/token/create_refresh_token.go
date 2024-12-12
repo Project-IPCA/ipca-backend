@@ -12,7 +12,8 @@ func (tokenService *Service) CreateRefreshToken(
 	user *models.User,
 ) (t string, err error) {
 	claimsRefresh := &JwtCustomRefreshClaims{
-		UserID: user.UserID,
+		UserID:    user.UserID,
+		CiSession: *user.CISession,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * ExpireRefreshCount)),
 		},

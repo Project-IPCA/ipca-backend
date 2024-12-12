@@ -28,3 +28,12 @@ func (authMiddleware *AuthMiddleware) GetJwtConfig() echojwt.Config {
 	}
 	return config
 }
+
+func (authMiddleware *AuthMiddleware) GetRefreshTokenConfig() echojwt.Config {
+	return echojwt.Config{
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return new(token.JwtCustomRefreshClaims)
+		},
+		SigningKey: []byte(authMiddleware.server.Config.Auth.RefreshSecret),
+	}
+}

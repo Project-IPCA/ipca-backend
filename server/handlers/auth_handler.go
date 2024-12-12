@@ -58,16 +58,6 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 		)
 	}
 
-	tokenService := tokenservice.NewTokenService(authHandler.server.Config)
-	accessToken, exp, err := tokenService.CreateAccessToken(&user)
-	if err != nil {
-		return err
-	}
-	refreshToken, err := tokenService.CreateRefreshToken(&user)
-	if err != nil {
-		return err
-	}
-
 	studentRepository := repositories.NewStudentRepository(authHandler.server.DB)
 	classScheduleRepository := repositories.NewClassScheduleRepository(authHandler.server.DB)
 	student := models.Student{}
@@ -199,6 +189,16 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 		}
 	}
 
+	tokenService := tokenservice.NewTokenService(authHandler.server.Config)
+	accessToken, exp, err := tokenService.CreateAccessToken(&user)
+	if err != nil {
+		return err
+	}
+	refreshToken, err := tokenService.CreateRefreshToken(&user)
+	if err != nil {
+		return err
+	}
+
 	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
 	return responses.Response(c, http.StatusOK, response)
 }
@@ -259,4 +259,41 @@ func (authHandler *AuthHandler) Logout(c echo.Context) error {
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Logout successful")
+}
+
+// @Description	Refresh Token
+// @ID				auth-refresh-token
+// @Tags			Auth
+// @Accept		json
+// @Produce		json
+// @Success		200		{object}	responses.LoginResponse
+// @Failure		403		{object}	responses.Error
+// @Failure		500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/auth/refresh_token [post]
+func (authHandler *AuthHandler) RefreshToken(c echo.Context) error {
+	userJwt := c.Get("user").(*jwt.Token)
+	claims := userJwt.Claims.(*token.JwtCustomRefreshClaims)
+	userId := claims.UserID
+
+	var existsUser models.User
+	userRepository := repositories.NewUserRepository(authHandler.server.DB)
+	userRepository.GetUserByUserID(&existsUser, userId)
+
+	if claims.CiSession != *existsUser.CISession {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Session.")
+	}
+
+	tokenService := tokenservice.NewTokenService(authHandler.server.Config)
+	accessToken, exp, err := tokenService.CreateAccessToken(&existsUser)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	refreshToken, err := tokenService.CreateRefreshToken(&existsUser)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
+	return responses.Response(c, http.StatusOK, response)
 }

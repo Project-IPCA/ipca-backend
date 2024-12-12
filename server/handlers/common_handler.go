@@ -38,13 +38,22 @@ func NewCommonHandler(server *s.Server) *CommonHandler {
 // @Router			/api/common/user_info [get]
 func (commonHandler *CommonHandler) GetUserInfo(c echo.Context) error {
 	userRepository := repositories.NewUserRepository(commonHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	var allDepts []models.Department
 	deptRepository := repositories.NewDepartmentRepository(commonHandler.server.DB)
 	deptRepository.GetAllDepts(&allDepts)
 
-	response := responses.NewUserInfoResponse(existUser, allDepts)
+	var classSchedule models.ClassSchedule
+	if *existUser.Role == constants.Role.Student {
+		classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
+		classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, *existUser.Student.GroupID)
+	}
+
+	response := responses.NewUserInfoResponse(existUser, allDepts, &classSchedule)
 	return responses.Response(c, http.StatusOK, response)
 }
 
@@ -62,7 +71,10 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 	updateUserInfoReq := new(requests.UpdateUserInfoRequest)
 
 	userRepository := repositories.NewUserRepository(commonHandler.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	if err := c.Bind(updateUserInfoReq); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Required Field")
@@ -103,7 +115,13 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 	deptRepository := repositories.NewDepartmentRepository(commonHandler.server.DB)
 	deptRepository.GetAllDepts(&allDepts)
 
-	response := responses.NewUserInfoResponse(existUser, allDepts)
+	var classSchedule models.ClassSchedule
+	if *existUser.Role == constants.Role.Student {
+		classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
+		classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, *existUser.Student.GroupID)
+	}
+
+	response := responses.NewUserInfoResponse(existUser, allDepts, &classSchedule)
 
 	return responses.Response(c, http.StatusOK, response)
 }
@@ -193,7 +211,10 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	itemId := c.QueryParam("item_id")
 
 	userRepository := repositories.NewUserRepository(commonHandle.server.DB)
-	existUser := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
 
 	stuUuid, err := uuid.Parse(stuId)
 	if err != nil && *existUser.Role != constants.Role.Student {
