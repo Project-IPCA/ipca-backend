@@ -63,7 +63,7 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	student := models.Student{}
 	classSchedule := models.ClassSchedule{}
 
-	if user.Role == &constants.Role.Student {
+	if *user.Role == constants.Role.Student {
 		studentRepository.GetStudentByStuID(&student, user.UserID)
 		classScheduleRepository.GetClassScheduleByGroupID(&classSchedule, *student.GroupID)
 		if classSchedule.AllowLogin == false {
@@ -89,8 +89,8 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 
 			redisCnl := fmt.Sprintf(
 				"%s:%s",
-				constants.RedisChannel.LoginRepeat,
-				user.Student.GroupID,
+				constants.RedisChannel.UserEvent,
+				user.UserID,
 			)
 			redisMsg := redis.NewMessage("repeat-login", &user.UserID)
 			if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {

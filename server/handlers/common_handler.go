@@ -300,6 +300,20 @@ func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Image Uploaded")
 	}
 
+	userRepository := repositories.NewUserRepository(commonHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
+	if !classSchedule.AllowUploadPic {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Not Allow To Upload Image")
+	}
+
 	minioAction := minioclient.NewMinioAction(commonHandler.server.Minio)
 	imageName, err := minioAction.UploadToMinio(
 		file,
