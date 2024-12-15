@@ -1291,10 +1291,18 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission(c echo.Context) 
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 	redis := redis_client.NewRedisAction(supervisorHandler.server.Redis)
-	redis.PublishMessage(
-		fmt.Sprintf("chapter-permission:%s", setPermissionReq.GroupId),
-		groupChapterPermission,
+	redisCnl := fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.GroupPermission,
+		setPermissionReq.GroupId,
 	)
+	if err := redis.PublishMessage(redisCnl, "permission-change"); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
 
 	response := responses.NewSetChapterPermissionResponse(groupChapterPermission)
 	return responses.Response(c, http.StatusOK, response)
@@ -1537,6 +1545,21 @@ func (supervisorHandler *SupervisorHandler) UpdateStudentCanSubmit(c echo.Contex
 	studentService := student.NewStudentService(supervisorHandler.server.DB)
 	studentService.UpdateCanSubmit(&existStudent, canSubmitReq.CanSubmit)
 
+	redis := redis_client.NewRedisAction(supervisorHandler.server.Redis)
+	redisCnl := fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.UserEvent,
+		existStudent.StuID,
+	)
+	redisMsg := redis.NewMessage("can-submit", &existStudent.StuID)
+	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
+
 	return responses.MessageResponse(c, http.StatusOK, "Updated Student Can Submit")
 }
 
@@ -1675,6 +1698,19 @@ func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Conte
 		groupId,
 	)
 	if err := redis.PublishMessage(redisCnl, newLog); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
+
+	redisCnl = fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.GroupPermission,
+		groupId,
+	)
+	if err := redis.PublishMessage(redisCnl, "logout-all"); err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
@@ -1887,6 +1923,20 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 	)
 
 	if err := redis.PublishMessage(redisCnl, newLog); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Internal Server Error",
+		)
+	}
+
+	redisCnl = fmt.Sprintf(
+		"%s:%s",
+		constants.RedisChannel.UserEvent,
+		exerciseSubmissionData.StuID,
+	)
+	redisMsg := redis.NewMessage("reject-submission", &exerciseSubmissionData.StuID)
+	if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
