@@ -85,21 +85,22 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	if user.IsOnline == true {
 		userService.UpdateIsOnline(&user, false)
 
+		redisCnl := fmt.Sprintf(
+			"%s:%s",
+			constants.RedisChannel.UserEvent,
+			user.UserID,
+		)
+		redisMsg := redis.NewMessage("repeat-login", &user.UserID)
+		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
+
 		if user.Student != nil {
 
-			redisCnl := fmt.Sprintf(
-				"%s:%s",
-				constants.RedisChannel.UserEvent,
-				user.UserID,
-			)
-			redisMsg := redis.NewMessage("repeat-login", &user.UserID)
-			if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
-				return responses.ErrorResponse(
-					c,
-					http.StatusInternalServerError,
-					"Internal Server Error",
-				)
-			}
 			redisCnl = fmt.Sprintf(
 				"%s:%s",
 				constants.RedisChannel.OnlineStudent,
