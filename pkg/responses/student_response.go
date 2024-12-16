@@ -263,10 +263,11 @@ func NewGetStudentAssignmentItemResponse(
 }
 
 type GetStudentWithAssigmentScoreResponse struct {
-	GroupId     uuid.UUID          `json:"group_id"`
-	LabInfo     []LabInfo          `json:"lab_info"`
-	StudentList []StudentWithScore `json:"student_list"`
-	Pagination  Pagination         `json:"pagination"`
+	GroupId      uuid.UUID          `json:"group_id"`
+	LabInfo      []LabInfo          `json:"lab_info"`
+	StudentList  []StudentWithScore `json:"student_list"`
+	Pagination   Pagination         `json:"pagination"`
+	TotalStudent int64              `json:"total_student"`
 }
 
 type LabInfo struct {
@@ -367,6 +368,7 @@ func NewGetStudentWithAssigmentScoreByGroupID(
 			PageSize: pageSizeInt,
 			Pages:    pages,
 		},
+		TotalStudent: totalStudents,
 	}
 }
 
