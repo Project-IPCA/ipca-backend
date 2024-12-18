@@ -132,7 +132,7 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param params body	requests.GetKeywordListRequest	true	"Get Keyword List Request"
-// @Success 200		{object}	responses.Data
+// @Success 200		{object}	constants.ReceiveGetKeyWordData
 // @Failure 400		{object}	responses.Error
 // @Router			/api/common/get_keyword_list [post]
 func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error {
