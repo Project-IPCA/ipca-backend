@@ -22,8 +22,8 @@ type UserDefinedConstraintsList struct {
 	Functions    []UserDefinedConstraintsData `json:"functions"`
 	Imports      []UserDefinedConstraintsData `json:"imports"`
 	Methods      []UserDefinedConstraintsData `json:"methods"`
-	ReverseWords []UserDefinedConstraintsData `json:"reverse_words"`
-	Variables    []UserDefinedConstraintsData `json:"variablse"`
+	ReverseWords []UserDefinedConstraintsData `json:"reserved_words"`
+	Variables    []UserDefinedConstraintsData `json:"variables"`
 }
 
 type SuggestedConstraintsList struct {
@@ -31,8 +31,8 @@ type SuggestedConstraintsList struct {
 	Functions    []SuggestedConstraintsData `json:"functions"`
 	Imports      []SuggestedConstraintsData `json:"imports"`
 	Methods      []SuggestedConstraintsData `json:"methods"`
-	ReverseWords []SuggestedConstraintsData `json:"reverse_words"`
-	Variables    []SuggestedConstraintsData `json:"variablse"`
+	ReverseWords []SuggestedConstraintsData `json:"reserved_words"`
+	Variables    []SuggestedConstraintsData `json:"variables"`
 }
 
 type KeywordConstrains struct {
@@ -40,18 +40,13 @@ type KeywordConstrains struct {
 	SuggestedConstraints   SuggestedConstraintsList   `json:"suggested_constraints"`
 }
 
-type BasicKeywordConstrains struct {
-	UserDefinedConstraints string `json:"user_defined_constraints"`
-	SuggestedConstraints   string `json:"suggested_constraints"`
-}
-
 type CreateLabExerciseRequest struct {
-	ChapterID          *uuid.UUID             `json:"chapter_id"          validate:"required" example:"00000000-0000-0000-0000-000000000000"`
-	Level              string                 `json:"level"               validate:"required" example:"1"`
-	Name               string                 `json:"name"                validate:"required" example:"Pyramid"`
-	Content            string                 `json:"content"             validate:"required" example:"lorem"`
-	Sourcecode         string                 `json:"sourcecode"          validate:"required" example:"lorem"`
-	KeywordConstraints BasicKeywordConstrains `json:"keyword_constraints"`
+	ChapterID          *uuid.UUID        `json:"chapter_id"          validate:"required" example:"00000000-0000-0000-0000-000000000000"`
+	Level              string            `json:"level"               validate:"required" example:"1"`
+	Name               string            `json:"name"                validate:"required" example:"Pyramid"`
+	Content            string            `json:"content"             validate:"required" example:"lorem"`
+	Sourcecode         string            `json:"sourcecode"          validate:"required" example:"lorem"`
+	KeywordConstraints KeywordConstrains `json:"keyword_constraints"`
 }
 
 func (cle CreateLabExerciseRequest) Validate() error {
