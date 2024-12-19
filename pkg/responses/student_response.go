@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"encoding/json"
 	"math"
 	"sort"
 	"strconv"
@@ -206,8 +207,8 @@ type StudentAssignmentItemResponse struct {
 	Content                string             `json:"content"`
 	Testcase               string             `json:"testcase"`
 	FullMark               int                `json:"full_mark"`
-	UserDefinedConstraints *string            `json:"user_defined_constraints"`
-	SuggestedConstraints   *string            `json:"suggested_constraints"`
+	UserDefinedConstraints *json.RawMessage   `json:"user_defined_constraints"`
+	SuggestedConstraints   *json.RawMessage   `json:"suggested_constraints"`
 	TestcaseList           []TestcaseResponse `json:"testcase_list"`
 }
 
@@ -255,8 +256,8 @@ func NewGetStudentAssignmentItemResponse(
 		Content:                *labExercise.Content,
 		Testcase:               testcaseValid,
 		FullMark:               labExercise.FullMark,
-		UserDefinedConstraints: nil,
-		SuggestedConstraints:   nil,
+		UserDefinedConstraints: labExercise.UserDefinedConstraints,
+		SuggestedConstraints:   labExercise.SuggestedConstraints,
 		TestcaseList:           testcaseListResponse,
 	}
 	return &response
