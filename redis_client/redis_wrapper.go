@@ -9,9 +9,9 @@ type RedisMessage struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (redisAction *RedisAction) NewMessage(action string, userId uuid.UUID) *RedisMessage {
+func (redisAction *RedisAction) NewMessage(action string, userId *uuid.UUID) *RedisMessage {
 	return &RedisMessage{
 		Action: action,
-		UserID: userId,
+		UserID: *userId,
 	}
 }

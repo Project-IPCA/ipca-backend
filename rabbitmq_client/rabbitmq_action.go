@@ -3,6 +3,7 @@ package rabbitmq_client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/Project-IPCA/ipca-backend/config"
@@ -28,7 +29,7 @@ func NewRabbitMQAction(rabbitmq *amqp.Connection,config *config.Config) *RabbitM
 func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 	ch, err := rabbitMQAction.RabbitMQ.Channel()
 	if err != nil {
-		panic("fail to open channel: " + err.Error())
+		return fmt.Errorf("fail to open channel: %v " , err)
 	}
 
 	q, err := ch.QueueDeclare(
@@ -40,7 +41,7 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 		nil,
 	)
 	if err != nil {
-		panic("fail declare a queue: " + err.Error())
+		return fmt.Errorf("fail declare a queue: %v" ,err)
 	}
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -48,7 +49,7 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 
 	body, err := json.Marshal(message)
 	if err != nil {
-		panic("failed to marshal message to JSON: " + err.Error())
+		return fmt.Errorf("failed to marshal message to json: %v" ,err)
 	}
 
 	err = ch.PublishWithContext(ctx,
@@ -61,7 +62,7 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 			Body:        body,
 		})
 	if err != nil {
-		panic("failed to send queue to RabbitMQ: " + err.Error())
+		return fmt.Errorf("failed to send queue to rabbitmq: %v", err)
 	}
 
 	return nil

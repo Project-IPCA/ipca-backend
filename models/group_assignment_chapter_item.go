@@ -7,7 +7,7 @@ import (
 type GroupAssignmentChapterItem struct {
 	GroupID        uuid.UUID `gorm:"type:varchar(36);primaryKey"`
 	ChapterID      uuid.UUID `gorm:"type:varchar(36);primaryKey"`
-	ItemID         int64     `gorm:"type:varchar(36);primaryKey"`
+	ItemID         int64     `gorm:"not null;primaryKey"`
 	ExerciseIDList *string   `gorm:"type:varchar(1024)"`
 	FullMark       int       `gorm:"not null;default:2"`
 	TimeStart      *string   `gorm:"default:null"`

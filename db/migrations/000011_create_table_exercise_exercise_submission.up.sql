@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS `exercise_submissions` (
   KEY stu_id (stu_id),
   KEY exercise_id (exercise_id),
   CONSTRAINT fk_exercise_submissions_students FOREIGN KEY (stu_id) REFERENCES students (stu_id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_exercise_submissions_lab_exercises FOREIGN KEY (exercise_id) REFERENCES lab_exercises (exercise_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+  CONSTRAINT fk_exercise_submissions_lab_exercises FOREIGN KEY (exercise_id) REFERENCES lab_exercises (exercise_id) ON DELETE CASCADE ON UPDATE CASCADE
 ); 

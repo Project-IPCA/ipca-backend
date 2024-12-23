@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"errors"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 
@@ -10,14 +12,17 @@ import (
 	"github.com/Project-IPCA/ipca-backend/services/token"
 )
 
-func GetUserClaims(c echo.Context, userRepo repositories.UserRepository) models.User {
+func GetUserClaims(c echo.Context, userRepo repositories.UserRepository) (models.User, error) {
 	userJwt := c.Get("user").(*jwt.Token)
 	claims := userJwt.Claims.(*token.JwtCustomClaims)
 	userId := claims.UserID
 
 	existUser := models.User{}
 	userRepo.GetUserByUserID(&existUser, userId)
-	return existUser
+	if claims.CiSession != *existUser.CISession {
+		return models.User{}, errors.New("invalid session")
+	}
+	return existUser, nil
 }
 
 func IsRoleSupervisor(user models.User) bool {

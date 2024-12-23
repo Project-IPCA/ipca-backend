@@ -166,3 +166,25 @@ func CleanupIsolate() error {
     }
     return nil
 }
+
+func CreateTempFile(fileName string, sourceCode string) (*os.File, error) {
+    tempFile, err := os.CreateTemp("", fileName)
+    if err != nil {
+        return nil, fmt.Errorf("error while creating temp file: %v", err)
+    }
+
+    _, err = tempFile.Write([]byte(sourceCode))
+    if err != nil {
+        tempFile.Close()
+        os.Remove(tempFile.Name())
+        return nil, fmt.Errorf("error while writing to temp file: %v", err)
+    }
+
+    _, err = tempFile.Seek(0, 0)
+    if err != nil {
+        tempFile.Close()
+        os.Remove(tempFile.Name())
+        return nil, fmt.Errorf("error while seeking temp file: %v", err)
+    }
+    return tempFile, nil
+}

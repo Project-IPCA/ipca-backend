@@ -21,7 +21,7 @@ func (userRepository *UserRepository) GetUserByUsername(
 	user *models.User,
 	username string,
 ) {
-	userRepository.DB.Where("username = ?", username).Find(user)
+	userRepository.DB.Preload("Student").Where("username = ?", username).Find(user)
 }
 
 func (userRepository *UserRepository) GetUserByUserID(
@@ -30,6 +30,18 @@ func (userRepository *UserRepository) GetUserByUserID(
 ) {
 	userRepository.DB.Preload("Student").
 		Preload("Supervisor").
+		Preload("Dept").
+		Where("user_id = ?", userId).
+		Find(user)
+}
+
+func (userRepository *UserRepository) GetUserStudentAndGroupByUserID(
+	user *models.User,
+	userId uuid.UUID,
+) {
+	userRepository.DB.Preload("Student.Group").
+		Preload("Supervisor").
+		Preload("Dept").
 		Where("user_id = ?", userId).
 		Find(user)
 }

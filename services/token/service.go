@@ -14,13 +14,15 @@ const (
 )
 
 type JwtCustomClaims struct {
-	UserID   uuid.UUID `json:"user_id"`
-	Username string    `json:"username"`
+	UserID    uuid.UUID `json:"user_id"`
+	Username  string    `json:"username"`
+	CiSession int       `json:"ci_session"`
 	jwt.RegisteredClaims
 }
 
 type JwtCustomRefreshClaims struct {
-	UserID uuid.UUID `json:"user_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	CiSession int       `json:"ci_session"`
 	jwt.RegisteredClaims
 }
 

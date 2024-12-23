@@ -15,6 +15,7 @@ func (tokenService *Service) CreateAccessToken(
 	claims := &JwtCustomClaims{
 		user.UserID,
 		user.Username,
+		*user.CISession,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(exp),
 		},

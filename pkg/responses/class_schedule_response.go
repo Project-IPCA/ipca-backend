@@ -1,6 +1,10 @@
 package responses
 
 import (
+	"math"
+	"strconv"
+	"time"
+
 	"github.com/google/uuid"
 
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -41,12 +45,16 @@ type AvailableGroupFilter struct {
 type AvailableGroupsResponse struct {
 	AvailableGroups []ClassSchedule      `json:"available_groups"`
 	Filter          AvailableGroupFilter `json:"filters"`
+	Pagination      Pagination           `json:"pagination"`
 }
 
 func NewClassSchedulesResponse(
 	filteredClassSchedules []models.ClassSchedule,
 	allClassSchedules []models.ClassSchedule,
 	staffs []models.Supervisor,
+	page string,
+	pageSize string,
+	totalClassSchedules int64,
 ) *AvailableGroupsResponse {
 	classSchedules := make([]ClassSchedule, 0)
 	for _, classSchedule := range filteredClassSchedules {
@@ -95,6 +103,18 @@ func NewClassSchedulesResponse(
 		uniqueYears = append(uniqueYears, &year)
 	}
 
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = 1
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = 10
+	}
+
+	pages := int(math.Ceil(float64(totalClassSchedules) / float64(pageSizeInt)))
+
 	return &AvailableGroupsResponse{
 		AvailableGroups: classSchedules,
 		Filter: AvailableGroupFilter{
@@ -102,46 +122,60 @@ func NewClassSchedulesResponse(
 			Instructors: allStaffs,
 			Staffs:      allStaffs,
 		},
+		Pagination: Pagination{
+			Page:     pageInt,
+			PageSize: pageSizeInt,
+			Pages:    pages,
+		},
 	}
 }
 
-type MyClassSchedule struct {
-	GroupID    uuid.UUID `json:"group_id"`
-	GroupNo    int       `json:"group_no"`
-	Department string    `json:"department"`
-	Year       *int      `json:"year"`
-	Semester   *int      `json:"semester"`
-	Day        *string   `json:"day"`
-	TimeStart  *string   `json:"time_start"`
-	TimeEnd    *string   `json:"time_end"`
-}
-
 type MyGroupFilter struct {
-	Year []*int
+	Year []*int `json:"year"`
 }
 
 type MyGroupResponse struct {
-	MyGroups []MyClassSchedule `json:"my_groups"`
-	Filter   MyGroupFilter     `json:"filters"`
+	MyGroups   []ClassSchedule `json:"my_groups"`
+	Filter     MyGroupFilter   `json:"filters"`
+	Pagination Pagination      `json:"pagination"`
 }
 
 func NewMyClassSchedulesResponse(
 	filteredClassSchedules []models.ClassSchedule,
 	allClassSchedules []models.ClassSchedule,
+	page string,
+	pageSize string,
+	totalClassScheduls int,
 ) *MyGroupResponse {
-	myClassSchedules := make([]MyClassSchedule, 0)
+	classSchedules := make([]ClassSchedule, 0)
 	for _, classSchedule := range filteredClassSchedules {
-		myClassSchedules = append(myClassSchedules, MyClassSchedule{
-			GroupID:    classSchedule.GroupID,
-			GroupNo:    *classSchedule.Number,
-			Department: classSchedule.Department.Name,
-			Year:       classSchedule.Year,
-			Semester:   classSchedule.Semester,
-			Day:        classSchedule.Day,
-			TimeStart:  classSchedule.TimeStart,
-			TimeEnd:    classSchedule.TimeEnd,
+		classStaffResponse := make([]ClassStaff, 0)
+		for _, labStaff := range classSchedule.ClassLabStaffs {
+			classStaffResponse = append(classStaffResponse, ClassStaff{
+				SupervisorID: labStaff.Supervisor.SupervisorID,
+				FirstName:    *labStaff.Supervisor.User.FirstName,
+				LastName:     *labStaff.Supervisor.User.LastName,
+			})
+		}
+		classSchedules = append(classSchedules, ClassSchedule{
+			GroupID:       classSchedule.GroupID,
+			GroupNo:       *classSchedule.Number,
+			Department:    classSchedule.Department.Name,
+			Year:          classSchedule.Year,
+			Semester:      classSchedule.Semester,
+			Day:           classSchedule.Day,
+			TimeStart:     classSchedule.TimeStart,
+			TimeEnd:       classSchedule.TimeEnd,
+			StudentAmount: len(classSchedule.Students),
+			Instructor: Instructor{
+				SupervisorID: classSchedule.Supervisor.SupervisorID,
+				FirstName:    *classSchedule.Supervisor.User.FirstName,
+				LastName:     *classSchedule.Supervisor.User.LastName,
+			},
+			Staff: classStaffResponse,
 		})
 	}
+
 	yearMap := make(map[int]bool)
 
 	for _, classSchedule := range allClassSchedules {
@@ -153,26 +187,50 @@ func NewMyClassSchedulesResponse(
 		uniqueYears = append(uniqueYears, &year)
 	}
 
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		pageInt = 1
+	}
+
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil {
+		pageSizeInt = 10
+	}
+
+	pages := int(math.Ceil(float64(totalClassScheduls) / float64(pageSizeInt)))
+
 	return &MyGroupResponse{
-		MyGroups: myClassSchedules,
+		MyGroups: classSchedules,
 		Filter: MyGroupFilter{
 			Year: uniqueYears,
+		},
+		Pagination: Pagination{
+			Page:     pageInt,
+			PageSize: pageSizeInt,
+			Pages:    pages,
 		},
 	}
 }
 
+type Permission struct {
+	Type      string     `json:"type"`
+	TimeStart *time.Time `json:"time_start"`
+	TimeEnd   *time.Time `json:"time_end"`
+}
+
 type GroupChapterPermission struct {
-	ChapterID       uuid.UUID `json:"chapter_id"`
-	ChapterIndex    int       `json:"chapter_index"`
-	Name            string    `json:"name"`
-	AllowAccessType string    `json:"allow_access_type"`
-	AllowSubmitType string    `json:"allow_submit_type"`
-	FullMark        int       `json:"full_mark"`
+	ChapterID    uuid.UUID  `json:"chapter_id"`
+	ChapterIndex int        `json:"chapter_index"`
+	Name         string     `json:"name"`
+	AllowAccess  Permission `json:"allow_access"`
+	AllowSubmit  Permission `json:"allow_submit"`
+	FullMark     int        `json:"full_mark"`
 }
 
 type ClassScheduleInfoResponse struct {
 	GroupID                 uuid.UUID                `json:"group_id"`
 	GroupNo                 int                      `json:"group_no"`
+	Name                    string                   `json:"name"`
 	Department              string                   `json:"department"`
 	Year                    *int                     `json:"year"`
 	Semester                *int                     `json:"semester"`
@@ -199,17 +257,26 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 	groupChapterPermResponse := make([]GroupChapterPermission, 0)
 	for _, gcp := range classSchedule.GroupChapterPermissions {
 		groupChapterPermResponse = append(groupChapterPermResponse, GroupChapterPermission{
-			ChapterID:       gcp.ChapterID,
-			ChapterIndex:    gcp.LabClassInfo.ChapterIndex,
-			Name:            gcp.LabClassInfo.Name,
-			AllowAccessType: gcp.AllowAccessType,
-			AllowSubmitType: gcp.AllowSubmitType,
-			FullMark:        gcp.LabClassInfo.FullMark,
+			ChapterID:    gcp.ChapterID,
+			ChapterIndex: gcp.LabClassInfo.ChapterIndex,
+			Name:         gcp.LabClassInfo.Name,
+			AllowAccess: Permission{
+				Type:      gcp.AllowAccessType,
+				TimeStart: gcp.AccessTimeStart,
+				TimeEnd:   gcp.AccessTimeEnd,
+			},
+			AllowSubmit: Permission{
+				Type:      gcp.AllowSubmitType,
+				TimeStart: gcp.SubmitTimeStart,
+				TimeEnd:   gcp.SubmitTimeEnd,
+			},
+			FullMark: gcp.LabClassInfo.FullMark,
 		})
 	}
 	return &ClassScheduleInfoResponse{
 		GroupID:       classSchedule.GroupID,
 		GroupNo:       *classSchedule.Number,
+		Name:          classSchedule.Name,
 		Department:    classSchedule.Department.Name,
 		Year:          classSchedule.Year,
 		Semester:      classSchedule.Semester,
@@ -234,12 +301,7 @@ type Department struct {
 	Name   string    `json:"name"`
 }
 
-type MyGroupInfoSelecter struct {
-	Staffs      []ClassStaff `json:"staffs"`
-	Departments []Department `json:"departments"`
-}
-
-type MyClassScheduleInfo struct {
+type MyGroupInfoResponse struct {
 	GroupID    uuid.UUID    `json:"group_id"`
 	GroupNo    int          `json:"group_no"`
 	Name       string       `json:"name"`
@@ -252,15 +314,8 @@ type MyClassScheduleInfo struct {
 	Staff      []ClassStaff `json:"staffs"`
 }
 
-type MyGroupInfoResponse struct {
-	Group    MyClassScheduleInfo `json:"group"`
-	Selecter MyGroupInfoSelecter `json:"selecter"`
-}
-
 func NewMyClassScheduleInfoResponse(
 	classSchedule models.ClassSchedule,
-	allDepts []models.Department,
-	staffs []models.Supervisor,
 ) *MyGroupInfoResponse {
 	classStaffResponse := make([]ClassStaff, 0)
 	for _, labStaff := range classSchedule.ClassLabStaffs {
@@ -271,42 +326,19 @@ func NewMyClassScheduleInfoResponse(
 		})
 	}
 
-	allDeptsRes := make([]Department, 0)
-	for _, dept := range allDepts {
-		allDeptsRes = append(allDeptsRes, Department{
-			DeptID: dept.DeptID,
-			Name:   dept.Name,
-		})
-	}
-
-	allStaffsRes := make([]ClassStaff, 0)
-	for _, staff := range staffs {
-		allStaffsRes = append(allStaffsRes, ClassStaff{
-			SupervisorID: staff.SupervisorID,
-			FirstName:    *staff.User.FirstName,
-			LastName:     *staff.User.LastName,
-		})
-	}
-
 	return &MyGroupInfoResponse{
-		Group: MyClassScheduleInfo{
-			GroupID: classSchedule.GroupID,
-			GroupNo: *classSchedule.Number,
-			Name:    classSchedule.Name,
-			Department: Department{
-				DeptID: classSchedule.Department.DeptID,
-				Name:   classSchedule.Department.Name,
-			},
-			Year:      classSchedule.Year,
-			Semester:  classSchedule.Semester,
-			Day:       classSchedule.Day,
-			TimeStart: classSchedule.TimeStart,
-			TimeEnd:   classSchedule.TimeEnd,
-			Staff:     classStaffResponse,
+		GroupID: classSchedule.GroupID,
+		GroupNo: *classSchedule.Number,
+		Name:    classSchedule.Name,
+		Department: Department{
+			DeptID: classSchedule.Department.DeptID,
+			Name:   classSchedule.Department.Name,
 		},
-		Selecter: MyGroupInfoSelecter{
-			Staffs:      allStaffsRes,
-			Departments: allDeptsRes,
-		},
+		Year:      classSchedule.Year,
+		Semester:  classSchedule.Semester,
+		Day:       classSchedule.Day,
+		TimeStart: classSchedule.TimeStart,
+		TimeEnd:   classSchedule.TimeEnd,
+		Staff:     classStaffResponse,
 	}
 }

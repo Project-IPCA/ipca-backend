@@ -1,6 +1,7 @@
 package user
 
 import (
+	"math/rand"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -10,10 +11,12 @@ import (
 )
 
 func (userService *Service) UpdateLoginSuccess(user *models.User) {
+	randNum := int(time.Now().UnixNano()%1000000) + rand.Intn(1000)
 	timeNow := time.Now()
 	user.LastLogin = &timeNow
 	user.LastSeen = timeNow
 	user.IsOnline = true
+	user.CISession = &randNum
 	userService.DB.Save(user)
 }
 
@@ -32,11 +35,17 @@ func (userService *Service) UpdateUserInfo(
 		if err == nil {
 			dob = &dobParse
 		}
-		user.DOB = dob
+		if dob != nil {
+			user.DOB = dob
+		}
 	}
 
 	if request.Avatar != nil {
 		user.Avatar = request.Avatar
+	}
+
+	if request.DeptID != nil {
+		user.DeptID = request.DeptID
 	}
 
 	if request.Nickname != nil {

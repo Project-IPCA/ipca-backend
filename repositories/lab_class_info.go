@@ -20,7 +20,7 @@ func NewLabClassInfoRepository(db *gorm.DB) *LabClassInfoRepository {
 
 func (labClassInfoRepository *LabClassInfoRepository) GetCount() int64 {
 	var count int64
-	labClassInfoRepository.DB.Find(models.LabClassInfo{}).Count(&count)
+	labClassInfoRepository.DB.Model(models.LabClassInfo{}).Count(&count)
 	return count
 }
 
@@ -28,4 +28,11 @@ func (labClassInfoRepository *LabClassInfoRepository) GetAllLabClassInfos(
 	labClassInfos *[]models.LabClassInfo,
 ) {
 	labClassInfoRepository.DB.Order("chapter_index ASC").Find(labClassInfos)
+}
+
+func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndex(
+	labClassInfo *models.LabClassInfo,
+	chapterIdx int,
+){
+	labClassInfoRepository.DB.Where("chapter_index",chapterIdx).Find(labClassInfo)
 }

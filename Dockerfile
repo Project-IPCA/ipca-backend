@@ -41,11 +41,13 @@ RUN setcap cap_sys_admin,cap_sys_chroot,cap_mknod,cap_net_admin+ep /usr/local/bi
 # Return to the app directory
 WORKDIR /app
 
+COPY . .
+
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
 RUN chmod +x /wait
 
 #Command to run the executable
-CMD swag init -g cmd/main.go\
+CMD swag init --parseDependency --parseInternal -g cmd/main.go\
   && chmod -R 777 docs \
   && /wait \
   && CompileDaemon --build="go build cmd/main.go"  --command="./main" --color

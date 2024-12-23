@@ -4,9 +4,7 @@ services:
     build: .
     ports:
       - ${SERVER_EXPOSE_PORT}:${SERVER_PORT}
-    restart: on-failure
-    volumes:
-      - ./:/app/
+    restart: unless-stopped
     env_file:
       - .env
     environment:

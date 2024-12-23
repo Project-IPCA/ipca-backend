@@ -11,7 +11,9 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/services/department"
+	labclassinfo "github.com/Project-IPCA/ipca-backend/services/lab_class_info"
 	"github.com/Project-IPCA/ipca-backend/services/supervisor"
+	"github.com/Project-IPCA/ipca-backend/services/ta"
 	userservice "github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -81,10 +83,10 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 	supervisorService := supervisor.NewSupervisorService(initHandler.server.DB)
 
 	userId, err := userService.CreateQuick(
-		"noppo",
-		"noppo",
-		"Noppo",
-		"Mummum",
+		"test1",
+		"test1",
+		"test1",
+		"test1",
 		constants.Gender.Male,
 		constants.Role.Supervisor,
 	)
@@ -97,4 +99,79 @@ func (initHandler *InitHandler) InitSupervisor(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
 	}
 	return responses.MessageResponse(c, http.StatusOK, "Init Supervisor Success.")
+}
+
+// @Description Init Lab Class Info
+// @ID init-lab-class-info
+// @Tags Init
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Router			/api/init/labclassinfo [post]
+func (initHandler *InitHandler) InitClassInfo(c echo.Context) error {
+	labClassInfoService := labclassinfo.NewLabClassInfoService(initHandler.server.DB)
+	chapterName := [17]string{
+		"Introduction",
+		"Variables Expression Statement",
+		"Conditional Execution",
+		"'Loop while",
+		"Loop for",
+		"List",
+		"String",
+		"Function",
+		"Dictionary",
+		"Files",
+		"Best Practice 1",
+		"Best Practice 2",
+		"Quiz #1 (chapter 01 - 03)",
+		"Quiz #2 (chapter 01 - 06)",
+		"Quiz #3 (chapter 01 - 09)",
+		"Reserve #1",
+		"Reserve #2",
+	}
+
+	for i := 0; i < len(chapterName); i++ {
+		labClassInfoService.Create(
+			i+1,
+			chapterName[i],
+			10,
+			5,
+		)
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Init Lab Class Info Success.")
+}
+
+// @Description Init TA
+// @ID init-ta
+// @Tags Init
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Router			/api/init/ta [post]
+func (initHandler *InitHandler) InitTA(c echo.Context) error {
+	userService := userservice.NewUserService(initHandler.server.DB)
+	taService := ta.NewTaService(initHandler.server.DB)
+
+	userId, err := userService.CreateQuick(
+		"ootTa",
+		"ootTa",
+		"TaOot",
+		"Handsome",
+		constants.Gender.Male,
+		constants.Role.Ta,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
+	}
+
+	err = taService.CreateTa(userId, nil, nil)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Professor X is KING")
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Init Ta Success.")
 }

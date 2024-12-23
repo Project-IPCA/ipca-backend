@@ -1,21 +1,29 @@
 package constants
 
 type ActionLogStruct struct {
-	Login       string
-	LoginRepeat string
-	Logout      string
+	Login            string
+	LoginRepeat      string
+	Logout           string
+	LogoutAllStudent string
 }
 
 var LogAction = ActionLogStruct{
-	Login:       "LOGIN",
-	LoginRepeat: "LOGIN_REPEAT",
-	Logout:      "LOGOUT",
+	Login:            "Login",
+	LoginRepeat:      "Login Repeat",
+	Logout:           "Logout",
+	LogoutAllStudent: "Logout All",
 }
 
 type PageLogStruct struct {
-	Login string
+	Login          string
+	ManageStudent  string
+	ExerciseSubmit string
+	LabExercise    string
 }
 
 var LogPage = PageLogStruct{
-	Login: "LOGIN",
+	Login:          "LOGIN",
+	ManageStudent:  "MANAGE_STUDENT",
+	ExerciseSubmit: "EXERCISE_SUBMIT",
+	LabExercise:    "LAB_EXERCISE",
 }

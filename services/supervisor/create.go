@@ -9,7 +9,6 @@ import (
 func (supervisorService *Service) Create(supervisorId uuid.UUID, dept string) error {
 	supervisor := builders.NewSupervisorBuilder().
 		SetSupervisorID(supervisorId).
-		SetDept(&dept).
 		Build()
 
 	supervisorService.DB.Create(&supervisor)
