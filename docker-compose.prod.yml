@@ -1,0 +1,22 @@
+services:
+  ipca-api:
+    container_name: ipca-api
+    build: .
+    ports:
+      - ${SERVER_EXPOSE_PORT}:${SERVER_PORT}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "mysql://${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8mb4&parseTime=True&loc=Local"
+    networks:
+      - ipca-stack
+    privileged: true
+    cap_add:
+      - ALL
+    security_opt:
+      - seccomp:unconfined
+
+networks:
+  ipca-stack:
+    external: true
