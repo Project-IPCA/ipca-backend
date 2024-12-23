@@ -11,7 +11,7 @@ pipeline {
                     } else if (env.BRANCH_NAME == 'develop') {
                         agent_label = 'develop-agent'
                         docker_compose_file = 'docker-compose.dev.yml'
-                        credentialsId = 'backend-dev'
+                        credentialsWId = 'backend-dev'
                     } else {
                         error "Branch ${env.BRANCH_NAME} is not configured!"
                     }
