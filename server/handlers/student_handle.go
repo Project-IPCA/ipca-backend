@@ -201,7 +201,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		return responses.ErrorResponse(
 			c,
 			http.StatusInternalServerError,
-			"Error While Send Queue RabbitMQ",
+			err.Error(),
 		)
 	}
 
