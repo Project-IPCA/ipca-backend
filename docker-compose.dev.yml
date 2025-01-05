@@ -3,12 +3,15 @@ services:
     container_name: ipca-api
     build: .
     ports:
-      - ${SERVER_EXPOSE_PORT}:${SERVER_PORT}
+      - ${BACKEND_SERVER_EXPOSE_PORT}:${BACKEND_SERVER_PORT}
     restart: on-failure
     volumes:
       - ./:/app/
     env_file:
       - .env
+    environment:
+      SERVER_PORT: ${BACKEND_SERVER_PORT}
+      SERVER_HOST: ${BACKEND_SERVER_HOST}
     networks:
       - ipca-stack
     privileged: true
