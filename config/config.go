@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	Env      EnvConfig
 	HTTP     HTTPConfig
 	DB       DBConfig
 	Auth     AuthConfig
@@ -21,6 +22,7 @@ func NewConfig() *Config {
 		log.Println("Error loading .env file")
 	}
 	return &Config{
+		Env:      LoadEnvConfig(),
 		Auth:     LoadAuthConfig(),
 		HTTP:     LoadHTTPConfig(),
 		DB:       LoadDBConfig(),
