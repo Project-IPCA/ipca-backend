@@ -306,12 +306,14 @@ func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	var classSchedule models.ClassSchedule
-	classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+	if existUser.Role == &constants.Role.Student {
+		var classSchedule models.ClassSchedule
+		classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
+		classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
 
-	if !classSchedule.AllowUploadPic {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Not Allow To Upload Image")
+		if !classSchedule.AllowUploadPic {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Not Allow To Upload Image")
+		}
 	}
 
 	minioAction := minioclient.NewMinioAction(commonHandler.server.Minio)
