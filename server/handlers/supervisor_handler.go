@@ -90,11 +90,15 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(arrStudents))
 
-	for _, item := range arrStudents {
+	for index, item := range arrStudents {
 		wg.Add(1)
 		go func(item string) {
 			defer wg.Done()
-			data := strings.Split(item, " ")
+			data := strings.Fields(item)
+			if len(data) == 0 ||  len(data) != 4{
+				errChan <- fmt.Errorf("Row %d Data Invalid", index + 1)
+				return
+			}
 			kmitlId := data[1]
 			firstName := data[2]
 			lastName := data[3]
@@ -137,11 +141,15 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 
 	wg.Wait()
 	close(errChan)
-
+	errList := make([]string,0)
 	for err := range errChan {
-		if err != nil {
-			return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		if err != nil{
+			errList = append(errList,err.Error())
 		}
+	}
+	if len(errList) > 0 {
+		errString := strings.Join(errList, "\n")
+		return responses.ErrorResponse(c, http.StatusBadRequest, errString)
 	}
 	return responses.MessageResponse(c, http.StatusCreated, "Add Student Successful")
 }
