@@ -187,7 +187,10 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	classScheduleRepository.GetClassScheduleByNumber(&existGroup, *createGroupReq.Number)
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
-	groupId, _ := classScheduleService.Create(createGroupReq, &supervisorId)
+	groupId, err := classScheduleService.Create(createGroupReq, &supervisorId)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Create Group.")
+	}
 
 	var existLabExercises []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
