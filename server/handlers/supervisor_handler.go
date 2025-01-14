@@ -2,15 +2,16 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -34,6 +35,7 @@ import (
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
+	"github.com/Project-IPCA/ipca-backend/services/supervisor"
 	"github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -2372,4 +2374,63 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Update Exercise Successfully Wait For Testcase Output")
+}
+
+// @Description Create Admin
+// @ID supervisor-create-admin
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateAdminRequest	true	"Create Admin"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/admin [post]
+func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
+	createAdminReq := new(requests.CreateAdminRequest)
+	if err := c.Bind(createAdminReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createAdminReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	//TODO check role and create to that role
+	supervisorService := supervisor.NewSupervisorService(supervisorHandler.server.DB)
+
+	userId, err := userService.Create(
+		createAdminReq.Username,
+		createAdminReq.Username,
+		createAdminReq.Firstname,
+		createAdminReq.Lastname,
+		createAdminReq.Gender,
+		createAdminReq.Role,
+		createAdminReq.DeptID,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create User.")
+	}
+
+	err = supervisorService.Create(userId, "คอมพิวเตอร์")
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create Supervisor.")
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Create Admin Success.")
 }
