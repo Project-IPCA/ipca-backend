@@ -27,10 +27,7 @@ pipeline {
                         } else {
                             dir("${WORKSPACE_DIR}") {
                                 sh "cat ${env_file} > .env"
-                                sh "cd ipca-backend"
-                                sh "git fetch"
-                                sh "git pull origin master"
-                                sh "cd .."
+                                sh "git submodule update --remote ipca-backend"
                                 sh "docker compose -f ${COMPOSE_FILE} up -d --build ${BUILD_OPTIONS}"
                             }
                         }
