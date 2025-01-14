@@ -26,3 +26,17 @@ func (bui BasicUserInfo) Validate() error {
 type UpdateUserInfoRequest struct {
 	BasicUserInfo
 }
+
+type CreateAdminRequest struct {
+	Username  string    `json:"username" example:"kanut" validate:"omitempty"`
+	Firstname string    `json:"f_name" example:"kanut" validate:"omitempty"`
+	Lastname  string    `json:"l_name" example:"handsome" validate:"omitempty"`
+	Role      string    `json:"role" example:"SUPERVISOR | TA" validate:"omitempty"`
+	Gender    string    `json:"gender" example:"MALE | FEMALE | OTHER" validate:"omitempty"`
+	DeptID    uuid.UUID `json:"dept_id" example:"00000000-0000-0000-0000-000000000000" validate:"omitempty"`
+}
+
+func (bui CreateAdminRequest) Validate() error {
+	validate := validator.New()
+	return validate.Struct(&bui)
+}

@@ -95,6 +95,7 @@ func ConfigureRoutes(server *s.Server) {
 	)
 	supervisorAuthGroup.GET("/assigned_student_exercise", supervisorHandler.GetAssginStudentExercise)
 	supervisorAuthGroup.PUT("/exercise", supervisorHandler.UpdateExercise)
+	supervisorAuthGroup.POST("/admin",supervisorHandler.CreateAdmin)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
