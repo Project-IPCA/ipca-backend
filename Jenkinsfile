@@ -27,7 +27,7 @@ pipeline {
                         } else {
                             dir("${WORKSPACE_DIR}") {
                                 sh "cat ${env_file} > .env"
-                                sh "cd ipca-frontend"
+                                sh "cd ipca-backend"
                                 sh "git fetch"
                                 sh "git pull origin master"
                                 sh "cd .."
