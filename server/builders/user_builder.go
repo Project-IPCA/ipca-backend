@@ -29,6 +29,7 @@ type UserBuilder struct {
 	AddedBy   *string
 	CISession *int
 	SessionID *string
+	DeptID    *uuid.UUID
 }
 
 func NewUserBuilder() *UserBuilder {
@@ -135,6 +136,11 @@ func (userBuilder *UserBuilder) SetSessionID(sessionId string) (u *UserBuilder) 
 	return userBuilder
 }
 
+func (userBuilder *UserBuilder) SetDeptID(deptId uuid.UUID) (u *UserBuilder) {
+	userBuilder.DeptID = &deptId
+	return userBuilder
+}
+
 func (userBuilder *UserBuilder) Build() models.User {
 	user := models.User{
 		UserID:    userBuilder.UserID,
@@ -157,6 +163,7 @@ func (userBuilder *UserBuilder) Build() models.User {
 		AddedBy:   userBuilder.AddedBy,
 		CISession: userBuilder.CISession,
 		SessionID: userBuilder.SessionID,
+		DeptID:    userBuilder.DeptID,
 	}
 	return user
 }

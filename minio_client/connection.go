@@ -45,6 +45,26 @@ func Init(cfg *config.Config) *minio.Client {
 			if err != nil {
 				panic("failed to create bucket minio: " + err.Error())
 			}
+
+			readOnlyPolicy := fmt.Sprintf(`{
+				"Version": "2012-10-17",
+				"Statement": [
+					{
+						"Effect": "Allow",
+						"Principal": {
+							"AWS": ["*"]
+						},
+						"Action": ["s3:GetObject"],
+						"Resource": ["arn:aws:s3:::%s/*"]
+					}
+				]
+			}`, bucketName)
+		
+			// Apply the policy to the bucket
+			err = minioClient.SetBucketPolicy(context.Background(), bucketName, readOnlyPolicy)
+			if err != nil {
+				panic("Failed to set bucket policy:"+ err.Error())
+			}
 		}
 	}
 

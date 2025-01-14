@@ -231,7 +231,7 @@ func (authHandler *AuthHandler) Logout(c echo.Context) error {
 
 	userService.UpdateIsOnline(&existsUser, false)
 
-	if existsUser.Role == &constants.Role.Student {
+	if *existsUser.Role == constants.Role.Student {
 		redis := redis_client.NewRedisAction(authHandler.server.Redis)
 		redisCnl := fmt.Sprintf(
 			"%s:%s",

@@ -306,12 +306,14 @@ func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	var classSchedule models.ClassSchedule
-	classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+	if existUser.Role == &constants.Role.Student {
+		var classSchedule models.ClassSchedule
+		classScheduleRepo := repositories.NewClassScheduleRepository(commonHandler.server.DB)
+		classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
 
-	if !classSchedule.AllowUploadPic {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Not Allow To Upload Image")
+		if !classSchedule.AllowUploadPic {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Not Allow To Upload Image")
+		}
 	}
 
 	minioAction := minioclient.NewMinioAction(commonHandler.server.Minio)
@@ -324,12 +326,22 @@ func (commonHandler *CommonHandler) UploadUserProfile(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Failed to Upload Image")
 	}
 
-	imageUrl := fmt.Sprintf(
-		"http://localhost:%s/%s/%s",
-		commonHandler.server.Config.Minio.Port,
-		commonHandler.server.Config.Minio.BucketProfile,
-		imageName,
-	)
+	var imageUrl string
+	if commonHandler.server.Config.Env.Enviroment == constants.EnviromentType.Develop {
+		imageUrl = fmt.Sprintf(
+			"http://localhost:%s/%s/%s",
+			commonHandler.server.Config.Minio.Port,
+			commonHandler.server.Config.Minio.BucketProfile,
+			imageName,
+		)
+	} else if commonHandler.server.Config.Env.Enviroment == constants.EnviromentType.Production {
+		imageUrl = fmt.Sprintf(
+			"%s/%s/%s",
+			commonHandler.server.Config.Minio.Endpoint,
+			commonHandler.server.Config.Minio.BucketProfile,
+			imageName,
+		)
+	}
 
 	response := responses.NewFileResponse(imageName, imageUrl)
 

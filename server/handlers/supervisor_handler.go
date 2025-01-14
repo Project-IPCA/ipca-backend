@@ -2,15 +2,16 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	minioclient "github.com/Project-IPCA/ipca-backend/minio_client"
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -34,6 +35,7 @@ import (
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
+	"github.com/Project-IPCA/ipca-backend/services/supervisor"
 	"github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -90,11 +92,15 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(arrStudents))
 
-	for _, item := range arrStudents {
+	for index, item := range arrStudents {
 		wg.Add(1)
 		go func(item string) {
 			defer wg.Done()
-			data := strings.Split(item, " ")
+			data := strings.Fields(item)
+			if len(data) == 0 || len(data) != 4 {
+				errChan <- fmt.Errorf("Row %d Data Invalid", index+1)
+				return
+			}
 			kmitlId := data[1]
 			firstName := data[2]
 			lastName := data[3]
@@ -137,11 +143,15 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 
 	wg.Wait()
 	close(errChan)
-
+	errList := make([]string, 0)
 	for err := range errChan {
 		if err != nil {
-			return responses.ErrorResponse(c, http.StatusBadRequest, err.Error())
+			errList = append(errList, err.Error())
 		}
+	}
+	if len(errList) > 0 {
+		errString := strings.Join(errList, "\n")
+		return responses.ErrorResponse(c, http.StatusBadRequest, errString)
 	}
 	return responses.MessageResponse(c, http.StatusCreated, "Add Student Successful")
 }
@@ -187,7 +197,10 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	classScheduleRepository.GetClassScheduleByNumber(&existGroup, *createGroupReq.Number)
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
-	groupId, _ := classScheduleService.Create(createGroupReq, &supervisorId)
+	groupId, err := classScheduleService.Create(createGroupReq, &supervisorId)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Create Group.")
+	}
 
 	var existLabExercises []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
@@ -280,6 +293,97 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Create Group Successful.")
+}
+
+// @Description Delete Group
+// @ID supervisor-delete-group
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id path string true "Group ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/group/{group_id} [delete]
+func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
+	groupIdStr := c.Param("group_id")
+	groupId, err := uuid.Parse(groupIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	classscheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	var classSchedule models.ClassSchedule
+	classscheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
+
+	//TODO check permission in db
+	if *existUser.Role != constants.Role.Supervisor || existUser.UserID != *classSchedule.SupervisorID {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "You Not Have Permission To Delete This Group.")
+	}
+
+	var studentList []models.Student
+	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+	studentRepo.GetStudentInGroupID(&studentList, groupId)
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(studentList))
+
+	for _, student := range studentList {
+		wg.Add(1)
+		go func(student models.Student) {
+			defer wg.Done()
+			var exerciseSubmission []models.ExerciseSubmission
+			exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(
+				supervisorHandler.server.DB,
+			)
+			exerciseSubmissionRepo.GetSubmissionByStudentID(student.StuID, &exerciseSubmission)
+
+			minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+			for _, submission := range exerciseSubmission {
+				minioAction.DeleteFileInMinio(
+					supervisorHandler.server.Config.Minio.BucketStudentCode,
+					submission.SourcecodeFilename,
+				)
+			}
+
+			err = userService.Delete(student.User)
+			if err != nil {
+				errChan <- fmt.Errorf("Failed to delete student %s", student.KmitlID)
+				return
+			}
+		}(student)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	errList := make([]string, 0)
+	for err := range errChan {
+		if err != nil {
+			errList = append(errList, err.Error())
+		}
+	}
+	if len(errList) > 0 {
+		errString := strings.Join(errList, "\n")
+		return responses.ErrorResponse(c, http.StatusInternalServerError, errString)
+	}
+
+	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
+	err = classScheduleService.Delete(&classSchedule)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Delete Group.")
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Delete Group Successful.")
 }
 
 // @Description Get All Available Group
@@ -2270,4 +2374,63 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Update Exercise Successfully Wait For Testcase Output")
+}
+
+// @Description Create Admin
+// @ID supervisor-create-admin
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateAdminRequest	true	"Create Admin"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/admin [post]
+func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
+	createAdminReq := new(requests.CreateAdminRequest)
+	if err := c.Bind(createAdminReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createAdminReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	//TODO check role and create to that role
+	supervisorService := supervisor.NewSupervisorService(supervisorHandler.server.DB)
+
+	userId, err := userService.Create(
+		createAdminReq.Username,
+		createAdminReq.Username,
+		createAdminReq.Firstname,
+		createAdminReq.Lastname,
+		createAdminReq.Gender,
+		createAdminReq.Role,
+		createAdminReq.DeptID,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create User.")
+	}
+
+	err = supervisorService.Create(userId, "คอมพิวเตอร์")
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create Supervisor.")
+	}
+	return responses.MessageResponse(c, http.StatusOK, "Create Admin Success.")
 }
