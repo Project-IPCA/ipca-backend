@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -1390,6 +1391,14 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission(c echo.Context) 
 	groupChapterPermissionService := groupchapterpermission.NewGroupChapterPermissionService(
 		supervisorHandler.server.DB,
 	)
+	if(groupChapterPermission.AccessTimeStart != nil){
+		bufferTimeStart := groupChapterPermission.AccessTimeStart.Add(-5 * time.Second)
+		groupChapterPermission.AccessTimeStart = &bufferTimeStart
+	}
+	if(groupChapterPermission.SubmitTimeStart != nil){
+		bufferTimeStart := groupChapterPermission.SubmitTimeStart.Add(-5 * time.Second)
+		groupChapterPermission.SubmitTimeStart = &bufferTimeStart
+	}
 	err = groupChapterPermissionService.UpdateByModel(&groupChapterPermission)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
