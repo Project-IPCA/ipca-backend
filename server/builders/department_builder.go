@@ -8,7 +8,8 @@ import (
 
 type DepartmentBuilder struct {
 	DeptID uuid.UUID
-	Name   string
+	NameTH string
+	NameEN string
 }
 
 func NewDepartmentBuilder() *DepartmentBuilder {
@@ -20,15 +21,21 @@ func (departmentBuilder *DepartmentBuilder) SetDeptID(deptId uuid.UUID) *Departm
 	return departmentBuilder
 }
 
-func (departmentBuilder *DepartmentBuilder) SetName(name string) *DepartmentBuilder {
-	departmentBuilder.Name = name
+func (departmentBuilder *DepartmentBuilder) SetName(name_th string) *DepartmentBuilder {
+	departmentBuilder.NameTH = name_th
+	return departmentBuilder
+}
+
+func (departmentBuilder *DepartmentBuilder) SetNameEN(name_en string) *DepartmentBuilder {
+	departmentBuilder.NameEN = name_en
 	return departmentBuilder
 }
 
 func (departmentBuilder *DepartmentBuilder) Build() models.Department {
 	department := models.Department{
 		DeptID: departmentBuilder.DeptID,
-		Name:   departmentBuilder.Name,
+		NameTH: departmentBuilder.NameTH,
+		NameEN: departmentBuilder.NameEN,
 	}
 	return department
 }

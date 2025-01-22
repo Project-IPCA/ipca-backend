@@ -25,7 +25,7 @@ type Instructor struct {
 type ClassSchedule struct {
 	GroupID       uuid.UUID    `json:"group_id"`
 	GroupNo       int          `json:"group_no"`
-	Department    string       `json:"department"`
+	Department    Department   `json:"department"`
 	Year          *int         `json:"year"`
 	Semester      *int         `json:"semester"`
 	Day           *string      `json:"day"`
@@ -66,10 +66,15 @@ func NewClassSchedulesResponse(
 				LastName:     *labStaff.Supervisor.User.LastName,
 			})
 		}
+		departmentData := Department{
+			DeptID: classSchedule.Department.DeptID,
+			NameTH: classSchedule.Department.NameTH,
+			NameEN: classSchedule.Department.NameEN,
+		}
 		classSchedules = append(classSchedules, ClassSchedule{
 			GroupID:       classSchedule.GroupID,
 			GroupNo:       *classSchedule.Number,
-			Department:    classSchedule.Department.Name,
+			Department:    departmentData,
 			Year:          classSchedule.Year,
 			Semester:      classSchedule.Semester,
 			Day:           classSchedule.Day,
@@ -157,10 +162,15 @@ func NewMyClassSchedulesResponse(
 				LastName:     *labStaff.Supervisor.User.LastName,
 			})
 		}
+		departmentData := Department{
+			DeptID: classSchedule.Department.DeptID,
+			NameTH: classSchedule.Department.NameTH,
+			NameEN: classSchedule.Department.NameEN,
+		}
 		classSchedules = append(classSchedules, ClassSchedule{
 			GroupID:       classSchedule.GroupID,
 			GroupNo:       *classSchedule.Number,
-			Department:    classSchedule.Department.Name,
+			Department:    departmentData,
 			Year:          classSchedule.Year,
 			Semester:      classSchedule.Semester,
 			Day:           classSchedule.Day,
@@ -231,7 +241,7 @@ type ClassScheduleInfoResponse struct {
 	GroupID                 uuid.UUID                `json:"group_id"`
 	GroupNo                 int                      `json:"group_no"`
 	Name                    string                   `json:"name"`
-	Department              string                   `json:"department"`
+	Department              Department               `json:"department"`
 	Year                    *int                     `json:"year"`
 	Semester                *int                     `json:"semester"`
 	Day                     *string                  `json:"day"`
@@ -273,11 +283,18 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 			FullMark: gcp.LabClassInfo.FullMark,
 		})
 	}
+
+	departmentData := Department{
+		DeptID: classSchedule.Department.DeptID,
+		NameTH: classSchedule.Department.NameTH,
+		NameEN: classSchedule.Department.NameEN,
+	}
+
 	return &ClassScheduleInfoResponse{
 		GroupID:       classSchedule.GroupID,
 		GroupNo:       *classSchedule.Number,
 		Name:          classSchedule.Name,
-		Department:    classSchedule.Department.Name,
+		Department:    departmentData,
 		Year:          classSchedule.Year,
 		Semester:      classSchedule.Semester,
 		Day:           classSchedule.Day,
@@ -298,7 +315,8 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 
 type Department struct {
 	DeptID uuid.UUID `json:"dept_id"`
-	Name   string    `json:"name"`
+	NameTH string    `json:"name_th"`
+	NameEN string    `json:"name_en"`
 }
 
 type MyGroupInfoResponse struct {
@@ -332,7 +350,8 @@ func NewMyClassScheduleInfoResponse(
 		Name:    classSchedule.Name,
 		Department: Department{
 			DeptID: classSchedule.Department.DeptID,
-			Name:   classSchedule.Department.Name,
+			NameTH: classSchedule.Department.NameTH,
+			NameEN: classSchedule.Department.NameEN,
 		},
 		Year:      classSchedule.Year,
 		Semester:  classSchedule.Semester,

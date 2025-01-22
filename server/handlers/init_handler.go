@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
+	"github.com/Project-IPCA/ipca-backend/pkg/requests"
 	"github.com/Project-IPCA/ipca-backend/pkg/responses"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/services/department"
@@ -35,7 +36,31 @@ func NewInitHandler(server *s.Server) *InitHandler {
 // @Failure 500		{object}	responses.Error
 // @Router			/api/init/department [post]
 func (initHanlder *InitHandler) InitDepartment(c echo.Context) error {
-	deptNames := [6]string{"คอมพิวเตอร์", "ไฟฟ้า", "โยธา", "เคมี", "เครื่องกล", "อุตสาหการ"}
+	deptNames := [6]requests.CreateDepartmentRequest{
+		{
+			Name:    "คอมพิวเตอร์",
+			Name_EN: "Computer Engineering",
+		},
+		{
+			Name:    "ไฟฟ้า",
+			Name_EN: "Electrical Engineering",
+		},
+		{
+			Name:    "โยธา",
+			Name_EN: "Civil Engineering",
+		},
+		{
+			Name:    "เคมี",
+			Name_EN: "Chemical Engineering",
+		},
+		{
+			Name:    "เครื่องกล",
+			Name_EN: "Mechanical Engineering",
+		},
+		{
+			Name:    "อุตสาหการ",
+			Name_EN: "Industrial Engineering",
+		}}
 	departmentService := department.NewDepartmetService(initHanlder.server.DB)
 
 	var wg sync.WaitGroup
@@ -43,12 +68,12 @@ func (initHanlder *InitHandler) InitDepartment(c echo.Context) error {
 
 	for _, deptName := range deptNames {
 		wg.Add(1)
-		go func(name string) {
+		go func(name, name_en string) {
 			defer wg.Done()
-			if err := departmentService.Create(name); err != nil {
+			if err := departmentService.Create(name, name_en); err != nil {
 				errChan <- fmt.Errorf("failed to create department %s: %v", name, err)
 			}
-		}(deptName)
+		}(deptName.Name, deptName.Name_EN)
 	}
 
 	go func() {

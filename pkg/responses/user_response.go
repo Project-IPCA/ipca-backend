@@ -50,7 +50,8 @@ func NewUserInfoResponse(user models.User, allDepartments []models.Department, c
 	for _, dept := range allDepartments {
 		deptsRes = append(deptsRes, Department{
 			DeptID: dept.DeptID,
-			Name:   dept.Name,
+			NameTH: dept.NameTH,
+			NameEN: dept.NameEN,
 		})
 	}
 
@@ -58,7 +59,8 @@ func NewUserInfoResponse(user models.User, allDepartments []models.Department, c
 	if user.DeptID != nil && user.Dept != nil {
 		userDept = &Department{
 			DeptID: *user.DeptID,
-			Name:   user.Dept.Name,
+			NameTH: user.Dept.NameTH,
+			NameEN: user.Dept.NameEN,
 		}
 	}
 
@@ -128,7 +130,8 @@ func NewUserStudentInfoResponse(user models.User) *UserStudentInfoResponse {
 	if user.DeptID != nil && user.Dept != nil {
 		userDept = &Department{
 			DeptID: *user.DeptID,
-			Name:   user.Dept.Name,
+			NameTH: user.Dept.NameTH,
+			NameEN: user.Dept.NameEN,
 		}
 	}
 
