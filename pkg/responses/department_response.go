@@ -8,8 +8,8 @@ import (
 
 type DepartmentResponse struct {
 	DeptID uuid.UUID `json:"dept_id"`
-	NameTH string    `json:"dept_name"`
-	NameEN string    `json:"dept_name_en"`
+	NameTH string    `json:"name_th"`
+	NameEN string    `json:"name_en"`
 }
 
 func NewDepartmentsResponse(departments []models.Department) *[]DepartmentResponse {
