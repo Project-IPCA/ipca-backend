@@ -8,7 +8,8 @@ import (
 
 type DepartmentResponse struct {
 	DeptID uuid.UUID `json:"dept_id"`
-	Name   string    `json:"dept_name"`
+	NameTH string    `json:"dept_name"`
+	NameEN string    `json:"dept_name_en"`
 }
 
 func NewDepartmentsResponse(departments []models.Department) *[]DepartmentResponse {
@@ -16,7 +17,8 @@ func NewDepartmentsResponse(departments []models.Department) *[]DepartmentRespon
 	for _, dept := range departments {
 		departmentsResponse = append(departmentsResponse, DepartmentResponse{
 			DeptID: dept.DeptID,
-			Name:   dept.Name,
+			NameTH: dept.NameTH,
+			NameEN: dept.NameEN,
 		})
 	}
 	return &departmentsResponse

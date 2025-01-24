@@ -1,0 +1,2 @@
+ALTER TABLE `departments`
+ADD COLUMN name_en VARCHAR(100) UNIQUE;
