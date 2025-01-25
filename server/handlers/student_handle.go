@@ -80,7 +80,17 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "GroupID Is Not UUID")
 	}
 
-	// TODO add validate group permission and assign chapter item
+	var groupChapterPermission models.GroupChapterPermission
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(studentHandler.server.DB)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, chapterUuid)
+	if groupChapterPermission.AllowSubmitType == constants.AccessType.Deny {
+		return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Submmit Now")
+	} else if groupChapterPermission.AllowSubmitType == constants.AccessType.Timer || groupChapterPermission.AllowSubmitType == constants.AccessType.DateTime {
+		if !utils.IsTimeInRange(groupChapterPermission.SubmitTimeStart, groupChapterPermission.SubmitTimeEnd) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Submmit Now")
+		}
+	}
+
 	var studentAssignChapterItem models.StudentAssignmentChapterItem
 	studentAssignChapterItemRepo := repositories.NewStudentAssignChapterItemRepository(
 		studentHandler.server.DB,
@@ -438,6 +448,17 @@ func (studentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
 	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
+
+	var groupChapterPermission models.GroupChapterPermission
+	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(studentHandler.server.DB)
+	groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, labClassInfo.ChapterID)
+	if groupChapterPermission.AllowAccessType == constants.AccessType.Deny {
+		return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Access Now")
+	} else if groupChapterPermission.AllowAccessType == constants.AccessType.Timer || groupChapterPermission.AllowAccessType == constants.AccessType.DateTime {
+		if !utils.IsTimeInRange(groupChapterPermission.AccessTimeStart, groupChapterPermission.AccessTimeEnd) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Access Now")
+		}
+	}
 
 	if int64(chapterInt) > labClassInfoRepo.GetCount() || chapterInt < 0 {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Chapter Index Out of Range.")

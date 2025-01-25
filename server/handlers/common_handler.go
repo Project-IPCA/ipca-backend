@@ -225,10 +225,6 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		)
 	}
 
-	if *existUser.Role == constants.Role.Student {
-		stuUuid = existUser.UserID
-	}
-
 	chapterInt, err := strconv.Atoi(chapterIdx)
 	if err != nil {
 		return responses.ErrorResponse(
@@ -254,6 +250,20 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	var labClassInfoData models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
 	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfoData, chapterInt)
+
+	if *existUser.Role == constants.Role.Student {
+		stuUuid = existUser.UserID
+		var groupChapterPermission models.GroupChapterPermission
+		groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(commonHandle.server.DB)
+		groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, labClassInfoData.ChapterID)
+		if groupChapterPermission.AllowAccessType == constants.AccessType.Deny {
+			return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Access Now")
+		} else if groupChapterPermission.AllowAccessType == constants.AccessType.Timer || groupChapterPermission.AllowAccessType == constants.AccessType.DateTime {
+			if !utils.IsTimeInRange(groupChapterPermission.SubmitTimeStart, groupChapterPermission.SubmitTimeEnd) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "You Can't Access Now")
+			}
+		}
+	}
 
 	var assignItem models.StudentAssignmentChapterItem
 	studentAssignChapterItemRepo.GetStudentAssignChapterItem(

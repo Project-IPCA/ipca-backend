@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -26,6 +27,7 @@ import (
 	activitylog "github.com/Project-IPCA/ipca-backend/services/activity_log"
 	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
 	classschedule "github.com/Project-IPCA/ipca-backend/services/class_schedule"
+	"github.com/Project-IPCA/ipca-backend/services/department"
 	exercisesubmission "github.com/Project-IPCA/ipca-backend/services/exercise_submission"
 	exercisetestcase "github.com/Project-IPCA/ipca-backend/services/exercise_testcase"
 	groupassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/group_assignment_chapter_item"
@@ -1390,6 +1392,14 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission(c echo.Context) 
 	groupChapterPermissionService := groupchapterpermission.NewGroupChapterPermissionService(
 		supervisorHandler.server.DB,
 	)
+	if groupChapterPermission.AccessTimeStart != nil {
+		bufferTimeStart := groupChapterPermission.AccessTimeStart.Add(-5 * time.Second)
+		groupChapterPermission.AccessTimeStart = &bufferTimeStart
+	}
+	if groupChapterPermission.SubmitTimeStart != nil {
+		bufferTimeStart := groupChapterPermission.SubmitTimeStart.Add(-5 * time.Second)
+		groupChapterPermission.SubmitTimeStart = &bufferTimeStart
+	}
 	err = groupChapterPermissionService.UpdateByModel(&groupChapterPermission)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -2433,4 +2443,48 @@ func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create Supervisor.")
 	}
 	return responses.MessageResponse(c, http.StatusOK, "Create Admin Success.")
+}
+
+// @Description Create Department
+// @ID supervisor-create-department
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateDepartmentRequest	true	"Create Department"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/department [post]
+func (supervisorHandler *SupervisorHandler) CreateDepartment(c echo.Context) error {
+	createDepartmentReq := new(requests.CreateDepartmentRequest)
+	if err := c.Bind(createDepartmentReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createDepartmentReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if *existUser.Role != constants.Role.Supervisor {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	departmentService := department.NewDepartmetService(supervisorHandler.server.DB)
+	err = departmentService.Create(createDepartmentReq.Name, createDepartmentReq.Name_EN)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Fail To Create Department.")
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Create Department Success.")
 }

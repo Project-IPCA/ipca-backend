@@ -11,6 +11,7 @@ import (
 
 	"github.com/Project-IPCA/ipca-backend/models"
 	"github.com/Project-IPCA/ipca-backend/pkg/constants"
+	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 )
 
 type GetAllChapterResponse struct {
@@ -36,8 +37,7 @@ func NewGetAllChapter(
 			canAccess = true
 		} else if chapter.AllowAccessType == constants.AccessType.Timer || chapter.AllowAccessType == constants.AccessType.DateTime {
 			if chapter.AccessTimeStart != nil && chapter.AccessTimeEnd != nil {
-				now := time.Now()
-				canAccess = now.After(*chapter.AccessTimeStart) && now.Before(*chapter.AccessTimeEnd)
+				canAccess = utils.IsTimeInRange(chapter.AccessTimeStart,chapter.AccessTimeEnd)
 			}
 		}
 		var labClassInfo models.LabClassInfo
