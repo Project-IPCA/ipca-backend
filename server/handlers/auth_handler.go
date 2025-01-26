@@ -50,6 +50,13 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	userRepository := repositories.NewUserRepository(authHandler.server.DB)
 	userRepository.GetUserByUsername(&user, loginReq.Username)
 
+	if *user.Role != constants.Role.Student {
+		return responses.ErrorResponse(
+			c, http.StatusUnauthorized,
+			"username or password is not correct.",
+		)
+	}
+
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginReq.Password)) != nil {
 		return responses.ErrorResponse(
 			c,
@@ -63,16 +70,14 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	student := models.Student{}
 	classSchedule := models.ClassSchedule{}
 
-	if *user.Role == constants.Role.Student {
-		studentRepository.GetStudentByStuID(&student, user.UserID)
-		classScheduleRepository.GetClassScheduleByGroupID(&classSchedule, *student.GroupID)
-		if classSchedule.AllowLogin == false {
-			return responses.ErrorResponse(
-				c,
-				http.StatusUnauthorized,
-				"Login is not allowed by Instructor.",
-			)
-		}
+	studentRepository.GetStudentByStuID(&student, user.UserID)
+	classScheduleRepository.GetClassScheduleByGroupID(&classSchedule, *student.GroupID)
+	if classSchedule.AllowLogin == false {
+		return responses.ErrorResponse(
+			c,
+			http.StatusUnauthorized,
+			"Login is not allowed by Instructor.",
+		)
 	}
 
 	activityLogService := activitylog.NewActivityLogService(authHandler.server.DB)
@@ -125,7 +130,11 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 				constants.LogAction.LoginRepeat,
 			)
 			if err != nil {
-				return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Insert Log.")
+				return responses.ErrorResponse(
+					c,
+					http.StatusInternalServerError,
+					"Can't Insert Log.",
+				)
 			}
 
 			redisCnl = fmt.Sprintf(
@@ -189,6 +198,83 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 			)
 		}
 	}
+
+	tokenService := tokenservice.NewTokenService(authHandler.server.Config)
+	accessToken, exp, err := tokenService.CreateAccessToken(&user)
+	if err != nil {
+		return err
+	}
+	refreshToken, err := tokenService.CreateRefreshToken(&user)
+	if err != nil {
+		return err
+	}
+
+	response := responses.NewLoginResponse(accessToken, refreshToken, exp)
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description	Login
+// @ID				auth-login-super
+// @Tags			Auth
+// @Accept			json
+// @Produce		json
+// @Param			params	body		requests.LoginRequest	true	"User's credentials"
+// @Success		200		{object}	responses.LoginResponse
+// @Failure		401		{object}	responses.Error
+// @Router			/api/auth/login/super [post]
+func (authHandler *AuthHandler) LoginSuper(c echo.Context) error {
+	loginReq := new(requests.LoginRequest)
+
+	if err := c.Bind(loginReq); err != nil {
+		return err
+	}
+
+	user := models.User{}
+	userRepository := repositories.NewUserRepository(authHandler.server.DB)
+	userRepository.GetUserByUsername(&user, loginReq.Username)
+
+	if *user.Role == constants.Role.Student {
+		return responses.ErrorResponse(
+			c, http.StatusUnauthorized,
+			"username or password is not correct.",
+		)
+	}
+
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginReq.Password)) != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusUnauthorized,
+			"username or password is not correct.",
+		)
+	}
+	redis := redis_client.NewRedisAction(authHandler.server.Redis)
+
+	userService := userservice.NewUserService(authHandler.server.DB)
+	if user.IsOnline == true {
+		userService.UpdateIsOnline(&user, false)
+
+		redisCnl := fmt.Sprintf(
+			"%s:%s",
+			constants.RedisChannel.UserEvent,
+			user.UserID,
+		)
+		redisMsg := redis.NewMessage("repeat-login", &user.UserID)
+		if err := redis.PublishMessage(redisCnl, redisMsg); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
+
+		return responses.ErrorResponse(
+			c,
+			http.StatusUnauthorized,
+			"Repeat log in. Previous machine logged out. Please try again.",
+		)
+	}
+
+	userService.UpdateLoginSuccess(&user)
 
 	tokenService := tokenservice.NewTokenService(authHandler.server.Config)
 	accessToken, exp, err := tokenService.CreateAccessToken(&user)

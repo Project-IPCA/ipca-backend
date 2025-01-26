@@ -93,7 +93,10 @@ func ConfigureRoutes(server *s.Server) {
 		"/student_chapter_list",
 		supervisorHandler.GetStudentChapterList,
 	)
-	supervisorAuthGroup.GET("/assigned_student_exercise", supervisorHandler.GetAssginStudentExercise)
+	supervisorAuthGroup.GET(
+		"/assigned_student_exercise",
+		supervisorHandler.GetAssginStudentExercise,
+	)
 	supervisorAuthGroup.PUT("/exercise", supervisorHandler.UpdateExercise)
 	supervisorAuthGroup.POST("/admin", supervisorHandler.CreateAdmin)
 	supervisorAuthGroup.POST("/department", supervisorHandler.CreateDepartment)
@@ -109,6 +112,7 @@ func ConfigureRoutes(server *s.Server) {
 	// Auth
 	authGroup := apiGroup.Group("/auth")
 	authGroup.POST("/login", authHandler.Login)
+	authGroup.POST("/login/super", authHandler.LoginSuper)
 	authAuthGroup := authGroup
 	authAuthGroup.Use(echojwt.WithConfig(jwtConfig))
 	authAuthGroup.POST("/logout", authHandler.Logout)
