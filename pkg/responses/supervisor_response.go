@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 )
 
 type GetLabChapterInfoResponse struct {
@@ -216,6 +217,27 @@ func NewGetAssginStudentExerciseResponse(
 		Content:     *labExercise.Content,
 		Testcase:    labExercise.Testcase,
 		FullMark:    labExercise.FullMark,
+	}
+
+	return response
+}
+
+type GetRolePermissionResponse struct {
+	Permission []string
+}
+
+func NewGetRolePermissionResponse(rolePermission []models.RolePermission, user models.User) GetRolePermissionResponse {
+	permisisonList := make([]string, 0)
+	if *user.Role == constants.Role.Supervisor || *user.Role == constants.Role.Beyonder {
+		permisisonList = append(permisisonList, constants.PermissionType.DashboardAdmin, constants.PermissionType.ExerciseAdmin, constants.PermissionType.GroupAdmin, constants.PermissionType.StudentAdmin)
+	} else {
+		for _, permission := range rolePermission {
+			permisisonList = append(permisisonList, permission.Permission)
+		}
+	}
+
+	response := GetRolePermissionResponse{
+		Permission: permisisonList,
 	}
 
 	return response

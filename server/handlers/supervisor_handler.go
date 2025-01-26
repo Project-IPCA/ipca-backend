@@ -35,6 +35,7 @@ import (
 	groupchapterpermission "github.com/Project-IPCA/ipca-backend/services/group_chapter_permission"
 	groupchapterselecteditem "github.com/Project-IPCA/ipca-backend/services/group_chapter_selected_item"
 	labexercise "github.com/Project-IPCA/ipca-backend/services/lab_exercise"
+	rolepermission "github.com/Project-IPCA/ipca-backend/services/role_permission"
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
 	"github.com/Project-IPCA/ipca-backend/services/supervisor"
@@ -75,14 +76,35 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser){
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission,*existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(addStudentsReq.GroupID,existUser.UserID) && utils.ValidateRolePermission(rolePermission,constants.PermissionType.StudentAdmin)){
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,addStudentsReq.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil{
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID{
+		if !classLabStaffRepo.CheckStaffValidInClass(addStudentsReq.GroupID,existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	arrStudents := strings.Split(addStudentsReq.StudentsData, "\n")
@@ -1452,7 +1474,7 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin(c echo.Context) e
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role == constants.Role.Student || *existUser.Role == constants.Role.Admin {
+	if *existUser.Role == constants.Role.Student {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -1514,7 +1536,7 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture(c echo.Co
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role == constants.Role.Student || *existUser.Role == constants.Role.Admin {
+	if *existUser.Role == constants.Role.Student {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -2487,4 +2509,120 @@ func (supervisorHandler *SupervisorHandler) CreateDepartment(c echo.Context) err
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Create Department Success.")
+}
+
+// @Description Set Role Permission
+// @ID supervisor-set-role-permission
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.SetRolePermissionRequest	true	"Set Role Permission"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/set_role_permission [post]
+func (supervisorHandler *SupervisorHandler) SetRolePermission(c echo.Context) error {
+	setRolePermissionReq := new(requests.SetRolePermissionRequest)
+	if err := c.Bind(setRolePermissionReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := setRolePermissionReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+	rolePermissionService := rolepermission.NewRolePermissionService(supervisorHandler.server.DB)
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(setRolePermissionReq.Data))
+	for _, permissionData := range setRolePermissionReq.Data {
+		wg.Add(1)
+		go func(role string, permission []string) {
+			defer wg.Done()
+			var rolePermission []models.RolePermission
+			rolePermissionRepo.GetPermissionByRole(&rolePermission, role)
+
+			exitsPermission := make(map[string]bool)
+			for _, permission := range rolePermission {
+				exitsPermission[permission.Permission] = true
+			}
+			for _, newPermission := range permission {
+				if !exitsPermission[newPermission] {
+					err := rolePermissionService.Create(role, newPermission)
+					if err != nil {
+						errChan <- fmt.Errorf("error : %v", err.Error())
+						return
+					}
+				}
+			}
+
+			newExitsPermission := make(map[string]bool)
+			for _, exitsPermission := range permission {
+				newExitsPermission[exitsPermission] = true
+			}
+			for _, oldPermission := range rolePermission {
+				if !newExitsPermission[oldPermission.Permission] {
+					err := rolePermissionService.Delete(&oldPermission)
+					if err != nil {
+						errChan <- fmt.Errorf("error : %v", err.Error())
+						return
+					}
+				}
+			}
+		}(permissionData.Role, permissionData.Permission)
+	}
+	wg.Wait()
+	close(errChan)
+	errList := make([]string, 0)
+	for err := range errChan {
+		if err != nil {
+			errList = append(errList, err.Error())
+		}
+	}
+	if len(errList) > 0 {
+		errString := strings.Join(errList, "\n")
+		return responses.ErrorResponse(c, http.StatusBadRequest, errString)
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Set Role Permission Successful.")
+}
+
+// @Description Get Role Permission
+// @ID supervisor-get-role-permission
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.GetRolePermissionResponse
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/role_permission [post]
+func (supervisorHandler *SupervisorHandler) GetRolePermission(c echo.Context) error {
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	var rolePermission []models.RolePermission
+	rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+	rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+	response := responses.NewGetRolePermissionResponse(rolePermission,existUser)
+	return responses.Response(c, http.StatusOK, response)
 }

@@ -23,3 +23,12 @@ func (repo *ClassLabStaffRepository) GetClassLabStaffByGroupID(
 ) {
 	repo.DB.Where("class_id = ?", groupId).Find(classLabStaff)
 }
+
+func (repo *ClassLabStaffRepository) CheckStaffValidInClass(
+	groupId uuid.UUID,
+	staffId uuid.UUID,
+) bool {
+	var classLabStaff models.ClassLabStaff
+	err := repo.DB.Where("class_id = ? AND staff_id = ?", groupId, staffId).First(classLabStaff)
+	return err.Error == nil
+}
