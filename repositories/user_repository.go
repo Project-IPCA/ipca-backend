@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 )
 
 type UserRepositoryQ interface{}
@@ -43,5 +44,15 @@ func (userRepository *UserRepository) GetUserStudentAndGroupByUserID(
 		Preload("Supervisor").
 		Preload("Dept").
 		Where("user_id = ?", userId).
+		Find(user)
+}
+
+func (userRepository *UserRepository) GetUserAdminRole(
+	user *[]models.User,
+) {
+	userRepository.DB.Preload("Executive").
+		Preload("Supervisor").
+		Preload("TA").
+		Where("role = ? OR role = ? OR role = ?", constants.Role.Supervisor, constants.Role.Ta, constants.Role.Executive).
 		Find(user)
 }

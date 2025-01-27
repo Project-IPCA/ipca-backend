@@ -484,13 +484,13 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 	var allClassSchedules []models.ClassSchedule
 	classSceduleR.GetAllClassSchedules(&allClassSchedules)
 
-	var allSupervisors []models.Supervisor
-	supervisorR := repositories.NewSupervisorRepository(supervisorHandler.server.DB)
-	supervisorR.GetAllSupervisors(&allSupervisors)
+	var userAdmin []models.User
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	userRepo.GetUserAdminRole(&userAdmin)
 	response := responses.NewClassSchedulesResponse(
 		existClassSchedules,
 		allClassSchedules,
-		allSupervisors,
+		userAdmin,
 		page,
 		pageSize,
 		totalClassSchedules,

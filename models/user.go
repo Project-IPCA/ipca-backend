@@ -16,7 +16,7 @@ type User struct {
 	Gender     *string     `gorm:"type:enum('MALE','FEMALE','OTHER')"`
 	DOB        *time.Time  `gorm:"column:dob"`
 	Avatar     *string     `gorm:"type:varchar(128)"`
-	Role       *string     `gorm:"type:enum('ADMIN','EDITOR','AUTHOR','STUDENT','SUPERVISOR','STAFF','TA')"`
+	Role       *string     `gorm:"type:enum('STUDENT','SUPERVISOR','EXECUTIVE','TA','BEYONDER')"`
 	Email      *string     `gorm:"type:varchar(64)"`
 	Tel        *string     `gorm:"type:varchar(10)"`
 	Added      time.Time   `gorm:"type:datetime;not null;default:CURRENT_TIMESTAMP"`
@@ -30,6 +30,7 @@ type User struct {
 	Supervisor *Supervisor `gorm:"foreignKey:SupervisorID"`
 	Student    *Student    `gorm:"foreignKey:StuID"`
 	TA         *TA         `gorm:"foreignKey:TaID"`
+	Executive  *Executive  `gorm:"foreignKey:ExecutiveID"`
 	DeptID     *uuid.UUID  `gorm:"type:varchar(36);default:null"`
 	Dept       *Department `gorm:"foreignKey:DeptID;references:DeptID"`
 }

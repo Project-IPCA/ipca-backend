@@ -115,19 +115,21 @@ func NewSetChapterPermissionResponse(
 	return response
 }
 
-type SupervisorsResponse struct {
-	SupervisorID uuid.UUID `json:"supervisor_id"`
-	FirstName    string    `json:"f_name"`
-	LastName     string    `json:"l_name"`
+type StaffsResponse struct {
+	StaffID   uuid.UUID `json:"staff_id"`
+	FirstName string    `json:"f_name"`
+	LastName  string    `json:"l_name"`
+	Role      string    `json:"role"`
 }
 
-func NewSupervisorsResponse(supervisors []models.Supervisor) *[]SupervisorsResponse {
-	response := make([]SupervisorsResponse, 0)
-	for _, supervisor := range supervisors {
-		response = append(response, SupervisorsResponse{
-			SupervisorID: supervisor.SupervisorID,
-			FirstName:    *supervisor.User.FirstName,
-			LastName:     *supervisor.User.LastName,
+func NewStaffsResponse(users []models.User) *[]StaffsResponse {
+	response := make([]StaffsResponse, 0)
+	for _, user := range users {
+		response = append(response, StaffsResponse{
+			StaffID:   user.UserID,
+			FirstName: *user.FirstName,
+			LastName:  *user.LastName,
+			Role:      *user.Role,
 		})
 	}
 	return &response
@@ -248,7 +250,7 @@ type GetAllRolePermissionResponse struct {
 	Permission []string `json:"permission"`
 }
 
-//TODO Improve get key unique from db and the filter
+// TODO Improve get key unique from db and the filter
 func NewGetAllRolePermissionResponse(rolePermission []models.RolePermission) []GetAllRolePermissionResponse {
 	permisisonList := make([]GetAllRolePermissionResponse, 0)
 	executivePermission := make([]string, 0)
