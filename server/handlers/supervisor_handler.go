@@ -28,6 +28,7 @@ import (
 	classlabstaff "github.com/Project-IPCA/ipca-backend/services/class_lab_staff"
 	classschedule "github.com/Project-IPCA/ipca-backend/services/class_schedule"
 	"github.com/Project-IPCA/ipca-backend/services/department"
+	"github.com/Project-IPCA/ipca-backend/services/executive"
 	exercisesubmission "github.com/Project-IPCA/ipca-backend/services/exercise_submission"
 	exercisetestcase "github.com/Project-IPCA/ipca-backend/services/exercise_testcase"
 	groupassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/group_assignment_chapter_item"
@@ -2739,7 +2740,6 @@ func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create User.")
 	}
 
-	//TODO Add Create Exercutive Role
 	switch createAdminReq.Role {
 	case constants.Role.Supervisor:
 		{
@@ -2756,6 +2756,15 @@ func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
 			err = taService.CreateTa(userId, nil, nil)
 			if err != nil {
 				return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create TA.")
+			}
+			break
+		}
+	case constants.Role.Executive:
+		{
+			executiveService := executive.NewExecutiveService(supervisorHandler.server.DB)
+			err = executiveService.Create(userId)
+			if err != nil {
+				return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create Executive.")
 			}
 			break
 		}
@@ -2920,7 +2929,7 @@ func (supervisorHandler *SupervisorHandler) GetRolePermission(c echo.Context) er
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.ValidateAdminRole(existUser){
+	if !utils.ValidateAdminRole(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -2948,7 +2957,7 @@ func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context)
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.ValidateSupervisorAndBeyonder(existUser){
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
