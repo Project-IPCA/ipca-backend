@@ -29,6 +29,6 @@ func (repo *ClassLabStaffRepository) CheckStaffValidInClass(
 	staffId uuid.UUID,
 ) bool {
 	var classLabStaff models.ClassLabStaff
-	err := repo.DB.Where("class_id = ? AND staff_id = ?", groupId, staffId).First(classLabStaff)
+	err := repo.DB.Where("class_id = ? AND staff_id = ?", groupId, staffId).First(&classLabStaff)
 	return err.Error == nil
 }

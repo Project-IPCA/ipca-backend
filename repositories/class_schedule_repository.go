@@ -165,7 +165,12 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 		baseQuery = baseQuery.Where("year = ?", yearInt)
 	}
 
-	baseQuery = baseQuery.Where("supervisor_id = ?", supervisorId)
+	baseQuery = baseQuery.Where(
+		classScheduleRepository.DB.Where("supervisor_id = ?", supervisorId).Or(
+			"EXISTS (SELECT 1 FROM class_lab_staffs WHERE class_lab_staffs.class_id = class_schedules.group_id AND class_lab_staffs.staff_id = ?)",
+			supervisorId,
+		),
+	)
 
 	var totalClassSchedules int64
 	baseQuery.Count(&totalClassSchedules)

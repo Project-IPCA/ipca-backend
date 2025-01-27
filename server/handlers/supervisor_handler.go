@@ -39,6 +39,7 @@ import (
 	"github.com/Project-IPCA/ipca-backend/services/student"
 	studentassignmentchapteritem "github.com/Project-IPCA/ipca-backend/services/student_assignment_chapter_item"
 	"github.com/Project-IPCA/ipca-backend/services/supervisor"
+	"github.com/Project-IPCA/ipca-backend/services/ta"
 	"github.com/Project-IPCA/ipca-backend/services/user"
 )
 
@@ -83,26 +84,26 @@ func (supervisorHandler *SupervisorHandler) AddStudents(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.ValidateSupervisorAndBeyonder(existUser){
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, addStudentsReq.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
 		var rolePermission []models.RolePermission
 		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
-		rolePermissionRepo.GetPermissionByRole(&rolePermission,*existUser.Role)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
 
-		if !(classLabStaffRepo.CheckStaffValidInClass(addStudentsReq.GroupID,existUser.UserID) && utils.ValidateRolePermission(rolePermission,constants.PermissionType.StudentAdmin)){
+		if !(classLabStaffRepo.CheckStaffValidInClass(addStudentsReq.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
 			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
 
-	var classSchedule models.ClassSchedule
-	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,addStudentsReq.GroupID)
-
-	if classSchedule.GroupID == uuid.Nil{
-		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
-	}
-
-	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID{
-		if !classLabStaffRepo.CheckStaffValidInClass(addStudentsReq.GroupID,existUser.UserID) {
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(addStudentsReq.GroupID, existUser.UserID) {
 			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
@@ -209,8 +210,13 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 	supervisorId := existUser.UserID
 
@@ -338,6 +344,7 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
@@ -348,9 +355,24 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 	var classSchedule models.ClassSchedule
 	classscheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
 
-	//TODO check permission in db
-	if *existUser.Role != constants.Role.Supervisor || existUser.UserID != *classSchedule.SupervisorID {
-		return responses.ErrorResponse(c, http.StatusBadRequest, "You Not Have Permission To Delete This Group.")
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var studentList []models.Student
@@ -441,7 +463,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
+	if !utils.ValidateAdminRole(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -498,7 +520,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
+	if !utils.ValidateAdminRole(existUser) {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
@@ -542,29 +564,29 @@ func (supervisorHandler *SupervisorHandler) GetGroupInfoByGroupID(c echo.Context
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
+
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, groupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
 	}
 
-	existClassSchedule := models.ClassSchedule{}
-	classScheduleR := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleR.GetClassSchedulePreloadByGroupID(&existClassSchedule, groupId)
-
-	if *existClassSchedule.SupervisorID != existUser.UserID {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if *existUser.Role != constants.Role.Beyonder && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
-	if existClassSchedule.GroupID != groupId {
-		return responses.ErrorResponse(c, http.StatusNotFound, "Not found group.")
-	}
-
-	response := responses.NewClassScheduleInfoResponse(existClassSchedule)
+	response := responses.NewClassScheduleInfoResponse(classSchedule)
 	return responses.Response(c, http.StatusOK, response)
 }
 
@@ -586,20 +608,41 @@ func (supervisorHandler *SupervisorHandler) ResetStudentPassword(c echo.Context)
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
 	existStudent := models.User{}
 	userRepository.GetUserByUserID(&existStudent, stuId)
 	if existStudent.UserID != stuId {
 		return responses.ErrorResponse(c, http.StatusNotFound, "User Not found.")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existStudent.Student.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	userService := user.NewUserService(supervisorHandler.server.DB)
@@ -626,29 +669,39 @@ func (supervisorHandler *SupervisorHandler) GetMyGroupInfo(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
-	existClassSchedule := models.ClassSchedule{}
+	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassSchedulePreloadByGroupID(&existClassSchedule, groupId)
-	if existClassSchedule.GroupID != groupId {
-		return responses.ErrorResponse(c, http.StatusNotFound, "Not Found Class Schedule.")
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, groupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
 	}
 
-	if existUser.UserID != *existClassSchedule.SupervisorID {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	response := responses.NewMyClassScheduleInfoResponse(
-		existClassSchedule,
+		classSchedule,
 	)
 
 	return responses.Response(c, http.StatusOK, response)
@@ -686,35 +739,44 @@ func (supervisorHandler *SupervisorHandler) UpdateMyGroupInfo(c echo.Context) er
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
-	existClassSchedule := models.ClassSchedule{}
+	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&existClassSchedule, groupId)
-	if existClassSchedule.GroupID != groupId {
-		return responses.ErrorResponse(c, http.StatusNotFound, "Not Found Class Schedule.")
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
 	}
 
-	if existUser.UserID != *existClassSchedule.SupervisorID {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
 	classScheduleService.UpdateMyGroup(
-		&existClassSchedule,
+		&classSchedule,
 		updateMyGroupReq,
 	)
 
 	var existClassLabStaff []models.ClassLabStaff
-	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	classLabStaffRepo.GetClassLabStaffByGroupID(&existClassLabStaff, groupId)
 
 	classLabStaffService := classlabstaff.NewClassLabStaffService(supervisorHandler.server.DB)
@@ -755,8 +817,14 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
@@ -829,8 +897,14 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labExercise models.LabExercise
@@ -952,6 +1026,7 @@ func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem(c ech
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
@@ -960,32 +1035,27 @@ func (supervisorHandler *SupervisorHandler) UpdateGroupAssignedChapterItem(c ech
 
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(
-		&classSchedule,
-		updateGroupAssignedChapterItemReq.GroupId,
-	)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,
+		updateGroupAssignedChapterItemReq.GroupId)
 
-	var classLabStaff []models.ClassLabStaff
-	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
-	classLabStaffRepo.GetClassLabStaffByGroupID(
-		&classLabStaff,
-		updateGroupAssignedChapterItemReq.GroupId,
-	)
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
 
-	havePermission := false
-	if existUser.UserID == *classSchedule.SupervisorID {
-		havePermission = true
-	} else {
-		for _, staff := range classLabStaff {
-			if staff.StaffID == existUser.UserID {
-				havePermission = true
-				break
-			}
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(updateGroupAssignedChapterItemReq.GroupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
 
-	if !havePermission {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(updateGroupAssignedChapterItemReq.GroupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var groupChapterSelectedItem []models.GroupChapterSelectedItem
@@ -1077,6 +1147,7 @@ func (supervisorHandler *SupervisorHandler) UpdateAllGroupAssignedChapterItem(
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
@@ -1085,32 +1156,27 @@ func (supervisorHandler *SupervisorHandler) UpdateAllGroupAssignedChapterItem(
 
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(
-		&classSchedule,
-		updateAllGroupAssignedChapterItemReq.GroupId,
-	)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,
+		updateAllGroupAssignedChapterItemReq.GroupId)
 
-	var classLabStaff []models.ClassLabStaff
-	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
-	classLabStaffRepo.GetClassLabStaffByGroupID(
-		&classLabStaff,
-		updateAllGroupAssignedChapterItemReq.GroupId,
-	)
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
 
-	havePermission := false
-	if existUser.UserID == *classSchedule.SupervisorID {
-		havePermission = true
-	} else {
-		for _, staff := range classLabStaff {
-			if staff.StaffID == existUser.UserID {
-				havePermission = true
-				break
-			}
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(updateAllGroupAssignedChapterItemReq.GroupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
 
-	if !havePermission {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(updateAllGroupAssignedChapterItemReq.GroupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	for _, data := range updateAllGroupAssignedChapterItemReq.UpdatePool {
@@ -1195,8 +1261,15 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	groupId := c.QueryParam("group_id")
@@ -1257,20 +1330,31 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 func (supervisorHandler *SupervisorHandler) GetStudentGroupList(c echo.Context) error {
 	page := c.QueryParam("page")
 	pageSize := c.QueryParam("pageSize")
+	groupId := c.QueryParam("group_id")
+	groupUuid, err := uuid.Parse(groupId)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Group_id")
+	}
+
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupUuid)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
 	}
 
-	groupId := c.QueryParam("group_id")
-	groupUuid, err := uuid.Parse(groupId)
-	if err != nil {
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Group_id")
+	if *existUser.Role != constants.Role.Beyonder && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupUuid, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labClassInfo []models.LabClassInfo
@@ -1322,14 +1406,35 @@ func (supervisorHandler *SupervisorHandler) SetChapterPemission(c echo.Context) 
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, setPermissionReq.GroupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(setPermissionReq.GroupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(setPermissionReq.GroupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	if !utils.ContainsString(constants.ActionTypeList, setPermissionReq.Permission.Type) {
@@ -1468,36 +1573,35 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupLogin(c echo.Context) e
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role == constants.Role.Student {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassSchedulePreloadByGroupID(
-		&classSchedule,
-		setAllowGroupLoginReq.GroupID,
-	)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, setAllowGroupLoginReq.GroupID)
 
-	isStaff := false
-	for _, staff := range classSchedule.ClassLabStaffs {
-		if staff.StaffID == existUser.UserID {
-			isStaff = true
-			break
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(setAllowGroupLoginReq.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
-	if existUser.UserID == *classSchedule.SupervisorID {
-		isStaff = true
-	}
 
-	if !isStaff {
-		return responses.ErrorResponse(c, http.StatusForbidden, "You Aren't Staff")
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(setAllowGroupLoginReq.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
@@ -1530,36 +1634,35 @@ func (supervisorHandler *SupervisorHandler) SetAllowGroupUploadPicture(c echo.Co
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role == constants.Role.Student {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassSchedulePreloadByGroupID(
-		&classSchedule,
-		setAllowGroupUploadPictureRequest.GroupID,
-	)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, setAllowGroupUploadPictureRequest.GroupID)
 
-	isStaff := false
-	for _, staff := range classSchedule.ClassLabStaffs {
-		if staff.StaffID == existUser.UserID {
-			isStaff = true
-			break
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(setAllowGroupUploadPictureRequest.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
-	if existUser.UserID == *classSchedule.SupervisorID {
-		isStaff = true
-	}
 
-	if !isStaff {
-		return responses.ErrorResponse(c, http.StatusForbidden, "You Aren't Staff")
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(setAllowGroupUploadPictureRequest.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	classScheduleService := classschedule.NewClassScheduleService(supervisorHandler.server.DB)
@@ -1596,8 +1699,14 @@ func (supervisorHandler *SupervisorHandler) DeleteExercise(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labExercise models.LabExercise
@@ -1664,19 +1773,43 @@ func (supervisorHandler *SupervisorHandler) UpdateStudentCanSubmit(c echo.Contex
 		)
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existUser) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
 	existStudent := models.Student{}
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
 	studentRepo.GetStudentByStuID(&existStudent, studentId)
+	if existStudent.StuID != studentId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "User Not found.")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existStudent.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*existStudent.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*existStudent.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
 
 	studentService := student.NewStudentService(supervisorHandler.server.DB)
 	studentService.UpdateCanSubmit(&existStudent, canSubmitReq.CanSubmit)
@@ -1717,21 +1850,41 @@ func (supervisorHandler *SupervisorHandler) GetStudentInfo(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existSupervisor, err := utils.GetUserClaims(c, *userRepository)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if !utils.IsRoleSupervisor(existSupervisor) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
 	existStudent := models.User{}
 	userRepository.GetUserStudentAndGroupByUserID(&existStudent, studentId)
+	if existStudent.UserID != studentId {
+		return responses.ErrorResponse(c, http.StatusNotFound, "User Not found.")
+	}
 
-	if utils.IsRoleSupervisor(existStudent) {
-		return responses.ErrorResponse(c, http.StatusNotFound, "Not found student.")
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existStudent.Student.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	response := responses.NewUserStudentInfoResponse(existStudent)
@@ -1761,13 +1914,36 @@ func (supervisorHandler *SupervisorHandler) LogoutAllStudentInGroup(c echo.Conte
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	// TODO Add validate role function
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassSchedulePreloadByGroupID(&classSchedule, groupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
 
 	var studentList []models.Student
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
@@ -1877,14 +2053,11 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
-	}
-
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
 	var userInfo models.User
@@ -1895,6 +2068,30 @@ func (supervisorHandler *SupervisorHandler) DeleteStudent(c echo.Context) error 
 			http.StatusForbidden,
 			"This User Isn't Student Can't delete.",
 		)
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *userInfo.Student.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*userInfo.Student.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*userInfo.Student.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var exerciseSubmission []models.ExerciseSubmission
@@ -1945,8 +2142,14 @@ func (supervisorHandler *SupervisorHandler) GetExerciseData(c echo.Context) erro
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labExerciseData models.LabExercise
@@ -2000,14 +2203,11 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
-	}
-
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
 	}
 
 	var exerciseSubmissionData models.ExerciseSubmission
@@ -2018,6 +2218,30 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return responses.ErrorResponse(c, http.StatusBadRequest, "Not Found Submission.")
+		}
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *exerciseSubmissionData.Student.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*exerciseSubmissionData.Student.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*exerciseSubmissionData.Student.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
 
@@ -2096,26 +2320,47 @@ func (supervisorHandler *SupervisorHandler) CancleStduentSubmission(c echo.Conte
 // @Security BearerAuth
 // @Router			/api/supervisor/student_chapter_list [get]
 func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context) error {
-	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
-	existSupervisor, err := utils.GetUserClaims(c, *userRepository)
-	if err != nil {
-		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
-	}
-
-	if !utils.IsRoleSupervisor(existSupervisor) {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
-	}
-
 	studentIdStr := c.QueryParam("studentId")
 	studentId, err := uuid.Parse(studentIdStr)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Parse Group_id")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
 	existStudent := models.User{}
 	userRepository.GetUserByUserID(&existStudent, studentId)
 	if existStudent.UserID != studentId {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existStudent.Student.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labClassInfos []models.LabClassInfo
@@ -2202,14 +2447,41 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Convert Item ID")
 	}
 
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
+	existStudent := models.User{}
+	userRepository.GetUserByUserID(&existStudent, stuId)
+	if existStudent.UserID != stuId {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existStudent.Student.GroupID)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.StudentAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(*existStudent.Student.GroupID, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labClassInfo models.LabClassInfo
@@ -2314,8 +2586,14 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
 	}
 
 	var labExerciseData models.LabExercise
@@ -2439,14 +2717,15 @@ func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+	}
+
+	if !utils.ContainsString(constants.AdminRoleList, createAdminReq.Role) {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Role.")
 	}
 
 	userService := user.NewUserService(supervisorHandler.server.DB)
-	//TODO check role and create to that role
-	supervisorService := supervisor.NewSupervisorService(supervisorHandler.server.DB)
-
 	userId, err := userService.Create(
 		createAdminReq.Username,
 		createAdminReq.Username,
@@ -2460,10 +2739,32 @@ func (supervisorHandler *SupervisorHandler) CreateAdmin(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create User.")
 	}
 
-	err = supervisorService.Create(userId, "คอมพิวเตอร์")
-	if err != nil {
-		return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create Supervisor.")
+	//TODO Add Create Exercutive Role
+	switch createAdminReq.Role {
+	case constants.Role.Supervisor:
+		{
+			supervisorService := supervisor.NewSupervisorService(supervisorHandler.server.DB)
+			err = supervisorService.Create(userId, "คอมพิวเตอร์")
+			if err != nil {
+				return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create Supervisor.")
+			}
+			break
+		}
+	case constants.Role.Ta:
+		{
+			taService := ta.NewTaService(supervisorHandler.server.DB)
+			err = taService.CreateTa(userId, nil, nil)
+			if err != nil {
+				return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Create TA.")
+			}
+			break
+		}
+	default:
+		{
+			return responses.ErrorResponse(c, http.StatusInternalServerError, "Invalid Role.")
+		}
 	}
+
 	return responses.MessageResponse(c, http.StatusOK, "Create Admin Success.")
 }
 
@@ -2498,8 +2799,8 @@ func (supervisorHandler *SupervisorHandler) CreateDepartment(c echo.Context) err
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	if *existUser.Role != constants.Role.Supervisor {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 	}
 
 	departmentService := department.NewDepartmetService(supervisorHandler.server.DB)
@@ -2623,6 +2924,6 @@ func (supervisorHandler *SupervisorHandler) GetRolePermission(c echo.Context) er
 	rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
 	rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
 
-	response := responses.NewGetRolePermissionResponse(rolePermission,existUser)
+	response := responses.NewGetRolePermissionResponse(rolePermission, existUser)
 	return responses.Response(c, http.StatusOK, response)
 }

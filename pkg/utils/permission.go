@@ -20,3 +20,10 @@ func ValidateSupervisorAndBeyonder(user models.User) bool {
 	}
 	return false
 }
+
+func ValidateAdminRole(user models.User) bool {
+	if *user.Role == constants.Role.Supervisor || *user.Role == constants.Role.Beyonder || *user.Role == constants.Role.Ta || *user.Role == constants.Role.Executive {
+		return true
+	}
+	return false
+}

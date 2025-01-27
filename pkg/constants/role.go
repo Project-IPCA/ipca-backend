@@ -15,3 +15,5 @@ var Role = RoleStruct{
 	Executive:  "EXECUTIVE",
 	Beyonder:   "BEYONDER",
 }
+
+var AdminRoleList = []string{"SUPERVISOR", "TA", "EXECUTIVE"}
