@@ -2912,7 +2912,7 @@ func (supervisorHandler *SupervisorHandler) SetRolePermission(c echo.Context) er
 // @Success 200		{object}	responses.GetRolePermissionResponse
 // @Failure 403		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/role_permission [post]
+// @Router			/api/supervisor/role_permission [get]
 func (supervisorHandler *SupervisorHandler) GetRolePermission(c echo.Context) error {
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -2920,10 +2920,42 @@ func (supervisorHandler *SupervisorHandler) GetRolePermission(c echo.Context) er
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
+	if !utils.ValidateAdminRole(existUser){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
 	var rolePermission []models.RolePermission
 	rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
 	rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
 
 	response := responses.NewGetRolePermissionResponse(rolePermission, existUser)
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get All Role Permission
+// @ID supervisor-get-all-role-permission
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Success 200		{object}	responses.GetAllRolePermissionResponse
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/all_role_permission [get]
+func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context) error {
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser){
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var rolePermission []models.RolePermission
+	rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+	rolePermissionRepo.GetAllPermissionRole(&rolePermission)
+
+	response := responses.NewGetAllRolePermissionResponse(rolePermission)
 	return responses.Response(c, http.StatusOK, response)
 }

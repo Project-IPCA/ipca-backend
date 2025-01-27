@@ -223,7 +223,7 @@ func NewGetAssginStudentExerciseResponse(
 }
 
 type GetRolePermissionResponse struct {
-	Permission []string
+	Permission []string `json:"permission"`
 }
 
 func NewGetRolePermissionResponse(rolePermission []models.RolePermission, user models.User) GetRolePermissionResponse {
@@ -241,4 +241,34 @@ func NewGetRolePermissionResponse(rolePermission []models.RolePermission, user m
 	}
 
 	return response
+}
+
+type GetAllRolePermissionResponse struct {
+	Role       string   `json:"role"`
+	Permission []string `json:"permission"`
+}
+
+//TODO Improve get key unique from db and the filter
+func NewGetAllRolePermissionResponse(rolePermission []models.RolePermission) []GetAllRolePermissionResponse {
+	permisisonList := make([]GetAllRolePermissionResponse, 0)
+	executivePermission := make([]string, 0)
+	taPermission := make([]string, 0)
+
+	for _, permisson := range rolePermission {
+		if permisson.Role == constants.Role.Executive {
+			executivePermission = append(executivePermission, permisson.Permission)
+		} else if permisson.Role == constants.Role.Ta {
+			taPermission = append(taPermission, permisson.Permission)
+		}
+	}
+
+	permisisonList = append(permisisonList, GetAllRolePermissionResponse{
+		Role:       constants.Role.Executive,
+		Permission: executivePermission,
+	}, GetAllRolePermissionResponse{
+		Role:       constants.Role.Ta,
+		Permission: taPermission,
+	})
+
+	return permisisonList
 }
