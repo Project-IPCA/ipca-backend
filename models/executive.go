@@ -6,7 +6,7 @@ import (
 
 type Executive struct {
 	ExecutiveID uuid.UUID `gorm:"primaryKey;type:varchar(36)"`
-	User        User      `gorm:"foreignKey:SupervisorID;references:UserID"`
+	User        User      `gorm:"foreignKey:ExecutiveID;references:UserID"`
 }
 
 func (Executive) TableName() string {

@@ -58,7 +58,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedulesByQu
 	baseQuery := classScheduleRepository.DB.Model(models.ClassSchedule{}).
 		Preload("Supervisor.User").
 		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("ClassLabStaffs.User").
 		Preload("Students")
 
 	defaultPage := 1
@@ -128,7 +128,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetClassSchedulePreloadB
 ) {
 	classScheduleRepository.DB.Preload("Supervisor.User").
 		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("ClassLabStaffs.User").
 		Preload("GroupChapterPermissions.LabClassInfo").
 		Where("group_id = ?", classScheduleId).Find(classSchedule)
 }
@@ -144,7 +144,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 		Preload("Department").
 		Preload("Supervisor.User").
 		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("ClassLabStaffs.User").
 		Preload("Students")
 
 	defaultPage := 1
