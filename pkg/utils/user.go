@@ -22,6 +22,9 @@ func GetUserClaims(c echo.Context, userRepo repositories.UserRepository) (models
 	if claims.CiSession != *existUser.CISession {
 		return models.User{}, errors.New("invalid session")
 	}
+	if ContainsString(constants.AdminRoleList,*existUser.Role) && !existUser.IsActive{
+		return models.User{}, errors.New("admin has been deleted")
+	}
 	return existUser, nil
 }
 
