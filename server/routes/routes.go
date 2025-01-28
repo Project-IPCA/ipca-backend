@@ -99,6 +99,7 @@ func ConfigureRoutes(server *s.Server) {
 	)
 	supervisorAuthGroup.PUT("/exercise", supervisorHandler.UpdateExercise)
 	supervisorAuthGroup.POST("/admin", supervisorHandler.CreateAdmin)
+	supervisorAuthGroup.DELETE("/admin/:admin_id", supervisorHandler.DeleteAdmin)
 	supervisorAuthGroup.POST("/department", supervisorHandler.CreateDepartment)
 	supervisorAuthGroup.POST("/set_role_permission", supervisorHandler.SetRolePermission)
 	supervisorAuthGroup.GET("/role_permission", supervisorHandler.GetRolePermission)
