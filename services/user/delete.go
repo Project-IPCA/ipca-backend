@@ -14,3 +14,14 @@ func (service *Service) Delete(
 	}
 	return nil
 }
+
+func (service *Service) DeleteAdmin(
+	user *models.User,
+) error {
+	user.IsActive = false
+	err := service.DB.Save(*user)
+	if err.Error != nil {
+		return fmt.Errorf("error while delete admin : %v", err.Error)
+	}
+	return nil
+}
