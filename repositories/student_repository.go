@@ -94,3 +94,9 @@ func (studentRepository *StudentRepository) GetStudentInGroupID(
 ) {
 	studentRepository.DB.Where("group_id = ?", groupID).Preload("User").Find(students)
 }
+
+func (studentRepository *StudentRepository) GetStudentGroupCount(groupID uuid.UUID) int64 {
+	var count int64
+	studentRepository.DB.Model(models.Student{}).Where("group_id = ?", groupID).Count(&count)
+	return count
+}
