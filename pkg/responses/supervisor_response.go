@@ -226,6 +226,7 @@ func NewGetAssginStudentExerciseResponse(
 
 type GetRolePermissionResponse struct {
 	Permission []string `json:"permission"`
+	Role       string   `json:"role"`
 }
 
 func NewGetRolePermissionResponse(rolePermission []models.RolePermission, user models.User) GetRolePermissionResponse {
@@ -240,6 +241,7 @@ func NewGetRolePermissionResponse(rolePermission []models.RolePermission, user m
 
 	response := GetRolePermissionResponse{
 		Permission: permisisonList,
+		Role:       *user.Role,
 	}
 
 	return response
