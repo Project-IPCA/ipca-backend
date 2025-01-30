@@ -276,3 +276,23 @@ func NewGetAllRolePermissionResponse(rolePermission []models.RolePermission) []G
 
 	return permisisonList
 }
+
+type SupervisorResponse struct {
+	SupervisorID uuid.UUID `json:"supervisor_id"`
+	FirstName    string    `json:"f_name"`
+	LastName     string    `json:"l_name"`
+	Role         string    `json:"role"`
+}
+
+func NewSupervisorResponse(supervisors []models.Supervisor) []SupervisorResponse {
+	supervisorResponse := make([]SupervisorResponse, 0)
+	for _, super := range supervisors {
+		supervisorResponse = append(supervisorResponse, SupervisorResponse{
+			SupervisorID: super.SupervisorID,
+			FirstName:    *super.User.FirstName,
+			LastName:     *super.User.LastName,
+			Role:         *super.User.Role,
+		})
+	}
+	return supervisorResponse
+}
