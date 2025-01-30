@@ -335,6 +335,7 @@ type MyGroupInfoResponse struct {
 	TimeStart  *string      `json:"time_start"`
 	TimeEnd    *string      `json:"time_end"`
 	Staff      []ClassStaff `json:"staffs"`
+	Instructor Instructor   `json:"instructor"`
 }
 
 func NewMyClassScheduleInfoResponse(
@@ -365,5 +366,10 @@ func NewMyClassScheduleInfoResponse(
 		TimeStart: classSchedule.TimeStart,
 		TimeEnd:   classSchedule.TimeEnd,
 		Staff:     classStaffResponse,
+		Instructor: Instructor{
+			SupervisorID: classSchedule.Supervisor.SupervisorID,
+			FirstName:    *classSchedule.Supervisor.User.FirstName,
+			LastName:     *classSchedule.Supervisor.User.LastName,
+		},
 	}
 }
