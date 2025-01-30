@@ -219,7 +219,18 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
-	supervisorId := existUser.UserID
+
+	var supervisorId uuid.UUID
+	if *createGroupReq.SupervisorId != uuid.Nil && *existUser.Role != constants.Role.Supervisor{
+		supervisorRepo := repositories.NewSupervisorRepository(supervisorHandler.server.DB)
+		if supervisorRepo.CheckValidSuperID(*createGroupReq.SupervisorId) {
+			supervisorId = *createGroupReq.SupervisorId
+		} else {
+			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Supervisor ID.")
+		}
+	} else {
+		supervisorId = existUser.UserID
+	}
 
 	existGroup := models.ClassSchedule{}
 	classScheduleRepository := repositories.NewClassScheduleRepository(
