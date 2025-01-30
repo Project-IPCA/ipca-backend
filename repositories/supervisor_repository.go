@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/google/uuid"
 )
 
 type SupervisorRepositoryQ interface{}
@@ -20,4 +21,12 @@ func (supervisorRepository *SupervisorRepository) GetAllSupervisors(
 	supervisors *[]models.Supervisor,
 ) {
 	supervisorRepository.DB.Preload("User").Find(supervisors)
+}
+
+func (supervisorRepository *SupervisorRepository) CheckValidSuperID(
+	superId uuid.UUID,
+) bool {
+	var supervisor models.Supervisor
+	err := supervisorRepository.DB.Where("supervisor_id = ?", superId).First(&supervisor)
+	return err.Error == nil
 }
