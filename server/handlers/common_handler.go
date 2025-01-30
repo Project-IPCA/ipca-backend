@@ -389,3 +389,19 @@ func (commonHandler *CommonHandler) GetStaffs(c echo.Context) error {
 	response := responses.NewStaffsResponse(users)
 	return responses.Response(c, http.StatusOK, response)
 }
+
+// @Description Get Supervisr
+// @ID common-get-supervisr
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Success 200 {array} responses.SupervisorResponse
+// @Security BearerAuth
+// @Router /api/common/supervisors [get]
+func (commonHandler *CommonHandler) GetSupervisors(c echo.Context) error {
+	var supervisors []models.Supervisor
+	supervisorRepo := repositories.NewSupervisorRepository(commonHandler.server.DB)
+	supervisorRepo.GetAllSupervisors(&supervisors)
+	response := responses.NewSupervisorResponse(supervisors)
+	return responses.Response(c, http.StatusOK, response)
+}
