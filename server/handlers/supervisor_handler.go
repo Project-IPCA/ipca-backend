@@ -928,10 +928,6 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
 	labExerciseRepo.GetLabExerciseByID(saveExerciseTesetcaseReq.ExerciseID, &labExercise)
 
-	if labExercise.CreatedBy != nil && *labExercise.CreatedBy != existUser.UserID {
-		return responses.ErrorResponse(c, http.StatusForbidden, "Not Have Permission To Do This!")
-	}
-
 	exerciseTestcaseRepo := repositories.NewExerciseTestcaseRepository(supervisorHandler.server.DB)
 	if len(saveExerciseTesetcaseReq.RemoveList) > 0 {
 		exerciseTestcaseRepo.DeleteExerciseTetscaseID(saveExerciseTesetcaseReq.RemoveList)
