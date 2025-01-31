@@ -11,9 +11,10 @@ import (
 )
 
 type ClassStaff struct {
-	SupervisorID uuid.UUID `json:"supervisor_id"`
-	FirstName    string    `json:"f_name"`
-	LastName     string    `json:"l_name"`
+	StaffID   uuid.UUID `json:"staff_id"`
+	FirstName string    `json:"f_name"`
+	LastName  string    `json:"l_name"`
+	Role      string    `json:"role"`
 }
 
 type Instructor struct {
@@ -51,7 +52,7 @@ type AvailableGroupsResponse struct {
 func NewClassSchedulesResponse(
 	filteredClassSchedules []models.ClassSchedule,
 	allClassSchedules []models.ClassSchedule,
-	staffs []models.Supervisor,
+	staffs []models.User,
 	page string,
 	pageSize string,
 	totalClassSchedules int64,
@@ -61,9 +62,10 @@ func NewClassSchedulesResponse(
 		classStaffResponse := make([]ClassStaff, 0)
 		for _, labStaff := range classSchedule.ClassLabStaffs {
 			classStaffResponse = append(classStaffResponse, ClassStaff{
-				SupervisorID: labStaff.Supervisor.SupervisorID,
-				FirstName:    *labStaff.Supervisor.User.FirstName,
-				LastName:     *labStaff.Supervisor.User.LastName,
+				StaffID:   labStaff.User.UserID,
+				FirstName: *labStaff.User.FirstName,
+				LastName:  *labStaff.User.LastName,
+				Role:      *labStaff.User.Role,
 			})
 		}
 		departmentData := Department{
@@ -93,9 +95,10 @@ func NewClassSchedulesResponse(
 	allStaffs := make([]ClassStaff, 0)
 	for _, staff := range staffs {
 		allStaffs = append(allStaffs, ClassStaff{
-			SupervisorID: staff.SupervisorID,
-			FirstName:    *staff.User.FirstName,
-			LastName:     *staff.User.LastName,
+			StaffID:   staff.UserID,
+			FirstName: *staff.FirstName,
+			LastName:  *staff.LastName,
+			Role:      *staff.Role,
 		})
 	}
 
@@ -157,9 +160,10 @@ func NewMyClassSchedulesResponse(
 		classStaffResponse := make([]ClassStaff, 0)
 		for _, labStaff := range classSchedule.ClassLabStaffs {
 			classStaffResponse = append(classStaffResponse, ClassStaff{
-				SupervisorID: labStaff.Supervisor.SupervisorID,
-				FirstName:    *labStaff.Supervisor.User.FirstName,
-				LastName:     *labStaff.Supervisor.User.LastName,
+				StaffID:   labStaff.User.UserID,
+				FirstName: *labStaff.User.FirstName,
+				LastName:  *labStaff.User.LastName,
+				Role:      *labStaff.User.Role,
 			})
 		}
 		departmentData := Department{
@@ -259,9 +263,10 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 	classStaffResponse := make([]ClassStaff, 0)
 	for _, labStaff := range classSchedule.ClassLabStaffs {
 		classStaffResponse = append(classStaffResponse, ClassStaff{
-			SupervisorID: labStaff.Supervisor.SupervisorID,
-			FirstName:    *labStaff.Supervisor.User.FirstName,
-			LastName:     *labStaff.Supervisor.User.LastName,
+			StaffID:   labStaff.User.UserID,
+			FirstName: *labStaff.User.FirstName,
+			LastName:  *labStaff.User.LastName,
+			Role:      *labStaff.User.Role,
 		})
 	}
 	groupChapterPermResponse := make([]GroupChapterPermission, 0)
@@ -330,6 +335,7 @@ type MyGroupInfoResponse struct {
 	TimeStart  *string      `json:"time_start"`
 	TimeEnd    *string      `json:"time_end"`
 	Staff      []ClassStaff `json:"staffs"`
+	Instructor Instructor   `json:"instructor"`
 }
 
 func NewMyClassScheduleInfoResponse(
@@ -338,9 +344,10 @@ func NewMyClassScheduleInfoResponse(
 	classStaffResponse := make([]ClassStaff, 0)
 	for _, labStaff := range classSchedule.ClassLabStaffs {
 		classStaffResponse = append(classStaffResponse, ClassStaff{
-			SupervisorID: labStaff.Supervisor.SupervisorID,
-			FirstName:    *labStaff.Supervisor.User.FirstName,
-			LastName:     *labStaff.Supervisor.User.LastName,
+			StaffID:   labStaff.User.UserID,
+			FirstName: *labStaff.User.FirstName,
+			LastName:  *labStaff.User.LastName,
+			Role:      *labStaff.User.Role,
 		})
 	}
 
@@ -359,5 +366,10 @@ func NewMyClassScheduleInfoResponse(
 		TimeStart: classSchedule.TimeStart,
 		TimeEnd:   classSchedule.TimeEnd,
 		Staff:     classStaffResponse,
+		Instructor: Instructor{
+			SupervisorID: classSchedule.Supervisor.SupervisorID,
+			FirstName:    *classSchedule.Supervisor.User.FirstName,
+			LastName:     *classSchedule.Supervisor.User.LastName,
+		},
 	}
 }

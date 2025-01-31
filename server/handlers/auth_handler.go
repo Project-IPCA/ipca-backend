@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 
@@ -49,6 +50,13 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	user := models.User{}
 	userRepository := repositories.NewUserRepository(authHandler.server.DB)
 	userRepository.GetUserByUsername(&user, loginReq.Username)
+
+	if user.UserID == uuid.Nil {
+		return responses.ErrorResponse(
+			c, http.StatusNotFound,
+			"User Not Found.",
+		)
+	}
 
 	if *user.Role != constants.Role.Student {
 		return responses.ErrorResponse(
@@ -233,10 +241,24 @@ func (authHandler *AuthHandler) LoginSuper(c echo.Context) error {
 	userRepository := repositories.NewUserRepository(authHandler.server.DB)
 	userRepository.GetUserByUsername(&user, loginReq.Username)
 
+	if user.UserID == uuid.Nil {
+		return responses.ErrorResponse(
+			c, http.StatusNotFound,
+			"User Not Found.",
+		)
+	}
+
 	if *user.Role == constants.Role.Student {
 		return responses.ErrorResponse(
 			c, http.StatusUnauthorized,
 			"username or password is not correct.",
+		)
+	}
+
+	if !user.IsActive {
+		return responses.ErrorResponse(
+			c, http.StatusForbidden,
+			"This Admin Has Been Deleted.",
 		)
 	}
 
@@ -369,6 +391,13 @@ func (authHandler *AuthHandler) RefreshToken(c echo.Context) error {
 
 	if claims.CiSession != *existsUser.CISession {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Session.")
+	}
+
+	if !existsUser.IsActive {
+		return responses.ErrorResponse(
+			c, http.StatusForbidden,
+			"This Admin Has Been Deleted.",
+		)
 	}
 
 	tokenService := tokenservice.NewTokenService(authHandler.server.Config)

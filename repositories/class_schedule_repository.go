@@ -58,7 +58,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedulesByQu
 	baseQuery := classScheduleRepository.DB.Model(models.ClassSchedule{}).
 		Preload("Supervisor.User").
 		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("ClassLabStaffs.User").
 		Preload("Students")
 
 	defaultPage := 1
@@ -128,7 +128,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetClassSchedulePreloadB
 ) {
 	classScheduleRepository.DB.Preload("Supervisor.User").
 		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("ClassLabStaffs.User").
 		Preload("GroupChapterPermissions.LabClassInfo").
 		Where("group_id = ?", classScheduleId).Find(classSchedule)
 }
@@ -144,7 +144,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 		Preload("Department").
 		Preload("Supervisor.User").
 		Preload("Department").
-		Preload("ClassLabStaffs.Supervisor.User").
+		Preload("ClassLabStaffs.User").
 		Preload("Students")
 
 	defaultPage := 1
@@ -165,7 +165,12 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 		baseQuery = baseQuery.Where("year = ?", yearInt)
 	}
 
-	baseQuery = baseQuery.Where("supervisor_id = ?", supervisorId)
+	baseQuery = baseQuery.Where(
+		classScheduleRepository.DB.Where("supervisor_id = ?", supervisorId).Or(
+			"EXISTS (SELECT 1 FROM class_lab_staffs WHERE class_lab_staffs.class_id = class_schedules.group_id AND class_lab_staffs.staff_id = ?)",
+			supervisorId,
+		),
+	)
 
 	var totalClassSchedules int64
 	baseQuery.Count(&totalClassSchedules)

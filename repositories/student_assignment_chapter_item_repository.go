@@ -33,3 +33,19 @@ func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStude
 	}
 	return nil
 }
+
+func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStudentChapterByGroupAndChapterID(
+	studentAssignChapterItems *[]models.StudentAssignmentChapterItem,
+	groupId uuid.UUID,
+	chapterId uuid.UUID,
+) error {
+	err := studentAssignChapterItemRepo.DB.Model(models.StudentAssignmentChapterItem{}).
+		Joins("JOIN students ON students.stu_id = student_assignment_chapter_items.stu_id").
+		Joins("JOIN lab_class_infos ON lab_class_infos.chapter_id = student_assignment_chapter_items.chapter_id").
+		Where("students.group_id = ? AND student_assignment_chapter_items.chapter_id = ?", groupId, chapterId).Order("lab_class_infos.chapter_index ASC").Find(studentAssignChapterItems)
+
+	if err.Error != nil {
+		return err.Error
+	}
+	return nil
+}

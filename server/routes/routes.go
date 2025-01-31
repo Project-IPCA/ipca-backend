@@ -99,7 +99,12 @@ func ConfigureRoutes(server *s.Server) {
 	)
 	supervisorAuthGroup.PUT("/exercise", supervisorHandler.UpdateExercise)
 	supervisorAuthGroup.POST("/admin", supervisorHandler.CreateAdmin)
+	supervisorAuthGroup.DELETE("/admin/:admin_id", supervisorHandler.DeleteAdmin)
 	supervisorAuthGroup.POST("/department", supervisorHandler.CreateDepartment)
+	supervisorAuthGroup.POST("/set_role_permission", supervisorHandler.SetRolePermission)
+	supervisorAuthGroup.GET("/role_permission", supervisorHandler.GetRolePermission)
+	supervisorAuthGroup.GET("/all_role_permission", supervisorHandler.GetAllRolePermission)
+	supervisorAuthGroup.GET("/average_group_score/:group_id", supervisorHandler.GetAverageGroupScore)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")
@@ -132,6 +137,7 @@ func ConfigureRoutes(server *s.Server) {
 	commonAuthGroup.POST("/user_profile", commonHandler.UploadUserProfile)
 	commonAuthGroup.GET("/departments", commonHandler.GetDepartments)
 	commonAuthGroup.GET("/staffs", commonHandler.GetStaffs)
+	commonAuthGroup.GET("/supervisors", commonHandler.GetSupervisors)
 
 	// Test
 	apiGroup.GET("/greeting", testHandler.Greeting)

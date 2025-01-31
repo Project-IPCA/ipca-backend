@@ -379,13 +379,29 @@ func (commonHandler *CommonHandler) GetDepartments(c echo.Context) error {
 // @Tags Common
 // @Accept json
 // @Produce json
-// @Success 200 {array} responses.SupervisorsResponse
+// @Success 200 {array} responses.StaffsResponse
 // @Security BearerAuth
 // @Router /api/common/staffs [get]
 func (commonHandler *CommonHandler) GetStaffs(c echo.Context) error {
+	var users []models.User
+	userRepo := repositories.NewUserRepository(commonHandler.server.DB)
+	userRepo.GetUserAdminRole(&users)
+	response := responses.NewStaffsResponse(users)
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get Supervisr
+// @ID common-get-supervisr
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Success 200 {array} responses.SupervisorResponse
+// @Security BearerAuth
+// @Router /api/common/supervisors [get]
+func (commonHandler *CommonHandler) GetSupervisors(c echo.Context) error {
 	var supervisors []models.Supervisor
-	supervRepo := repositories.NewSupervisorRepository(commonHandler.server.DB)
-	supervRepo.GetAllSupervisors(&supervisors)
-	response := responses.NewSupervisorsResponse(supervisors)
+	supervisorRepo := repositories.NewSupervisorRepository(commonHandler.server.DB)
+	supervisorRepo.GetAllSupervisors(&supervisors)
+	response := responses.NewSupervisorResponse(supervisors)
 	return responses.Response(c, http.StatusOK, response)
 }

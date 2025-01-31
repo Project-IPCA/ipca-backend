@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS `role_permissions` (
+    permission_id VARCHAR(36) NOT NULL,
+    role ENUM('BEYONDER','STUDENT', 'SUPERVISOR', 'EXECUTIVE', 'TA') NOT NULL,
+    permission ENUM('GROUP_ADMIN', 'EXERCISE_ADMIN', 'STUDENT_ADMIN', 'DASHBOARD_ADMIN') NOT NULL,
+    PRIMARY KEY (permission_id)
+) 

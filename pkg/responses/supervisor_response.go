@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Project-IPCA/ipca-backend/models"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 )
 
 type GetLabChapterInfoResponse struct {
@@ -114,19 +115,21 @@ func NewSetChapterPermissionResponse(
 	return response
 }
 
-type SupervisorsResponse struct {
-	SupervisorID uuid.UUID `json:"supervisor_id"`
-	FirstName    string    `json:"f_name"`
-	LastName     string    `json:"l_name"`
+type StaffsResponse struct {
+	StaffID   uuid.UUID `json:"staff_id"`
+	FirstName string    `json:"f_name"`
+	LastName  string    `json:"l_name"`
+	Role      string    `json:"role"`
 }
 
-func NewSupervisorsResponse(supervisors []models.Supervisor) *[]SupervisorsResponse {
-	response := make([]SupervisorsResponse, 0)
-	for _, supervisor := range supervisors {
-		response = append(response, SupervisorsResponse{
-			SupervisorID: supervisor.SupervisorID,
-			FirstName:    *supervisor.User.FirstName,
-			LastName:     *supervisor.User.LastName,
+func NewStaffsResponse(users []models.User) *[]StaffsResponse {
+	response := make([]StaffsResponse, 0)
+	for _, user := range users {
+		response = append(response, StaffsResponse{
+			StaffID:   user.UserID,
+			FirstName: *user.FirstName,
+			LastName:  *user.LastName,
+			Role:      *user.Role,
 		})
 	}
 	return &response
@@ -219,4 +222,77 @@ func NewGetAssginStudentExerciseResponse(
 	}
 
 	return response
+}
+
+type GetRolePermissionResponse struct {
+	Permission []string `json:"permission"`
+	Role       string   `json:"role"`
+}
+
+func NewGetRolePermissionResponse(rolePermission []models.RolePermission, user models.User) GetRolePermissionResponse {
+	permisisonList := make([]string, 0)
+	if *user.Role == constants.Role.Supervisor || *user.Role == constants.Role.Beyonder {
+		permisisonList = append(permisisonList, constants.PermissionType.DashboardAdmin, constants.PermissionType.ExerciseAdmin, constants.PermissionType.GroupAdmin, constants.PermissionType.StudentAdmin)
+	} else {
+		for _, permission := range rolePermission {
+			permisisonList = append(permisisonList, permission.Permission)
+		}
+	}
+
+	response := GetRolePermissionResponse{
+		Permission: permisisonList,
+		Role:       *user.Role,
+	}
+
+	return response
+}
+
+type GetAllRolePermissionResponse struct {
+	Role       string   `json:"role"`
+	Permission []string `json:"permission"`
+}
+
+// TODO Improve get key unique from db and the filter
+func NewGetAllRolePermissionResponse(rolePermission []models.RolePermission) []GetAllRolePermissionResponse {
+	permisisonList := make([]GetAllRolePermissionResponse, 0)
+	executivePermission := make([]string, 0)
+	taPermission := make([]string, 0)
+
+	for _, permisson := range rolePermission {
+		if permisson.Role == constants.Role.Executive {
+			executivePermission = append(executivePermission, permisson.Permission)
+		} else if permisson.Role == constants.Role.Ta {
+			taPermission = append(taPermission, permisson.Permission)
+		}
+	}
+
+	permisisonList = append(permisisonList, GetAllRolePermissionResponse{
+		Role:       constants.Role.Executive,
+		Permission: executivePermission,
+	}, GetAllRolePermissionResponse{
+		Role:       constants.Role.Ta,
+		Permission: taPermission,
+	})
+
+	return permisisonList
+}
+
+type SupervisorResponse struct {
+	SupervisorID uuid.UUID `json:"supervisor_id"`
+	FirstName    string    `json:"f_name"`
+	LastName     string    `json:"l_name"`
+	Role         string    `json:"role"`
+}
+
+func NewSupervisorResponse(supervisors []models.Supervisor) []SupervisorResponse {
+	supervisorResponse := make([]SupervisorResponse, 0)
+	for _, super := range supervisors {
+		supervisorResponse = append(supervisorResponse, SupervisorResponse{
+			SupervisorID: super.SupervisorID,
+			FirstName:    *super.User.FirstName,
+			LastName:     *super.User.LastName,
+			Role:         *super.User.Role,
+		})
+	}
+	return supervisorResponse
 }
