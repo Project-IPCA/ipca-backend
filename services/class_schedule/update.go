@@ -17,7 +17,6 @@ func (classScheduleService *Service) UpdateMyGroup(
 	classSchedule.Year = request.Year
 	classSchedule.TimeStart = request.TimeStart
 	classSchedule.TimeEnd = request.TimeEnd
-	classSchedule.SupervisorID = request.SupervisorId
 	classScheduleService.DB.Save(classSchedule)
 }
 

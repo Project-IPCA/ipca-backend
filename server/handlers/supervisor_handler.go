@@ -362,7 +362,6 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
-	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
 	if err != nil {
@@ -383,9 +382,7 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 
 	if *existUser.Role == constants.Role.Supervisor &&
 		*classSchedule.SupervisorID != existUser.UserID {
-		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
-			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
-		}
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 	}
 
 	var studentList []models.Student
