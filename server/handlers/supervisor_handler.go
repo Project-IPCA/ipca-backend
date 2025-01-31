@@ -378,13 +378,7 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 	}
 
 	if !utils.ValidateSupervisorAndBeyonder(existUser) {
-		var rolePermission []models.RolePermission
-		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
-		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
-
-		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
-			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
-		}
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 	}
 
 	if *existUser.Role == constants.Role.Supervisor &&
