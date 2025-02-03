@@ -296,3 +296,14 @@ func NewSupervisorResponse(supervisors []models.Supervisor) []SupervisorResponse
 	}
 	return supervisorResponse
 }
+
+type TotalStaffResponse struct {
+	TotalStaff int64 `json:"total_staffs"`
+}
+
+func NewTotalStaffResponse(total int64) TotalStaffResponse {
+	response := TotalStaffResponse{
+		TotalStaff: total,
+	}
+	return response
+}
