@@ -100,3 +100,21 @@ func (studentRepository *StudentRepository) GetStudentGroupCount(groupID uuid.UU
 	studentRepository.DB.Model(models.Student{}).Where("group_id = ?", groupID).Count(&count)
 	return count
 }
+
+func (studentRepository *StudentRepository) GetTotalStudent(groupId *uuid.UUID, year *int, status string) int64 {
+	var total int64
+	baseQuery := studentRepository.DB.Model(models.Student{})
+	if status != "" {
+		baseQuery = baseQuery.Joins("JOIN users ON users.user_id = students.stu_id").Where("users.is_online = ?", status)
+	}
+
+	if groupId != nil {
+		baseQuery = baseQuery.Where("students.group_id = ? ", groupId)
+	}
+
+	if year != nil {
+		baseQuery = baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").Where("class_schedules.year = ?", year)
+	}
+	baseQuery.Count(&total)
+	return total
+}
