@@ -3216,3 +3216,70 @@ func (supervisorHandler *SupervisorHandler) GetAverageGroupScore(c echo.Context)
 
 	return responses.Response(c, http.StatusOK, averrageScore)
 }
+
+func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) error {
+	groupId := c.QueryParam("groupId")
+	status := c.QueryParam("status")
+	year := c.QueryParam("year")
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	var rolePermission []models.RolePermission
+	rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+	rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+	var totalStudent int64
+	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+
+	if groupId != "" && year == "" {
+		groupUuid, err := uuid.Parse(groupId)
+		if err != nil {
+			return responses.ErrorResponse(c, http.StatusInternalServerError, "Invalid Group ID.")
+		}
+
+		var classSchedule models.ClassSchedule
+		classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+		classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupUuid)
+
+		if classSchedule.GroupID == uuid.Nil {
+			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+		}
+
+		classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+		if !utils.ValidateSupervisorAndBeyonder(existUser) {
+			if !(classLabStaffRepo.CheckStaffValidInClass(groupUuid, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin)) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
+		}
+
+		if *existUser.Role == constants.Role.Supervisor &&
+			*classSchedule.SupervisorID != existUser.UserID {
+			if !classLabStaffRepo.CheckStaffValidInClass(groupUuid, existUser.UserID) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
+		}
+		totalStudent = studentRepo.GetTotalStudent(&groupUuid, nil, status)
+	} else if year != "" && groupId == "" {
+		yearInt, err := strconv.Atoi(year)
+		if err != nil {
+			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Year.")
+		}
+
+		if !utils.ValidateSupervisorAndBeyonder(existUser) {
+			if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
+		}
+		totalStudent = studentRepo.GetTotalStudent(nil, &yearInt, status)
+
+	} else {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Query Params.")
+	}
+
+	response := responses.NewTotalStudentResponse(totalStudent)
+	return responses.Response(c, http.StatusOK, response)
+}

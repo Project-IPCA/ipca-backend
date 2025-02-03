@@ -37,7 +37,7 @@ func NewGetAllChapter(
 			canAccess = true
 		} else if chapter.AllowAccessType == constants.AccessType.Timer || chapter.AllowAccessType == constants.AccessType.DateTime {
 			if chapter.AccessTimeStart != nil && chapter.AccessTimeEnd != nil {
-				canAccess = utils.IsTimeInRange(chapter.AccessTimeStart,chapter.AccessTimeEnd)
+				canAccess = utils.IsTimeInRange(chapter.AccessTimeStart, chapter.AccessTimeEnd)
 			}
 		}
 		var labClassInfo models.LabClassInfo
@@ -413,6 +413,17 @@ func NewStudentSubmssionResponse(studentSubmission []models.ExerciseSubmission) 
 			Result:             submission.Result,
 			ErrorMessage:       submission.ErrorMessage,
 		})
+	}
+	return response
+}
+
+type TotalStudentResponse struct {
+	TotalStudent int64 `json:"total_students"`
+}
+
+func NewTotalStudentResponse(total int64) TotalStudentResponse {
+	response := TotalStudentResponse{
+		TotalStudent: total,
 	}
 	return response
 }
