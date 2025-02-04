@@ -3491,3 +3491,67 @@ func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error 
 
 	return responses.Response(c, http.StatusOK, response)
 }
+
+// @Description Get Total Groups
+// @ID supervisor-get-total-groups
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id path string true "Group ID"
+// @Success 200		{array}		responses.StudentRankingResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/score_ranking/{group_id} [get]
+func (supervisorHandler *SupervisorHandler) GetScoreRankingByGroup(c echo.Context) error {
+	groupIdStr := c.Param("group_id")
+	groupId, err := uuid.Parse(groupIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if *existUser.Role == constants.Role.Supervisor &&
+		*classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var students []models.StudentWithAggregate
+	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
+	err = studentRepo.GetStudentGroupRanking(&students, groupId)
+
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Fail When Get Ranking.")
+	}
+
+	response := responses.NewStudentRankingResponse(students)
+
+	return responses.Response(c, http.StatusOK, response)
+}
