@@ -1,12 +1,12 @@
 package responses
 
 type TotalSubmissionsResponse struct {
-	TotalSubmission int64 `json:"total_submission"`
+	TotalSubmissions int64 `json:"total_submissions"`
 }
 
 func NewTotalSubmissionsResponse(total int64) TotalSubmissionsResponse {
 	response := TotalSubmissionsResponse{
-		TotalSubmission: total,
+		TotalSubmissions: total,
 	}
 	return response
 }
