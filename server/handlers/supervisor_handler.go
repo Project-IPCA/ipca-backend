@@ -3128,9 +3128,10 @@ func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context)
 // @Security BearerAuth
 // @Router			/api/supervisor/average_group_score/{group_id}  [get]
 func (supervisorHandler *SupervisorHandler) GetAverageGroupScore(c echo.Context) error {
-	groupIdStr := c.Param("group_id")
-	groupId, err := uuid.Parse(groupIdStr)
-	if err != nil {
+	groupIdStr := c.QueryParam("groupId")
+	year := c.QueryParam("year")
+	groupId, _ := uuid.Parse(groupIdStr)
+	if year == "" && groupIdStr == "" {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
 	}
 
@@ -3141,20 +3142,27 @@ func (supervisorHandler *SupervisorHandler) GetAverageGroupScore(c echo.Context)
 		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
 	}
 
-	var classSchedule models.ClassSchedule
-	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
-
-	if classSchedule.GroupID == uuid.Nil {
-		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
-	}
-
 	if !utils.ValidateSupervisorAndBeyonder(existUser) {
 		var rolePermission []models.RolePermission
 		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
 		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
 
-		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin)) {
+	if groupId != uuid.Nil {
+		var classSchedule models.ClassSchedule
+		classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+		classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
+
+		if classSchedule.GroupID == uuid.Nil {
+			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+		}
+
+		if *existUser.Role == constants.Role.Supervisor && *classSchedule.SupervisorID != existUser.UserID && !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		} else if *existUser.Role != constants.Role.Beyonder && !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
 			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 		}
 	}
@@ -3164,7 +3172,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageGroupScore(c echo.Context)
 	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo)
 
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
-	studentCount := studentRepo.GetStudentGroupCount(groupId)
+	studentCount := studentRepo.GetStudentGroupOrYearCount(groupId, year)
 	studentAssignItemsRepo := repositories.NewStudentAssignChapterItemRepository(
 		supervisorHandler.server.DB,
 	)
@@ -3181,10 +3189,11 @@ func (supervisorHandler *SupervisorHandler) GetAverageGroupScore(c echo.Context)
 			defer wg.Done()
 
 			var studentAssignItems []models.StudentAssignmentChapterItem
-			err := studentAssignItemsRepo.GetStudentChapterByGroupAndChapterID(
+			err := studentAssignItemsRepo.GetStudentChapterByChapterIDAndGroupOrYear(
 				&studentAssignItems,
 				groupId,
 				labClassInfo.ChapterID,
+				year,
 			)
 			if err != nil {
 				errChan <- fmt.Errorf("error : %v", err.Error())
