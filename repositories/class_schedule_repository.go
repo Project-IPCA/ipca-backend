@@ -180,3 +180,15 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 
 	return totalClassSchedules
 }
+
+func (classScheduleRepository *ClassScheduleRepository) GetTotalGroup(year string) int64 {
+	var totalGruop int64
+	baseQuery := classScheduleRepository.DB.Model(models.ClassSchedule{})
+
+	if year != "" {
+		baseQuery.Where("year = ?", year)
+	}
+
+	baseQuery.Count(&totalGruop)
+	return totalGruop
+}
