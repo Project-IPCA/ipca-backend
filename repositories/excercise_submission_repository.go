@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
@@ -77,4 +79,34 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetTotalSubmissions(
 	baseQuery.Count(&total)
 
 	return total
+}
+
+func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionsByDate(
+	submissions *int64,
+	groupId string, year string,
+	date time.Time,
+) {
+	baseQuery := exerciseSubmissionRepo.DB.Model(models.ExerciseSubmission{})
+
+	if groupId != "" || year != "" {
+		baseQuery = baseQuery.Joins(
+			"JOIN students ON students.stu_id = exercise_submissions.stu_id",
+		)
+	}
+
+	if groupId != "" {
+		baseQuery = baseQuery.Where("students.group_id = ?", groupId)
+	}
+
+	if year != "" {
+		baseQuery = baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").
+			Where("class_schedules.year = ?", year)
+	}
+
+	baseQuery = baseQuery.Where(
+		"DATE(exercise_submissions.time_submit) = ?",
+		date.Format("2006-01-02"),
+	)
+
+	baseQuery.Count(submissions)
 }

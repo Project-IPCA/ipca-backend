@@ -10,3 +10,18 @@ func NewTotalSubmissionsResponse(total int64) TotalSubmissionsResponse {
 	}
 	return response
 }
+
+type StatsSubmissionsResponse struct {
+	SubmissionsList []int64  `json:"submissions_list"`
+	DateList        []string `json:"date_list"`
+}
+
+func NewStatsSubmissionsResponse(
+	submissionList []int64,
+	dateList []string,
+) StatsSubmissionsResponse {
+	return StatsSubmissionsResponse{
+		SubmissionsList: submissionList,
+		DateList:        dateList,
+	}
+}
