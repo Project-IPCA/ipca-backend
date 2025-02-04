@@ -3115,19 +3115,20 @@ func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context)
 	return responses.Response(c, http.StatusOK, response)
 }
 
-// @Description Get Average Group Score
-// @ID supervisor-get-average-group-score
+// @Description Get Average Chapter Score
+// @ID supervisor-get-average-Chapter-score
 // @Tags Supervisor
 // @Accept json
 // @Produce json
-// @Param group_id path string true "Group ID"
+// @Param group_id query string false "Group_ID"
+// @Param year query string false "Year"
 // @Success 200		{array}		float64
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/average_group_score/{group_id}  [get]
-func (supervisorHandler *SupervisorHandler) GetAverageGroupScore(c echo.Context) error {
+// @Router			/api/supervisor/stats/score/chapter  [get]
+func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Context) error {
 	groupIdStr := c.QueryParam("groupId")
 	year := c.QueryParam("year")
 	groupId, _ := uuid.Parse(groupIdStr)
@@ -3449,6 +3450,44 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year)
 
 	response := responses.NewTotalSubmissionsResponse(totalSubmissions)
+
+	return responses.Response(c, http.StatusOK, response)
+}
+
+// @Description Get Total Groups
+// @ID supervisor-get-total-groups
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param year query string false "Year"
+// @Success 200		{object}	responses.TotalGroupsResponse
+// @Failure 403		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/groups/total [get]
+func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error {
+	year := c.QueryParam("year")
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var totalGroup int64
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	totalGroup = classScheduleRepo.GetTotalGroup(year)
+
+	response := responses.NewTotalGroupsResponse(totalGroup)
 
 	return responses.Response(c, http.StatusOK, response)
 }
