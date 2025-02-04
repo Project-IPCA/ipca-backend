@@ -427,3 +427,37 @@ func NewTotalStudentResponse(total int64) TotalStudentResponse {
 	}
 	return response
 }
+
+type StuentRankingInfo struct {
+	ID       uuid.UUID `json:"id"`
+	Profile  *string   `json:"profile"`
+	Nickname string    `json:"nickname"`
+}
+
+type StudentRankingResponse struct {
+	Student StuentRankingInfo `json:"student"`
+	Score   int               `json:"score"`
+}
+
+func NewStudentRankingResponse(students []models.StudentWithAggregate) []StudentRankingResponse {
+	response := make([]StudentRankingResponse, 0)
+	for _, student := range students {
+		var nickname string
+		if student.User.Nickname != nil {
+			nickname = *student.User.Nickname
+		} else {
+			nickname = *student.User.FirstName
+		}
+
+		studentInfo := StuentRankingInfo{
+			ID:       student.StuID,
+			Profile:  student.User.Avatar,
+			Nickname: nickname,
+		}
+		response = append(response, StudentRankingResponse{
+			Student: studentInfo,
+			Score:   student.TotalMarks,
+		})
+	}
+	return response
+}

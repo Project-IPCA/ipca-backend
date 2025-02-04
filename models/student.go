@@ -19,3 +19,8 @@ type Student struct {
 func (Student) TableName() string {
 	return "students"
 }
+
+type StudentWithAggregate struct {
+	Student
+	TotalMarks int `gorm:"column:total_marks"`
+}

@@ -373,3 +373,14 @@ func NewMyClassScheduleInfoResponse(
 		},
 	}
 }
+
+type TotalGroupsResponse struct {
+	TotalGroups int64 `json:"total_groups"`
+}
+
+func NewTotalGroupsResponse(total int64) TotalGroupsResponse {
+	response := TotalGroupsResponse{
+		TotalGroups: total,
+	}
+	return response
+}
