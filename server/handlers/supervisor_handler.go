@@ -3375,6 +3375,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 // @Accept json
 // @Produce json
 // @Param group_id query string false "Group_ID"
+// @Param year query string false "Year"
 // @Success 200		{object}	responses.TotalSubmissionsResponse
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
@@ -3383,6 +3384,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 // @Router			/api/supervisor/submissions/total [get]
 func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.Context) error {
 	groupId := c.QueryParam("group_id")
+	year := c.QueryParam("year")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3406,6 +3408,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 	)
 
 	if groupId != "" {
+
 		groupUuid, err := uuid.Parse(groupId)
 		if err != nil {
 			return responses.ErrorResponse(c, http.StatusInternalServerError, "Invalid Group ID.")
@@ -3432,11 +3435,9 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
-		totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(&groupUuid)
-
-	} else {
-		totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(nil)
 	}
+
+	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year)
 
 	response := responses.NewTotalSubmissionsResponse(totalSubmissions)
 

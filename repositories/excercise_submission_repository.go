@@ -54,14 +54,27 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByID(
 }
 
 func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetTotalSubmissions(
-	groupId *uuid.UUID,
+	groupId string, year string,
 ) int64 {
 	var total int64
 	baseQuery := exerciseSubmissionRepo.DB.Model(models.ExerciseSubmission{})
-	if groupId != nil {
-		baseQuery.Joins("JOIN students ON students.stu_id = exercise_submissions.stu_id").
-			Where("students.group_id = ?", groupId)
+
+	if groupId != "" || year != "" {
+		baseQuery = baseQuery.Joins(
+			"JOIN students ON students.stu_id = exercise_submissions.stu_id",
+		)
 	}
+
+	if groupId != "" {
+		baseQuery = baseQuery.Where("students.group_id = ?", groupId)
+	}
+
+	if year != "" {
+		baseQuery = baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").
+			Where("class_schedules.year = ?", year)
+	}
+
 	baseQuery.Count(&total)
+
 	return total
 }
