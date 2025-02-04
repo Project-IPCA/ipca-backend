@@ -3495,7 +3495,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error 
 }
 
 // @Description Get Total Groups
-// @ID supervisor-get-total-groups
+// @ID supervisor-get-score-ranking
 // @Tags Supervisor
 // @Accept json
 // @Produce json
