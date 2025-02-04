@@ -104,9 +104,13 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.POST("/set_role_permission", supervisorHandler.SetRolePermission)
 	supervisorAuthGroup.GET("/role_permission", supervisorHandler.GetRolePermission)
 	supervisorAuthGroup.GET("/all_role_permission", supervisorHandler.GetAllRolePermission)
-	supervisorAuthGroup.GET("/average_group_score/:group_id", supervisorHandler.GetAverageGroupScore)
+	supervisorAuthGroup.GET(
+		"/average_group_score/:group_id",
+		supervisorHandler.GetAverageGroupScore,
+	)
 	supervisorAuthGroup.GET("/students/total", supervisorHandler.GetTotalStudent)
 	supervisorAuthGroup.GET("/staffs/total", supervisorHandler.GetTotalStaff)
+	supervisorAuthGroup.GET("/submissions/total", supervisorHandler.GetTotalExerciseSubmissions)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")

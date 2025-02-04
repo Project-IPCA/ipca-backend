@@ -3368,3 +3368,77 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 	response := responses.NewTotalStaffResponse(totalStaff)
 	return responses.Response(c, http.StatusOK, response)
 }
+
+// @Description Get Total Submissions
+// @ID supervisor-get-total-submissions
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id query string false "Group_ID"
+// @Success 200		{object}	responses.TotalSubmissionsResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/submissions/total [get]
+func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.Context) error {
+	groupId := c.QueryParam("group_id")
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var totalSubmissions int64
+	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(
+		supervisorHandler.server.DB,
+	)
+
+	if groupId != "" {
+		groupUuid, err := uuid.Parse(groupId)
+		if err != nil {
+			return responses.ErrorResponse(c, http.StatusInternalServerError, "Invalid Group ID.")
+		}
+
+		var classSchedule models.ClassSchedule
+		classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+		classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupUuid)
+
+		if classSchedule.GroupID == uuid.Nil {
+			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+		}
+
+		classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+		if !utils.ValidateSupervisorAndBeyonder(existUser) {
+			if !(classLabStaffRepo.CheckStaffValidInClass(groupUuid, existUser.UserID)) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
+		}
+
+		if *existUser.Role == constants.Role.Supervisor &&
+			*classSchedule.SupervisorID != existUser.UserID {
+			if !classLabStaffRepo.CheckStaffValidInClass(groupUuid, existUser.UserID) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
+		}
+		totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(&groupUuid)
+
+	} else {
+		totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(nil)
+	}
+
+	response := responses.NewTotalSubmissionsResponse(totalSubmissions)
+
+	return responses.Response(c, http.StatusOK, response)
+}
