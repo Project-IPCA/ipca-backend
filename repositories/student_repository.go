@@ -128,3 +128,19 @@ func (studentRepository *StudentRepository) GetTotalStudent(groupId *uuid.UUID, 
 	baseQuery.Count(&total)
 	return total
 }
+
+func (studentRepository *StudentRepository) GetStudentGroupRanking(students *[]models.StudentWithAggregate, groupId uuid.UUID) error {
+	err := studentRepository.DB.Model(&models.Student{}).
+		Preload("User").
+		Joins("LEFT JOIN student_assignment_chapter_items ON student_assignment_chapter_items.stu_id = students.stu_id").
+		Where("students.group_id = ?", groupId).
+		Select("students.*, COALESCE(SUM(student_assignment_chapter_items.marking), 0) AS total_marks").
+		Group("students.stu_id").
+		Order("total_marks DESC").
+		Find(students)
+
+	if err.Error != nil {
+		return err.Error
+	}
+	return nil
+}
