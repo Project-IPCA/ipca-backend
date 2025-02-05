@@ -3205,8 +3205,13 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 				totalScore = totalScore + assignItem.Marking
 			}
 
+			average := float64(totalScore)
+			if studentCount != 0 {
+				average = float64(totalScore) / float64(studentCount)
+			}
+
 			mu.Lock()
-			averrageScore[labClassInfo.ChapterIndex-1] = float64(totalScore) / float64(studentCount)
+			averrageScore[labClassInfo.ChapterIndex-1] = average
 			mu.Unlock()
 		}(labClassInfo)
 	}
