@@ -3158,12 +3158,17 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
 		}
 
+		if !utils.ValidateSupervisorAndBeyonder(existUser) {
+			if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
+		}
+	
 		if *existUser.Role == constants.Role.Supervisor &&
-			*classSchedule.SupervisorID != existUser.UserID &&
-			!classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
-			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
-		} else if *existUser.Role != constants.Role.Beyonder && !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
-			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			*classSchedule.SupervisorID != existUser.UserID {
+			if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+			}
 		}
 	}
 
