@@ -3642,3 +3642,46 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 	response := responses.NewStatsSubmissionsResponse(submissionsList, dateList)
 	return responses.Response(c, http.StatusOK, response)
 }
+
+// @Description Get Average Department Score
+// @ID supervisor-get-average-departments-score
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param year query string false "Year"
+// @Success 200		{array}		responses.AverageDeptScoreResponse
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/average_dept_score [get]
+func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) error {
+	year := c.QueryParam("year")
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.DashboardAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var department []models.DepartmentWithAggregate
+	departmentRepo := repositories.NewDepartmentRepository(supervisorHandler.server.DB)
+	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year)
+
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Qurey.")
+	}
+
+	response := responses.NewAverageDeptScoreResponse(department)
+
+	return responses.Response(c, http.StatusOK, response)
+}

@@ -14,3 +14,9 @@ type Department struct {
 func (Department) TableName() string {
 	return "departments"
 }
+
+type DepartmentWithAggregate struct {
+	Department
+	TotalMarks   int `gorm:"column:total_marks"`
+	StudentCount int `gorm:"column:student_count"`
+}
