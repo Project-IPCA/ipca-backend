@@ -3132,9 +3132,6 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 	groupIdStr := c.QueryParam("groupId")
 	year := c.QueryParam("year")
 	groupId, _ := uuid.Parse(groupIdStr)
-	if year == "" && groupIdStr == "" {
-		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
-	}
 
 	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3267,7 +3264,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 	var totalStudent int64
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
 
-	if groupId != "" && year == "" {
+	if groupId != "" {
 		groupUuid, err := uuid.Parse(groupId)
 		if err != nil {
 			return responses.ErrorResponse(c, http.StatusInternalServerError, "Invalid Group ID.")
@@ -3294,18 +3291,8 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
-		totalStudent = studentRepo.GetTotalStudent(&groupUuid, nil, status)
-	} else if year != "" && groupId == "" {
-		yearInt, err := strconv.Atoi(year)
-		if err != nil {
-			return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Year.")
-		}
-
-		totalStudent = studentRepo.GetTotalStudent(nil, &yearInt, status)
-
-	} else {
-		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Query Params.")
 	}
+	totalStudent = studentRepo.GetTotalStudent(groupId, year, status)
 
 	response := responses.NewTotalStudentResponse(totalStudent)
 	return responses.Response(c, http.StatusOK, response)
@@ -3342,9 +3329,6 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 		}
 	}
 
-	var totalStaff int64
-	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-
 	if groupId != "" {
 		groupUuid, err := uuid.Parse(groupId)
 		if err != nil {
@@ -3372,11 +3356,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
-		totalStaff = userRepo.GetTotalAdmin(&groupUuid)
-	} else {
-		totalStaff = userRepo.GetTotalAdmin(nil)
-	}
+	} 
 
+	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
+	totalStaff := userRepo.GetTotalAdmin(groupId)
+	
 	response := responses.NewTotalStaffResponse(totalStaff)
 	return responses.Response(c, http.StatusOK, response)
 }
