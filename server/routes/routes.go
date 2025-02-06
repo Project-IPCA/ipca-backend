@@ -7,6 +7,7 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 
 	"github.com/Project-IPCA/ipca-backend/middlewares"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/server/handlers"
 )
@@ -22,7 +23,9 @@ func ConfigureRoutes(server *s.Server) {
 	server.Echo.IPExtractor = echo.ExtractIPFromXFFHeader()
 	server.Echo.Static("/static", "bucket")
 
-	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
+	if server.Config.Env.Enviroment == constants.EnviromentType.Develop {
+		server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
+	}
 	server.Echo.Use(middleware.Logger())
 	server.Echo.Use(middleware.CORS())
 
