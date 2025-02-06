@@ -307,3 +307,16 @@ func NewTotalStaffResponse(total int64) TotalStaffResponse {
 	}
 	return response
 }
+
+type AverageChapterScoreResponse struct {
+	MaxRange int       `json:"max_range"`
+	Data     []float64 `json:"data"`
+}
+
+func NewAverageChapterScoreResponse(data []float64, maxRange int) AverageChapterScoreResponse {
+	response := AverageChapterScoreResponse{
+		MaxRange: maxRange,
+		Data:     data,
+	}
+	return response
+}

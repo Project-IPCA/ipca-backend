@@ -25,13 +25,18 @@ func NewDepartmentsResponse(departments []models.Department) *[]DepartmentRespon
 }
 
 type AverageDeptScoreResponse struct {
+	MaxRange int                    `json:"max_range"`
+	Data     []AverageDeptScoreData `json:"data"`
+}
+
+type AverageDeptScoreData struct {
 	NameTH string  `json:"dept_name_th"`
 	NameEN string  `json:"dept_name_en"`
 	Score  float64 `json:"score"`
 }
 
-func NewAverageDeptScoreResponse(depts []models.DepartmentWithAggregate) []AverageDeptScoreResponse {
-	response := make([]AverageDeptScoreResponse, 0)
+func NewAverageDeptScoreResponse(depts []models.DepartmentWithAggregate,labClassInfo []models.LabClassInfo) AverageDeptScoreResponse {
+	data := make([]AverageDeptScoreData, 0)
 	for _, dept := range depts {
 		var average float64
 		if dept.StudentCount == 0 {
@@ -39,11 +44,17 @@ func NewAverageDeptScoreResponse(depts []models.DepartmentWithAggregate) []Avera
 		} else {
 			average = float64(dept.TotalMarks) / float64(dept.StudentCount)
 		}
-		response = append(response, AverageDeptScoreResponse{
+		data = append(data, AverageDeptScoreData{
 			NameTH: dept.NameTH,
 			NameEN: dept.NameEN,
 			Score:  average,
 		})
 	}
+	
+	response := AverageDeptScoreResponse{
+		MaxRange: len(labClassInfo)*labClassInfo[0].FullMark,
+		Data: data,
+	}
+
 	return response
 }

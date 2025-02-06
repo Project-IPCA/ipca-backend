@@ -3122,7 +3122,7 @@ func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context)
 // @Produce json
 // @Param group_id query string false "Group_ID"
 // @Param year query string false "Year"
-// @Success 200		{array}		float64
+// @Success 200		{object}	responses.AverageChapterScoreResponse
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
@@ -3163,7 +3163,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
-	
+
 		if *existUser.Role == constants.Role.Supervisor &&
 			*classSchedule.SupervisorID != existUser.UserID {
 			if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
@@ -3233,7 +3233,9 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 		return responses.ErrorResponse(c, http.StatusInternalServerError, errString)
 	}
 
-	return responses.Response(c, http.StatusOK, averrageScore)
+	response := responses.NewAverageChapterScoreResponse(averrageScore, allLabClassInfo[0].FullMark)
+
+	return responses.Response(c, http.StatusOK, response)
 }
 
 // @Description Get Total Student (Have to send only group_id or year)
@@ -3366,11 +3368,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
-	} 
+	}
 
 	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
 	totalStaff := userRepo.GetTotalAdmin(groupId)
-	
+
 	response := responses.NewTotalStaffResponse(totalStaff)
 	return responses.Response(c, http.StatusOK, response)
 }
@@ -3643,7 +3645,7 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 // @Accept json
 // @Produce json
 // @Param year query string false "Year"
-// @Success 200		{array}		responses.AverageDeptScoreResponse
+// @Success 200		{object}	responses.AverageDeptScoreResponse
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
@@ -3675,7 +3677,11 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Qurey.")
 	}
 
-	response := responses.NewAverageDeptScoreResponse(department)
+	var labClassInfo []models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo)
+
+	response := responses.NewAverageDeptScoreResponse(department, labClassInfo)
 
 	return responses.Response(c, http.StatusOK, response)
 }
