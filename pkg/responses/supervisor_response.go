@@ -296,3 +296,27 @@ func NewSupervisorResponse(supervisors []models.Supervisor) []SupervisorResponse
 	}
 	return supervisorResponse
 }
+
+type TotalStaffResponse struct {
+	TotalStaff int64 `json:"total_staffs"`
+}
+
+func NewTotalStaffResponse(total int64) TotalStaffResponse {
+	response := TotalStaffResponse{
+		TotalStaff: total,
+	}
+	return response
+}
+
+type AverageChapterScoreResponse struct {
+	MaxRange int       `json:"max_range"`
+	Data     []float64 `json:"data"`
+}
+
+func NewAverageChapterScoreResponse(data []float64, maxRange int) AverageChapterScoreResponse {
+	response := AverageChapterScoreResponse{
+		MaxRange: maxRange,
+		Data:     data,
+	}
+	return response
+}

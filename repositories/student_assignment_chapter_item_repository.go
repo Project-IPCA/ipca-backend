@@ -34,15 +34,26 @@ func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStude
 	return nil
 }
 
-func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStudentChapterByGroupAndChapterID(
+func (studentAssignChapterItemRepo *StudentAssignChapterItemRepository) GetStudentChapterByChapterIDAndGroupOrYear(
 	studentAssignChapterItems *[]models.StudentAssignmentChapterItem,
 	groupId uuid.UUID,
 	chapterId uuid.UUID,
+	year string,
 ) error {
-	err := studentAssignChapterItemRepo.DB.Model(models.StudentAssignmentChapterItem{}).
-		Joins("JOIN students ON students.stu_id = student_assignment_chapter_items.stu_id").
+	baseQuery := studentAssignChapterItemRepo.DB.Model(models.StudentAssignmentChapterItem{}).
 		Joins("JOIN lab_class_infos ON lab_class_infos.chapter_id = student_assignment_chapter_items.chapter_id").
-		Where("students.group_id = ? AND student_assignment_chapter_items.chapter_id = ?", groupId, chapterId).Order("lab_class_infos.chapter_index ASC").Find(studentAssignChapterItems)
+		Joins("JOIN students ON students.stu_id = student_assignment_chapter_items.stu_id")
+
+	if year != "" {
+		baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").
+			Where("class_schedules.year = ?", year)
+	}
+
+	if groupId != uuid.Nil {
+		baseQuery.Where("students.group_id = ?", groupId)
+	}
+
+	err := baseQuery.Where("student_assignment_chapter_items.chapter_id = ?", chapterId).Order("lab_class_infos.chapter_index ASC").Find(studentAssignChapterItems)
 
 	if err.Error != nil {
 		return err.Error

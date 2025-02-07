@@ -1,7 +1,9 @@
 services:
   ipca-api:
     container_name: ipca-api
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     ports:
       - ${BACKEND_SERVER_EXPOSE_PORT}:${BACKEND_SERVER_PORT}
     restart: unless-stopped

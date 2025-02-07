@@ -37,7 +37,7 @@ func NewGetAllChapter(
 			canAccess = true
 		} else if chapter.AllowAccessType == constants.AccessType.Timer || chapter.AllowAccessType == constants.AccessType.DateTime {
 			if chapter.AccessTimeStart != nil && chapter.AccessTimeEnd != nil {
-				canAccess = utils.IsTimeInRange(chapter.AccessTimeStart,chapter.AccessTimeEnd)
+				canAccess = utils.IsTimeInRange(chapter.AccessTimeStart, chapter.AccessTimeEnd)
 			}
 		}
 		var labClassInfo models.LabClassInfo
@@ -412,6 +412,50 @@ func NewStudentSubmssionResponse(studentSubmission []models.ExerciseSubmission) 
 			Output:             submission.Output,
 			Result:             submission.Result,
 			ErrorMessage:       submission.ErrorMessage,
+		})
+	}
+	return response
+}
+
+type TotalStudentResponse struct {
+	TotalStudent int64 `json:"total_students"`
+}
+
+func NewTotalStudentResponse(total int64) TotalStudentResponse {
+	response := TotalStudentResponse{
+		TotalStudent: total,
+	}
+	return response
+}
+
+type StuentRankingInfo struct {
+	ID        uuid.UUID `json:"id"`
+	KmitlID   string    `json:"kmitl_id"`
+	Profile   *string   `json:"profile"`
+	Nickname  *string   `json:"nickname"`
+	Firstname string    `json:"firstname"`
+	Lastname  string    `json:"lastname"`
+}
+
+type StudentRankingResponse struct {
+	Student StuentRankingInfo `json:"student"`
+	Score   int               `json:"score"`
+}
+
+func NewStudentRankingResponse(students []models.StudentWithAggregate) []StudentRankingResponse {
+	response := make([]StudentRankingResponse, 0)
+	for _, student := range students {
+		studentInfo := StuentRankingInfo{
+			ID:        student.StuID,
+			KmitlID:   student.KmitlID,
+			Profile:   student.User.Avatar,
+			Nickname:  student.User.Nickname,
+			Firstname: *student.User.FirstName,
+			Lastname:  *student.User.LastName,
+		}
+		response = append(response, StudentRankingResponse{
+			Student: studentInfo,
+			Score:   student.TotalMarks,
 		})
 	}
 	return response

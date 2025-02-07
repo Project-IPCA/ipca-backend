@@ -56,3 +56,13 @@ func (userRepository *UserRepository) GetUserAdminRole(
 		Where("role = ? OR role = ? OR role = ?", constants.Role.Supervisor, constants.Role.Ta, constants.Role.Executive).
 		Find(user)
 }
+
+func (userRepository *UserRepository) GetTotalAdmin(groupId string) int64 {
+	var total int64
+	baseQuery := userRepository.DB.Model(models.User{}).Where("users.role = ? OR users.role = ? OR users.role = ?", constants.Role.Supervisor, constants.Role.Ta, constants.Role.Executive)
+	if groupId != "" {
+		baseQuery = baseQuery.Joins("JOIN class_lab_staffs ON class_lab_staffs.staff_id = users.user_id").Where("class_lab_staffs.class_id = ?", groupId)
+	}
+	baseQuery.Count(&total)
+	return total
+}

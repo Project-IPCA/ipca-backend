@@ -7,6 +7,7 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 
 	"github.com/Project-IPCA/ipca-backend/middlewares"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/server/handlers"
 )
@@ -22,7 +23,9 @@ func ConfigureRoutes(server *s.Server) {
 	server.Echo.IPExtractor = echo.ExtractIPFromXFFHeader()
 	server.Echo.Static("/static", "bucket")
 
-	server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
+	if server.Config.Env.Enviroment == constants.EnviromentType.Develop {
+		server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
+	}
 	server.Echo.Use(middleware.Logger())
 	server.Echo.Use(middleware.CORS())
 
@@ -104,7 +107,17 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.POST("/set_role_permission", supervisorHandler.SetRolePermission)
 	supervisorAuthGroup.GET("/role_permission", supervisorHandler.GetRolePermission)
 	supervisorAuthGroup.GET("/all_role_permission", supervisorHandler.GetAllRolePermission)
-	supervisorAuthGroup.GET("/average_group_score/:group_id", supervisorHandler.GetAverageGroupScore)
+	supervisorAuthGroup.GET(
+		"/stats/score/chapter",
+		supervisorHandler.GetAverageChapterScore,
+	)
+	supervisorAuthGroup.GET("/students/total", supervisorHandler.GetTotalStudent)
+	supervisorAuthGroup.GET("/staffs/total", supervisorHandler.GetTotalStaff)
+	supervisorAuthGroup.GET("/submissions/total", supervisorHandler.GetTotalExerciseSubmissions)
+	supervisorAuthGroup.GET("/stats/submission/time", supervisorHandler.GetSubmissionsOverTime)
+	supervisorAuthGroup.GET("/groups/total", supervisorHandler.GetTotalGroup)
+	supervisorAuthGroup.GET("/score_ranking/:group_id", supervisorHandler.GetScoreRankingByGroup)
+	supervisorAuthGroup.GET("/average_dept_score", supervisorHandler.GetAverageDeptScore)
 
 	// Student
 	studentGroup := apiGroup.Group("/student")

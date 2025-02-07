@@ -95,8 +95,52 @@ func (studentRepository *StudentRepository) GetStudentInGroupID(
 	studentRepository.DB.Where("group_id = ?", groupID).Preload("User").Find(students)
 }
 
-func (studentRepository *StudentRepository) GetStudentGroupCount(groupID uuid.UUID) int64 {
+func (studentRepository *StudentRepository) GetStudentGroupOrYearCount(groupID uuid.UUID, year string) int64 {
 	var count int64
-	studentRepository.DB.Model(models.Student{}).Where("group_id = ?", groupID).Count(&count)
+	baseQuery := studentRepository.DB.Model(models.Student{})
+
+	if groupID != uuid.Nil {
+		baseQuery.Where("students.group_id = ?", groupID)
+	}
+
+	if year != "" {
+		baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").Where("class_schedules.year = ?", year)
+	}
+
+	baseQuery.Count(&count)
 	return count
+}
+
+func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year string, status string) int64 {
+	var total int64
+	baseQuery := studentRepository.DB.Model(models.Student{})
+	if status != "" {
+		baseQuery = baseQuery.Joins("JOIN users ON users.user_id = students.stu_id").Where("users.is_online = ?", status)
+	}
+
+	if groupId != "" {
+		baseQuery = baseQuery.Where("students.group_id = ? ", groupId)
+	}
+
+	if year != "" {
+		baseQuery = baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").Where("class_schedules.year = ?", year)
+	}
+	baseQuery.Count(&total)
+	return total
+}
+
+func (studentRepository *StudentRepository) GetStudentGroupRanking(students *[]models.StudentWithAggregate, groupId uuid.UUID) error {
+	err := studentRepository.DB.Model(&models.Student{}).
+		Preload("User").
+		Joins("LEFT JOIN student_assignment_chapter_items ON student_assignment_chapter_items.stu_id = students.stu_id").
+		Where("students.group_id = ?", groupId).
+		Select("students.*, COALESCE(SUM(student_assignment_chapter_items.marking), 0) AS total_marks").
+		Group("students.stu_id").
+		Order("total_marks DESC").
+		Find(students)
+
+	if err.Error != nil {
+		return err.Error
+	}
+	return nil
 }
