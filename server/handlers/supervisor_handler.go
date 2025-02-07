@@ -3685,3 +3685,30 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	return responses.Response(c, http.StatusOK, response)
 }
+
+func (supervisorHandler *SupervisorHandler) GetLastTimeLog(c echo.Context) error {
+	groupId := c.QueryParam("group_id")
+	lasttime := c.QueryParam("last_time")
+	limit := c.QueryParam("limit")
+
+	if groupId == "" || limit == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Parse Int.")
+	}
+
+	var activityLog []models.ActivityLog
+	activityLogRepo := repositories.NewActivityLogRepository(supervisorHandler.server.DB)
+	total,err := activityLogRepo.GetActivityLogByGroupID(&activityLog, groupId, lasttime, limitInt)
+
+	if err != nil {
+		return responses.ErrorResponse(c,http.StatusInternalServerError,err.Error())
+	}
+
+	response := responses.NewLogLastTimeResponse(activityLog,total)
+
+	return responses.Response(c, http.StatusOK, response)
+}
