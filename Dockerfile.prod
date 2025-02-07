@@ -10,6 +10,8 @@ RUN apk update && apk add --no-cache \
 # Set the working directory
 WORKDIR /app
 
+RUN go install github.com/swaggo/swag/cmd/swag@v1.8.10
+
 # Clone isolate
 RUN git clone https://github.com/ioi/isolate.git /isolate
 
@@ -35,6 +37,7 @@ WORKDIR /app
 
 # Copy source code
 COPY . .
+RUN swag init --parseDependency --parseInternal -g cmd/main.go
 
 # Build the Go application
 RUN go build -o main cmd/main.go
@@ -43,10 +46,16 @@ RUN go build -o main cmd/main.go
 FROM alpine:3.20
 
 # Install necessary runtime dependencies
-RUN apk add --no-cache eudev libcap
+RUN apk add --no-cache eudev libcap bash python3
 
 # Copy isolate from the builder stage
 COPY --from=builder /usr/local/bin/isolate /usr/local/bin/isolate
+COPY --from=builder /usr/local/etc/isolate /usr/local/etc/isolate
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=builder /usr/local/sbin/isolate-cg-keeper /usr/local/sbin/isolate-cg-keeper
+
+# Copy the python_files
+COPY --from=builder /app/python_file /app/python_file
 
 # Copy the built Go application
 COPY --from=builder /app/main /app/main
@@ -64,5 +73,4 @@ RUN addgroup -S isolate && adduser -S -G isolate isolate \
 RUN setcap cap_sys_admin,cap_sys_chroot,cap_mknod,cap_net_admin+ep /usr/local/bin/isolate
 
 # Run the application
-CMD ["/app/main"]
-    
+CMD ["/app/main"]    
