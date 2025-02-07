@@ -50,6 +50,10 @@ RUN apk add --no-cache eudev libcap
 
 # Copy isolate from the builder stage
 COPY --from=builder /usr/local/bin/isolate /usr/local/bin/isolate
+COPY --from=builder /usr/local/etc/isolate /usr/local/etc/isolate
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=builder /usr/local/sbin/isolate-cg-keeper /usr/local/sbin/isolate-cg-keeper
+
 
 # Copy the built Go application
 COPY --from=builder /app/main /app/main
