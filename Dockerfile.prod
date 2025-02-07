@@ -10,6 +10,8 @@ RUN apk update && apk add --no-cache \
 # Set the working directory
 WORKDIR /app
 
+RUN go install github.com/swaggo/swag/cmd/swag@v1.8.10
+
 # Clone isolate
 RUN git clone https://github.com/ioi/isolate.git /isolate
 
@@ -35,6 +37,7 @@ WORKDIR /app
 
 # Copy source code
 COPY . .
+RUN swag init --parseDependency --parseInternal -g cmd/main.go
 
 # Build the Go application
 RUN go build -o main cmd/main.go
