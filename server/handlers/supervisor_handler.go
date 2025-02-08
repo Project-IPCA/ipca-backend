@@ -3686,12 +3686,26 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 	return responses.Response(c, http.StatusOK, response)
 }
 
+// @Description Get Last Time Log
+// @ID supervisor-get-last-time-log
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param group_id query string true "Group ID"
+// @Param last_time query string false "Last Time"
+// @Param limit query string true "Limit"
+// @Success 200		{object}	responses.LogLastTimeResponse
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/last_log [get]
 func (supervisorHandler *SupervisorHandler) GetLastTimeLog(c echo.Context) error {
-	groupId := c.QueryParam("group_id")
+	groupIdStr := c.QueryParam("group_id")
 	lasttime := c.QueryParam("last_time")
 	limit := c.QueryParam("limit")
 
-	if groupId == "" || limit == "" {
+	if groupIdStr == "" || limit == "" {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
 
@@ -3700,15 +3714,52 @@ func (supervisorHandler *SupervisorHandler) GetLastTimeLog(c echo.Context) error
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Parse Int.")
 	}
 
-	var activityLog []models.ActivityLog
-	activityLogRepo := repositories.NewActivityLogRepository(supervisorHandler.server.DB)
-	total,err := activityLogRepo.GetActivityLogByGroupID(&activityLog, groupId, lasttime, limitInt)
-
+	groupId, err := uuid.Parse(groupIdStr)
 	if err != nil {
-		return responses.ErrorResponse(c,http.StatusInternalServerError,err.Error())
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Parse UUID.")
 	}
 
-	response := responses.NewLogLastTimeResponse(activityLog,total)
+	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupId)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !(classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) && utils.ValidateRolePermission(rolePermission, constants.PermissionType.GroupAdmin)) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	if *existUser.Role == constants.Role.Supervisor &&
+		*classSchedule.SupervisorID != existUser.UserID {
+		if !classLabStaffRepo.CheckStaffValidInClass(groupId, existUser.UserID) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var activityLog []models.ActivityLog
+	activityLogRepo := repositories.NewActivityLogRepository(supervisorHandler.server.DB)
+	total, err := activityLogRepo.GetActivityLogByGroupID(&activityLog, groupIdStr, lasttime, limitInt)
+
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	response := responses.NewLogLastTimeResponse(activityLog, total)
 
 	return responses.Response(c, http.StatusOK, response)
 }
