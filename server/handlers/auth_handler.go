@@ -356,7 +356,7 @@ func (authHandler *AuthHandler) Logout(c echo.Context) error {
 		}
 		activityLogService := activitylog.NewActivityLogService(authHandler.server.DB)
 		ip, port, userAgent := utils.GetNetworkRequest(c)
-		activityLogService.Create(
+		newLog, err := activityLogService.Create(
 			existsUser.Student.GroupID,
 			existsUser.Username,
 			ip,
@@ -365,6 +365,24 @@ func (authHandler *AuthHandler) Logout(c echo.Context) error {
 			constants.LogPage.Login,
 			constants.LogAction.Logout,
 		)
+		
+		if err != nil {
+			return responses.ErrorResponse(c, http.StatusInternalServerError, "Can't Insert Log.")
+		}
+
+		redisCnl = fmt.Sprintf(
+			"%s:%s",
+			constants.RedisChannel.Log,
+			existsUser.Student.GroupID,
+		)
+		if err := redis.PublishMessage(redisCnl, newLog); err != nil {
+			return responses.ErrorResponse(
+				c,
+				http.StatusInternalServerError,
+				"Internal Server Error",
+			)
+		}
+		
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Logout successful")
