@@ -4,10 +4,8 @@ import (
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	echoSwagger "github.com/swaggo/echo-swagger"
 
 	"github.com/Project-IPCA/ipca-backend/middlewares"
-	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 	s "github.com/Project-IPCA/ipca-backend/server"
 	"github.com/Project-IPCA/ipca-backend/server/handlers"
 )
@@ -23,9 +21,7 @@ func ConfigureRoutes(server *s.Server) {
 	server.Echo.IPExtractor = echo.ExtractIPFromXFFHeader()
 	server.Echo.Static("/static", "bucket")
 
-	if server.Config.Env.Enviroment == constants.EnviromentType.Develop {
-		server.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
-	}
+	ConfigureSwaggerRoutes(server)
 	server.Echo.Use(middleware.Logger())
 	server.Echo.Use(middleware.CORS())
 
