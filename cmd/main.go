@@ -6,6 +6,7 @@ import (
 	application "github.com/Project-IPCA/ipca-backend"
 	"github.com/Project-IPCA/ipca-backend/config"
 	"github.com/Project-IPCA/ipca-backend/docs"
+	"github.com/Project-IPCA/ipca-backend/pkg/constants"
 )
 
 // @title IPCA API
@@ -18,7 +19,8 @@ import (
 // @BasePath /api
 func main() {
 	cfg := config.NewConfig()
-
-	docs.SwaggerInfo.Host = fmt.Sprintf("%s:%s", cfg.HTTP.Host, cfg.HTTP.Port)
+	if (cfg.Env.Enviroment == constants.EnviromentType.Develop) {
+		docs.SwaggerInfo.Host = fmt.Sprintf("%s:%s", cfg.HTTP.Host, cfg.HTTP.Port)
+	}
 	application.Start(cfg)
 }
