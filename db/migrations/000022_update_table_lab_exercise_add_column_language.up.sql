@@ -1,0 +1,2 @@
+ALTER TABLE `lab_exercises` 
+ADD COLUMN `language` ENUM('C', 'PYTHON') NOT NULL DEFAULT 'PYTHON';
