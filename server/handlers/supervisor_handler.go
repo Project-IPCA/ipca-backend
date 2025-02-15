@@ -282,7 +282,7 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepository := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepository.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepository.GetAllLabClassInfos(&labClassInfos, *existClassSchedule.Language)
 	groupAssignmentChapterItemRepository := repositories.NewGroupAssignmentChapterItemRepository(
 		supervisorHandler.server.DB,
 	)
@@ -1308,6 +1308,14 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 		)
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,groupUuid)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
 	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterIdxInt)
@@ -1324,7 +1332,7 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var exerciseList []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
-	labExerciseRepo.GetLabExerciseByChapterID(&exerciseList, labClassInfo.ChapterID)
+	labExerciseRepo.GetLabExerciseByChapterIDAndLanguage(&exerciseList, labClassInfo.ChapterID,*classSchedule.Language)
 
 	response := responses.NewGetLabChapterInfoResponse(
 		labClassInfo,
@@ -1381,7 +1389,7 @@ func (supervisorHandler *SupervisorHandler) GetStudentGroupList(c echo.Context) 
 
 	var labClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo, *classSchedule.Language)
 
 	var student []models.Student
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
@@ -2426,7 +2434,7 @@ func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context
 
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos, *classSchedule.Language)
 
 	var groupChapterPermission []models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
@@ -3174,7 +3182,8 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 
 	var allLabClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo)
+	//TODO Add logic for query data
+	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo, "PYTHON")
 
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
 	studentCount := studentRepo.GetStudentGroupOrYearCount(groupId, year)
@@ -3679,7 +3688,8 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	var labClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo)
+	//TODO Add logic for query data
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo, "PYTHON")
 
 	response := responses.NewAverageDeptScoreResponse(department, labClassInfo)
 

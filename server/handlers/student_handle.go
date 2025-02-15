@@ -261,9 +261,13 @@ func (studentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(studentHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos, *classSchedule.Language)
 
 	var groupChapterPermission []models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
@@ -362,9 +366,13 @@ func (studentHandler *StudentHandler) GetChapterList(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(studentHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos, *classSchedule.Language)
 
 	var groupChapterPermission []models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(

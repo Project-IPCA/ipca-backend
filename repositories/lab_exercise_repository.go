@@ -39,6 +39,6 @@ func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(exerciseI
 	return nil
 }
 
-func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByChapterID(labExercise *[]models.LabExercise, chapterId uuid.UUID) {
-	labExerciesRepository.DB.Where("chapter_id = ?", chapterId).Find(labExercise)
+func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByChapterIDAndLanguage(labExercise *[]models.LabExercise, chapterId uuid.UUID, language string) {
+	labExerciesRepository.DB.Where("chapter_id = ? AND language = ?", chapterId,language).Find(labExercise)
 }
