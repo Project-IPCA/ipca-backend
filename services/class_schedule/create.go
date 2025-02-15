@@ -23,6 +23,7 @@ func (classScheduleService *Service) Create(
 		SetYear(request.Year).
 		SetTimeStart(request.TimeStart).
 		SetTimeEnd(request.TimeEnd).
+		SetLanguage(request.Language).
 		Build()
 
 	classScheduleService.DB.Create(&group)
