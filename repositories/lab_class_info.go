@@ -26,8 +26,9 @@ func (labClassInfoRepository *LabClassInfoRepository) GetCount() int64 {
 
 func (labClassInfoRepository *LabClassInfoRepository) GetAllLabClassInfos(
 	labClassInfos *[]models.LabClassInfo,
+	language string,
 ) {
-	labClassInfoRepository.DB.Order("chapter_index ASC").Find(labClassInfos)
+	labClassInfoRepository.DB.Where("language = ?",language).Order("chapter_index ASC").Find(labClassInfos)
 }
 
 func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndex(
