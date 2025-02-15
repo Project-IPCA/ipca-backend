@@ -15,6 +15,7 @@ type ClassSchedule struct {
 	Day                     *string                  `gorm:"type:enum('SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY');default:null"`
 	TimeStart               *string                  `gorm:"type:time;default:null"`
 	TimeEnd                 *string                  `gorm:"type:time;default:null"`
+	Language                *string                  `gorm:"type:enum('PYTHON','C');default:'PYTHON'"`
 	Year                    *int                     `gorm:"default:null"`
 	Semester                *int                     `gorm:"default:null"`
 	AllowUploadPic          bool                     `gorm:"default:true"`

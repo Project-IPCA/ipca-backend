@@ -21,6 +21,7 @@ type ClassScheduleBuilder struct {
 	AllowLogin     bool
 	AllowSubmit    bool
 	AllowExercise  bool
+	Language       *string
 }
 
 func NewClassScheduleBuilder() *ClassScheduleBuilder {
@@ -125,6 +126,13 @@ func (classScheduleBuilder *ClassScheduleBuilder) SetAllowExercise(
 	return classScheduleBuilder
 }
 
+func (classScheduleBuilder *ClassScheduleBuilder) SetLanguage(
+	Language *string,
+) (cs *ClassScheduleBuilder) {
+	classScheduleBuilder.Language = Language
+	return classScheduleBuilder
+}
+
 func (classScheduleBuilder *ClassScheduleBuilder) Build() models.ClassSchedule {
 	classSchedule := models.ClassSchedule{
 		GroupID:        classScheduleBuilder.GroupID,
@@ -141,6 +149,7 @@ func (classScheduleBuilder *ClassScheduleBuilder) Build() models.ClassSchedule {
 		AllowLogin:     classScheduleBuilder.AllowLogin,
 		AllowSubmit:    classScheduleBuilder.AllowSubmit,
 		AllowExercise:  classScheduleBuilder.AllowExercise,
+		Language:       classScheduleBuilder.Language,
 	}
 	return classSchedule
 }
