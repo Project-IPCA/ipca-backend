@@ -805,18 +805,18 @@ func (supervisorHandler *SupervisorHandler) UpdateMyGroupInfo(c echo.Context) er
 	return responses.MessageResponse(c, http.StatusOK, "Update Group Info.")
 }
 
-// @Description Create Exercise
-// @ID supervisor-create-exercise
+// @Description Create Pyhon Exercise
+// @ID supervisor-create-python-exercise
 // @Tags Supervisor
 // @Accept json
 // @Produce json
-// @Param params body	requests.CreateLabExerciseRequest	true	"Creaet Lab Exercise Request"
+// @Param params body	requests.CreatePythonExerciseRequest	true	"Creaet Python Exercise Request"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/exercise [post]
-func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error {
-	createLabExerciseReq := new(requests.CreateLabExerciseRequest)
+// @Router			/api/supervisor/exercise/python [post]
+func (supervisorHandler *SupervisorHandler) CreatePythonExercise(c echo.Context) error {
+	createLabExerciseReq := new(requests.CreatePythonExerciseRequest)
 	if err := c.Bind(createLabExerciseReq); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
@@ -845,7 +845,7 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
-	exerciseId, err := labExerciseService.CreateWithoutSourceCode(
+	exerciseId, err := labExerciseService.CreatePythonWithoutSourceCode(
 		createLabExerciseReq,
 		&existUser.UserID,
 		existUser.Username,
@@ -855,6 +855,84 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 
 	filename := fmt.Sprintf("exercise_" + exerciseId.String() + "*.py")
+	tempFile, err := utils.CreateTempFile(filename, createLabExerciseReq.Sourcecode)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Create Temp File Fail %s", err),
+		)
+	}
+	defer os.Remove(tempFile.Name())
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	uploadFileName, err := minioAction.UploadToMinio(
+		tempFile,
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		false,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	var labExerciseData models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExerciseData)
+	labExerciseService.UpdateLabExerciseSourcecode(&labExerciseData, uploadFileName)
+
+	return responses.Response(c, http.StatusOK, labExerciseData)
+}
+
+// @Description Create C Exercise
+// @ID supervisor-create-c-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateCExerciseRequest	true	"Creaet C Exercise Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/exercise/c [post]
+func (supervisorHandler *SupervisorHandler) CreateCExercise(c echo.Context) error {
+	createLabExerciseReq := new(requests.CreateCExerciseRequest)
+	if err := c.Bind(createLabExerciseReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createLabExerciseReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
+	exerciseId, err := labExerciseService.CreateCWithoutSourceCode(
+		createLabExerciseReq,
+		&existUser.UserID,
+		existUser.Username,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Create Exercise Fail")
+	}
+
+	filename := fmt.Sprintf("exercise_" + exerciseId.String() + "*.c")
 	tempFile, err := utils.CreateTempFile(filename, createLabExerciseReq.Sourcecode)
 	if err != nil {
 		return responses.ErrorResponse(
@@ -1002,6 +1080,7 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		ExerciseId:   saveExerciseTesetcaseReq.ExerciseID,
 		TestcaseList: saveExerciseTesetcaseReq.TestCaseList,
 		Sourcecode:   sourcecode.String(),
+		Language:     *labExercise.Language,
 	}
 	err = rabbit.SendQueue(message)
 	if err != nil {
@@ -1310,7 +1389,7 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var classSchedule models.ClassSchedule
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule,groupUuid)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupUuid)
 
 	if classSchedule.GroupID == uuid.Nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
@@ -1332,7 +1411,7 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var exerciseList []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
-	labExerciseRepo.GetLabExerciseByChapterIDAndLanguage(&exerciseList, labClassInfo.ChapterID,*classSchedule.Language)
+	labExerciseRepo.GetLabExerciseByChapterIDAndLanguage(&exerciseList, labClassInfo.ChapterID, *classSchedule.Language)
 
 	response := responses.NewGetLabChapterInfoResponse(
 		labClassInfo,
@@ -2632,20 +2711,20 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 	return responses.Response(c, http.StatusOK, response)
 }
 
-// @Description Update Exercise
-// @ID supervisor-update-exercise
+// @Description Update Python Exercise
+// @ID supervisor-update-python-exercise
 // @Tags Supervisor
 // @Accept json
 // @Produce json
-// @Param params body	requests.UpdateLabExerciseRequest	true	"Update Exercise"
+// @Param params body	requests.UpdatePythonExerciseRequest	true	"Update Python Exercise"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/exercise [put]
-func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error {
-	updateLabExerciseReq := new(requests.UpdateLabExerciseRequest)
+// @Router			/api/supervisor/exercise/python [put]
+func (supervisorHandler *SupervisorHandler) UpdatePythonExercise(c echo.Context) error {
+	updateLabExerciseReq := new(requests.UpdatePythonExerciseRequest)
 	if err := c.Bind(updateLabExerciseReq); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
@@ -2686,7 +2765,7 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 	}
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
-	err = labExerciseService.UpdateLabExercise(&labExerciseData, *updateLabExerciseReq)
+	err = labExerciseService.UpdatePythonExercise(&labExerciseData, *updateLabExerciseReq)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -2759,6 +2838,152 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 		ExerciseId:   *updateLabExerciseReq.ExerciseID,
 		TestcaseList: testcaseList,
 		Sourcecode:   updateLabExerciseReq.Sourcecode,
+		Language:     constants.ExerciseLanguage.Python,
+	}
+	err = rabbit.SendQueue(message)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Error While Send Queue RabbitMQ",
+		)
+	}
+
+	return responses.MessageResponse(
+		c,
+		http.StatusOK,
+		"Update Exercise Successfully Wait For Testcase Output",
+	)
+}
+
+// @Description Update C Exercise
+// @ID supervisor-update-c-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.UpdateCExerciseRequest	true	"Update C Exercise"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/exercise/c [put]
+func (supervisorHandler *SupervisorHandler) UpdateCExercise(c echo.Context) error {
+	updateLabExerciseReq := new(requests.UpdateCExerciseRequest)
+	if err := c.Bind(updateLabExerciseReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := updateLabExerciseReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var labExerciseData models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	err = labExerciseRepo.GetLabExerciseByID(*updateLabExerciseReq.ExerciseID, &labExerciseData)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return responses.ErrorResponse(
+				c,
+				http.StatusBadRequest,
+				"Not Found Exercise.",
+			)
+		}
+	}
+
+	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
+	err = labExerciseService.UpdateCExercise(&labExerciseData, *updateLabExerciseReq)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	tempFile, err := utils.CreateTempFile(
+		fmt.Sprintf(*labExerciseData.Sourcecode+"*.c"),
+		updateLabExerciseReq.Sourcecode,
+	)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Create Temp File Fail %s", err),
+		)
+	}
+	defer os.Remove(tempFile.Name())
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	err = minioAction.DeleteFileInMinio(
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		*labExerciseData.Sourcecode,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	filename, err := minioAction.UploadToMinio(
+		tempFile,
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		false,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	labExerciseService.UpdateLabExerciseSourcecode(&labExerciseData, filename)
+
+	exerciseTestcaseService := exercisetestcase.NewExerciseTestcaseService(
+		supervisorHandler.server.DB,
+	)
+	exerciseTestcaseService.UpdateTestcaseIsReadyByExerciseID(
+		*updateLabExerciseReq.ExerciseID,
+		constants.TestcaseIsReadyType.No,
+	)
+
+	var exerciseTestcase []models.ExerciseTestcase
+	exerciseTestcaseRepo := repositories.NewExerciseTestcaseRepository(supervisorHandler.server.DB)
+	exerciseTestcaseRepo.GetTestcasesByExerciseID(labExerciseData.ExerciseID, &exerciseTestcase)
+
+	testcaseList := make([]requests.ExerciseTestcaseReq, 0)
+	for _, testcase := range exerciseTestcase {
+		testcaseList = append(testcaseList, requests.ExerciseTestcaseReq{
+			TestcaseID:      testcase.TestcaseID,
+			ExerciseID:      testcase.ExerciseID,
+			IsReady:         testcase.IsReady,
+			TestcaseContent: testcase.TestcaseContent,
+			IsActive:        *testcase.IsActive,
+			IsShowStudent:   *testcase.IsShowStudent,
+			TestcaseNote:    *testcase.TestcaseNote,
+			TestcaseOutput:  *testcase.TestcaseOutput,
+			TestcaseError:   *testcase.TestcaseError,
+		})
+	}
+
+	rabbit := rabbitmq_client.NewRabbitMQAction(
+		supervisorHandler.server.RabitMQ,
+		supervisorHandler.server.Config,
+	)
+	message := requests.AddTestcaseRabitMessage{
+		JobId:        *updateLabExerciseReq.JobID,
+		JobType:      "upsert-testcase",
+		ExerciseId:   *updateLabExerciseReq.ExerciseID,
+		TestcaseList: testcaseList,
+		Sourcecode:   updateLabExerciseReq.Sourcecode,
+		Language:     constants.ExerciseLanguage.C,
 	}
 	err = rabbit.SendQueue(message)
 	if err != nil {
