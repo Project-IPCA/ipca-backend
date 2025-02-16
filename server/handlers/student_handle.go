@@ -200,6 +200,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		StudentID:    userId,
 		ChapterId:    chapterUuid,
 		ItemId:       exerciseSubmitReq.ItemId,
+		Language:     *labExercise.Language,
 	}
 
 	rabbit := rabbitmq_client.NewRabbitMQAction(

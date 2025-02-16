@@ -39,6 +39,7 @@ type ExerciseSubmissionRabbitMessage struct {
 	StudentID    uuid.UUID                 `json:"stu_id"`
 	ChapterId    uuid.UUID                 `json:"chapter_id"`
 	ItemId       int                       `json:"item_id"`
+	Language     string                    `json:"language"`
 }
 
 type LogDataInfo struct {

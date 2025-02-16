@@ -45,7 +45,8 @@ func ConfigureRoutes(server *s.Server) {
 	supervisorAuthGroup.POST("/students", supervisorHandler.AddStudents)
 	supervisorAuthGroup.POST("/group", supervisorHandler.CreateGroup)
 	supervisorAuthGroup.DELETE("/group/:group_id", supervisorHandler.DeleteGroup)
-	supervisorAuthGroup.POST("/exercise", supervisorHandler.CreateExercise)
+	supervisorAuthGroup.POST("/exercise/python", supervisorHandler.CreatePythonExercise)
+	supervisorAuthGroup.POST("/exercise/c", supervisorHandler.CreateCExercise)
 	supervisorAuthGroup.GET("/available_groups", supervisorHandler.GetAllAvailableGroups)
 	supervisorAuthGroup.GET("/my_groups", supervisorHandler.GetMyGroups)
 	supervisorAuthGroup.GET("/group/:group_id", supervisorHandler.GetGroupInfoByGroupID)
@@ -96,7 +97,8 @@ func ConfigureRoutes(server *s.Server) {
 		"/assigned_student_exercise",
 		supervisorHandler.GetAssginStudentExercise,
 	)
-	supervisorAuthGroup.PUT("/exercise", supervisorHandler.UpdateExercise)
+	supervisorAuthGroup.PUT("/exercise/python", supervisorHandler.UpdatePythonExercise)
+	supervisorAuthGroup.PUT("/exercise/c", supervisorHandler.UpdateCExercise)
 	supervisorAuthGroup.POST("/admin", supervisorHandler.CreateAdmin)
 	supervisorAuthGroup.DELETE("/admin/:admin_id", supervisorHandler.DeleteAdmin)
 	supervisorAuthGroup.POST("/department", supervisorHandler.CreateDepartment)

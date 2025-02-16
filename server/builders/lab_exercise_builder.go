@@ -24,6 +24,7 @@ type LabExerciseBuilder struct {
 	SuggestedConstraints   *json.RawMessage
 	AddedBy                *string
 	CreatedBy              *uuid.UUID
+	Language               *string
 }
 
 func NewLabExerciseBuilder() *LabExerciseBuilder {
@@ -109,6 +110,11 @@ func (b *LabExerciseBuilder) SetCreatedBy(createdBy *uuid.UUID) *LabExerciseBuil
 	return b
 }
 
+func (b *LabExerciseBuilder) SetLanguage(language *string) *LabExerciseBuilder {
+	b.Language = language
+	return b
+}
+
 func (b *LabExerciseBuilder) Build() models.LabExercise {
 	return models.LabExercise{
 		ExerciseID:             b.ExerciseID,
@@ -125,5 +131,6 @@ func (b *LabExerciseBuilder) Build() models.LabExercise {
 		SuggestedConstraints:   b.SuggestedConstraints,
 		AddedBy:                b.AddedBy,
 		CreatedBy:              b.CreatedBy,
+		Language:               b.Language,
 	}
 }
