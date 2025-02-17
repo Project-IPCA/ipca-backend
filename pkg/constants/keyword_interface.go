@@ -1,12 +1,12 @@
 package constants
 
-type ReceiveGetKeyWordData struct {
-	Message string             `json:"message"`
-	Status  string             `json:"status"`
-	Data    GetKeyWordCategory `json:"data"`
+type ReceiveGetKeyWordPython struct {
+	Message string                   `json:"message"`
+	Status  string                   `json:"status"`
+	Data    GetKeyWordPythonCategory `json:"data"`
 }
 
-type GetKeyWordCategory struct {
+type GetKeyWordPythonCategory struct {
 	Classes       []GetKeyWordCategoryInfo `json:"classes"`
 	Functions     []GetKeyWordCategoryInfo `json:"functions"`
 	Imports       []GetKeyWordCategoryInfo `json:"imports"`
@@ -20,18 +20,17 @@ type GetKeyWordCategoryInfo struct {
 	Limit   int    `json:"limit"`
 }
 
-type ReceiveCheckKeywordData struct {
-	Status string             `json:"status"`
-	Data   GetKeyWordCategory `json:"data"`
+type ReceiveGetKeyWordC struct {
+	Message string              `json:"message"`
+	Status  string              `json:"status"`
+	Data    GetKeyWordCCategory `json:"data"`
 }
 
-type CheckKeywordCategory struct {
-	Classes       []CheckKeywordCategoryInfo `json:"classes"`
-	Functions     []CheckKeywordCategoryInfo `json:"functions"`
-	Imports       []CheckKeywordCategoryInfo `json:"imports"`
-	Methods       []CheckKeywordCategoryInfo `json:"methods"`
-	ReservedWords []CheckKeywordCategoryInfo `json:"reserved_words"`
-	Variables     []CheckKeywordCategoryInfo `json:"variables"`
+type GetKeyWordCCategory struct {
+	Functions    []GetKeyWordCategoryInfo `json:"functions"`
+	Includes     []GetKeyWordCategoryInfo `json:"includes"`
+	ReverseWords []GetKeyWordCategoryInfo `json:"reserved_words"`
+	Variables    []GetKeyWordCategoryInfo `json:"variables"`
 }
 
 type CheckKeywordCategoryInfo struct {
@@ -41,18 +40,20 @@ type CheckKeywordCategoryInfo struct {
 	Type    string `json:"type"`
 }
 
-type ResponseCheckKeywordData struct {
-	Status string                       `json:"status"`
-	Data   ResponseCheckKeywordCategory `json:"keyword_constraint"`
+type PythonCheckKeywordCategory struct {
+	Classes       []CheckKeywordCategoryInfo `json:"classes"`
+	Functions     []CheckKeywordCategoryInfo `json:"functions"`
+	Imports       []CheckKeywordCategoryInfo `json:"imports"`
+	Methods       []CheckKeywordCategoryInfo `json:"methods"`
+	ReservedWords []CheckKeywordCategoryInfo `json:"reserved_words"`
+	Variables     []CheckKeywordCategoryInfo `json:"variables"`
 }
 
-type ResponseCheckKeywordCategory struct {
-	Classes       []ResponseCheckKeywordCategoryInfo `json:"classes"`
-	Functions     []ResponseCheckKeywordCategoryInfo `json:"functions"`
-	Imports       []ResponseCheckKeywordCategoryInfo `json:"imports"`
-	Methods       []ResponseCheckKeywordCategoryInfo `json:"methods"`
-	ReservedWords []ResponseCheckKeywordCategoryInfo `json:"reserved_words"`
-	Variables     []ResponseCheckKeywordCategoryInfo `json:"variables"`
+type CCheckKeywordCategory struct {
+	Functions     []CheckKeywordCategoryInfo `json:"functions"`
+	Includes      []CheckKeywordCategoryInfo `json:"includes"`
+	ReservedWords []CheckKeywordCategoryInfo `json:"reserved_words"`
+	Variables     []CheckKeywordCategoryInfo `json:"variables"`
 }
 
 type ResponseCheckKeywordCategoryInfo struct {
@@ -61,4 +62,30 @@ type ResponseCheckKeywordCategoryInfo struct {
 	Active   bool   `json:"active"`
 	Type     string `json:"type"`
 	IsPassed bool   `json:"is_passed"`
+}
+
+type PythonCheckKeywordCategoryResponse struct {
+	Classes       []ResponseCheckKeywordCategoryInfo `json:"classes"`
+	Functions     []ResponseCheckKeywordCategoryInfo `json:"functions"`
+	Imports       []ResponseCheckKeywordCategoryInfo `json:"imports"`
+	Methods       []ResponseCheckKeywordCategoryInfo `json:"methods"`
+	ReservedWords []ResponseCheckKeywordCategoryInfo `json:"reserved_words"`
+	Variables     []ResponseCheckKeywordCategoryInfo `json:"variables"`
+}
+
+type CCheckKeywordCategoryResponse struct {
+	Functions     []ResponseCheckKeywordCategoryInfo `json:"functions"`
+	Includes      []ResponseCheckKeywordCategoryInfo `json:"includes"`
+	ReservedWords []ResponseCheckKeywordCategoryInfo `json:"reserved_words"`
+	Variables     []ResponseCheckKeywordCategoryInfo `json:"variables"`
+}
+
+type PythonCheckKeywordResponse struct {
+	Status string                             `json:"status"`
+	Data   PythonCheckKeywordCategoryResponse `json:"keyword_constraint"`
+}
+
+type CCheckKeywordResponse struct {
+	Status string                        `json:"status"`
+	Data   CCheckKeywordCategoryResponse `json:"keyword_constraint"`
 }
