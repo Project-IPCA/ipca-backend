@@ -35,6 +35,7 @@ type ClassSchedule struct {
 	StudentAmount int          `json:"student_amount"`
 	Instructor    Instructor   `json:"instructor"`
 	Staff         []ClassStaff `json:"staffs"`
+	Language      *string      `json:"language"`
 }
 
 type AvailableGroupFilter struct {
@@ -89,6 +90,7 @@ func NewClassSchedulesResponse(
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
 			Staff: classStaffResponse,
+			Language: classSchedule.Language,
 		})
 	}
 
@@ -187,6 +189,7 @@ func NewMyClassSchedulesResponse(
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
 			Staff: classStaffResponse,
+			Language: classSchedule.Language,
 		})
 	}
 
@@ -371,6 +374,7 @@ func NewMyClassScheduleInfoResponse(
 			FirstName:    *classSchedule.Supervisor.User.FirstName,
 			LastName:     *classSchedule.Supervisor.User.LastName,
 		},
+		
 	}
 }
 
