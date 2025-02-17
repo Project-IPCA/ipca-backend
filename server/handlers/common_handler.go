@@ -247,9 +247,13 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		commonHandle.server.DB,
 	)
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(commonHandle.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	var labClassInfoData models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfoData, chapterInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfoData, chapterInt,*classSchedule.Language)
 
 	if *existUser.Role == constants.Role.Student {
 		stuUuid = existUser.UserID
