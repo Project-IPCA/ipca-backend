@@ -34,6 +34,7 @@ func (labClassInfoRepository *LabClassInfoRepository) GetAllLabClassInfos(
 func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndex(
 	labClassInfo *models.LabClassInfo,
 	chapterIdx int,
+	language string,
 ){
-	labClassInfoRepository.DB.Where("chapter_index",chapterIdx).Find(labClassInfo)
+	labClassInfoRepository.DB.Where("chapter_index = ? AND language = ?",chapterIdx,language).Find(labClassInfo)
 }

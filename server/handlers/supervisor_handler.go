@@ -1397,7 +1397,7 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterIdxInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterIdxInt,*classSchedule.Language)
 
 	var groupChapterSelectItem []models.GroupChapterSelectedItem
 	groupChapterSelectItemRepo := repositories.NewGroupChapterSelectedItemRepository(
@@ -2641,7 +2641,7 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt,*classSchedule.Language)
 
 	if int64(chapterInt) > labClassInfoRepo.GetCount() || chapterInt < 0 {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Chapter Index Out of Range.")

@@ -18,6 +18,7 @@ type ExerciseSubmission struct {
 	Output             *string     `gorm:"type:text;column:output"`
 	Result             *string     `gorm:"type:json;column:result"`
 	ErrorMessage       *string     `gorm:"type:mediumtext;column:error_message"`
+	Language           *string     `gorm:"type:type:enum('PYTHON','C');column:language"`
 	LabExercise        LabExercise `gorm:"foreignKey:ExerciseID;references:ExerciseID"`
 	Student            Student     `gorm:"foreignKey:StuID;references:StuID"`
 }
