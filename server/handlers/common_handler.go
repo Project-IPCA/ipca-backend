@@ -314,12 +314,18 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		commonHandle.server.DB,
 	)
 
-	var labClassInfoData models.LabClassInfo
-	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfoData, chapterInt)
-
 	if *existUser.Role == constants.Role.Student {
 		stuUuid = existUser.UserID
+	}
+	var studentUser models.Student
+	studentRepo := repositories.NewStudentRepository(commonHandle.server.DB)
+	studentRepo.GetStudentByStuID(&studentUser,stuUuid)
+
+	var labClassInfoData models.LabClassInfo
+	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfoData, chapterInt,*studentUser.Group.Language)
+
+	if *existUser.Role == constants.Role.Student {
 		var groupChapterPermission models.GroupChapterPermission
 		groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(commonHandle.server.DB)
 		groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, labClassInfoData.ChapterID)
