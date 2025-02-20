@@ -210,6 +210,7 @@ type StudentAssignmentItemResponse struct {
 	UserDefinedConstraints *json.RawMessage   `json:"user_defined_constraints"`
 	SuggestedConstraints   *json.RawMessage   `json:"suggested_constraints"`
 	TestcaseList           []TestcaseResponse `json:"testcase_list"`
+	Language               string             `json:"language"`
 }
 
 type TestcaseResponse struct {
@@ -259,6 +260,7 @@ func NewGetStudentAssignmentItemResponse(
 		UserDefinedConstraints: labExercise.UserDefinedConstraints,
 		SuggestedConstraints:   labExercise.SuggestedConstraints,
 		TestcaseList:           testcaseListResponse,
+		Language:               *labExercise.Language,
 	}
 	return &response
 }

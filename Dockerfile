@@ -50,6 +50,7 @@ RUN chmod +x /wait
 CMD swag init --parseDependency --parseInternal -g cmd/main.go\
     && chmod -R 777 docs \
     && /wait \
+    && mkdir -p ./c_file/program \
     && gcc ./c_file/code/keyword_list.c -o ./c_file/program/keyword_list \
     && gcc ./c_file/code/kw_checker.c -o ./c_file/program/kw_checker \
     && CompileDaemon --build="go build -tags dev cmd/main.go"  --command="./main" --color
