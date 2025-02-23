@@ -473,7 +473,7 @@ func (studentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt, *classSchedule.Language)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfo, chapterInt, *classSchedule.Language)
 
 	var groupChapterPermission models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(studentHandler.server.DB)

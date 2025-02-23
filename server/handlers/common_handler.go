@@ -126,16 +126,16 @@ func (commonHandler *CommonHandler) UpdateUserInfo(c echo.Context) error {
 	return responses.Response(c, http.StatusOK, response)
 }
 
-// @Description Get Keyword List
-// @ID common-get-keyword-list
+// @Description Get Keyword List Python
+// @ID common-get-keyword-list-python
 // @Tags Common
 // @Accept json
 // @Produce json
 // @Param params body	requests.GetKeywordListRequest	true	"Get Keyword List Request"
-// @Success 200		{object}	constants.ReceiveGetKeyWordData
+// @Success 200		{object}	constants.ReceiveGetKeyWordPython
 // @Failure 400		{object}	responses.Error
-// @Router			/api/common/get_keyword_list [post]
-func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error {
+// @Router			/api/common/get_keyword_list/python [post]
+func (commonHandler *CommonHandler) GetKeywordPythonList(c echo.Context) error {
 	getKeywordListRequest := new(requests.GetKeywordListRequest)
 	if err := c.Bind(getKeywordListRequest); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
@@ -147,7 +147,7 @@ func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error {
 			"Invalid Request",
 		)
 	}
-	keywordList, err := utils.GetKeywordFromCode(getKeywordListRequest.Sourcecode)
+	keywordList, err := utils.GetPythonKeywordFromCode(getKeywordListRequest.Sourcecode)
 	if err != nil {
 		return responses.ErrorResponse(
 			c,
@@ -158,17 +158,49 @@ func (commonHandler *CommonHandler) GetKeywordList(c echo.Context) error {
 	return responses.Response(c, http.StatusOK, keywordList)
 }
 
-// @Description Keyword Check
-// @ID common-keyword-check
+// @Description Get Keyword List c
+// @ID common-get-keyword-list-c
 // @Tags Common
 // @Accept json
 // @Produce json
-// @Param params body	requests.CheckKeywordRequest	true	"Keyword Check"
+// @Param params body	requests.GetKeywordListRequest	true	"Get Keyword List Request"
+// @Success 200		{object}	constants.ReceiveGetKeyWordC
+// @Failure 400		{object}	responses.Error
+// @Router			/api/common/get_keyword_list/c [post]
+func (commonHandler *CommonHandler) GetKeywordCList(c echo.Context) error {
+	getKeywordListRequest := new(requests.GetKeywordListRequest)
+	if err := c.Bind(getKeywordListRequest); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := getKeywordListRequest.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	keywordList, err := utils.GetCKeywordFromCode(getKeywordListRequest.Sourcecode)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Error While Running Sourcecode %s", err),
+		)
+	}
+	return responses.Response(c, http.StatusOK, keywordList)
+}
+
+// @Description Python Keyword Check
+// @ID common-python-keyword-check
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Param params body	requests.PythonCheckKeywordRequest	true	"Python Keyword Check"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
-// @Router			/api/common/keyword_check [post]
-func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
-	checkKeywordRequest := new(requests.CheckKeywordRequest)
+// @Router			/api/common/keyword_check/python [post]
+func (commonHandler *CommonHandler) PythonKeywordCheck(c echo.Context) error {
+	checkKeywordRequest := new(requests.PythonCheckKeywordRequest)
 	if err := c.Bind(checkKeywordRequest); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
@@ -179,7 +211,42 @@ func (commonHandler *CommonHandler) KeywordCheck(c echo.Context) error {
 			"Invalid Request",
 		)
 	}
-	checkKeyword, err := utils.KeywordCheck(
+	checkKeyword, err := utils.PythonKeywordCheck(
+		checkKeywordRequest.Sourcecode,
+		checkKeywordRequest.ExerciseKeywordList,
+	)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Error While Running Sourcecode %s", err),
+		)
+	}
+	return responses.Response(c, http.StatusOK, checkKeyword)
+}
+
+// @Description c Keyword Check
+// @ID common-c-keyword-check
+// @Tags Common
+// @Accept json
+// @Produce json
+// @Param params body	requests.CCheckKeywordRequest	true	"C Keyword Check"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Router			/api/common/keyword_check/c [post]
+func (commonHandler *CommonHandler) CKeywordCheck(c echo.Context) error {
+	checkKeywordRequest := new(requests.CCheckKeywordRequest)
+	if err := c.Bind(checkKeywordRequest); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := checkKeywordRequest.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	checkKeyword, err := utils.CKeywordCheck(
 		checkKeywordRequest.Sourcecode,
 		checkKeywordRequest.ExerciseKeywordList,
 	)
@@ -247,16 +314,18 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 		commonHandle.server.DB,
 	)
 
-	var classSchedule models.ClassSchedule
-	classScheduleRepo := repositories.NewClassScheduleRepository(commonHandle.server.DB)
-	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+	if *existUser.Role == constants.Role.Student {
+		stuUuid = existUser.UserID
+	}
+	var studentUser models.Student
+	studentRepo := repositories.NewStudentRepository(commonHandle.server.DB)
+	studentRepo.GetStudentByStuID(&studentUser,stuUuid)
 
 	var labClassInfoData models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfoData, chapterInt,*classSchedule.Language)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfoData, chapterInt,*studentUser.Group.Language)
 
 	if *existUser.Role == constants.Role.Student {
-		stuUuid = existUser.UserID
 		var groupChapterPermission models.GroupChapterPermission
 		groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(commonHandle.server.DB)
 		groupChapterPermissionRepo.GetGroupChapterPermissionByPK(&groupChapterPermission, *existUser.Student.GroupID, labClassInfoData.ChapterID)

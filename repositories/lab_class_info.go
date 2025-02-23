@@ -28,13 +28,20 @@ func (labClassInfoRepository *LabClassInfoRepository) GetAllLabClassInfos(
 	labClassInfos *[]models.LabClassInfo,
 	language string,
 ) {
-	labClassInfoRepository.DB.Where("language = ?",language).Order("chapter_index ASC").Find(labClassInfos)
+	labClassInfoRepository.DB.Where("language = ?", language).Order("chapter_index ASC").Find(labClassInfos)
 }
 
 func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndex(
 	labClassInfo *models.LabClassInfo,
 	chapterIdx int,
+) {
+	labClassInfoRepository.DB.Where("chapter_index = ?", chapterIdx).Find(labClassInfo)
+}
+
+func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndexAndLanguage(
+	labClassInfo *models.LabClassInfo,
+	chapterIdx int,
 	language string,
-){
-	labClassInfoRepository.DB.Where("chapter_index = ? AND language = ?",chapterIdx,language).Find(labClassInfo)
+) {
+	labClassInfoRepository.DB.Where("chapter_index = ? AND language = ?", chapterIdx, language).Find(labClassInfo)
 }

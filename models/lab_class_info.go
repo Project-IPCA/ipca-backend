@@ -10,6 +10,7 @@ type LabClassInfo struct {
 	Name                    string                   `gorm:"column:name;type:varchar(256);not null"`
 	FullMark                int                      `gorm:"column:fullmark;not null"`
 	NoItems                 int                      `gorm:"column:no_items;not null;default:5"`
+	Language                *string                  `gorm:"type:enum('PYTHON','C');default:'PYTHON'"`
 	LabExercises            []LabExercise            `gorm:"foreignKey:ChapterID"`
 	GroupChapterPermissions []GroupChapterPermission `gorm:"foreignKey:ChapterID"`
 }

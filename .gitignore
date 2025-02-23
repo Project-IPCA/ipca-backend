@@ -3,3 +3,4 @@ main
 docs/*
 !docs/doc_stub.go
 bucket/
+c_file/program/*

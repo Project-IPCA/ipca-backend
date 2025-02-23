@@ -53,7 +53,7 @@ func (studentRepository *StudentRepository) GetStudentByStuID(
 	student *models.Student,
 	stuId uuid.UUID,
 ) {
-	studentRepository.DB.Where("stu_id = ?", stuId).Find(student)
+	studentRepository.DB.Where("stu_id = ?", stuId).Preload("Group").Find(student)
 }
 
 func (studentRepository *StudentRepository) GetStudentsAndAssignmentScoreByGroupID(
