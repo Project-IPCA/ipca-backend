@@ -19,6 +19,7 @@ type GetLabChapterInfoResponse struct {
 	GroupId           uuid.UUID            `json:"group_id"`
 	GroupSelectedLabs map[string][]string  `json:"group_selected_labs"`
 	LabList           map[string][]LabData `json:"lab_list"`
+	Language          string               `json:"language"`
 }
 
 type LabData struct {
@@ -75,6 +76,7 @@ func NewGetLabChapterInfoResponse(
 		GroupId:           groupId,
 		GroupSelectedLabs: groupSelectedLabs,
 		LabList:           labList,
+		Language:          *labClassInfo.Language,
 	}
 }
 

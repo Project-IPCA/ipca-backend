@@ -89,7 +89,7 @@ func NewClassSchedulesResponse(
 				FirstName:    *classSchedule.Supervisor.User.FirstName,
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
-			Staff: classStaffResponse,
+			Staff:    classStaffResponse,
 			Language: classSchedule.Language,
 		})
 	}
@@ -188,7 +188,7 @@ func NewMyClassSchedulesResponse(
 				FirstName:    *classSchedule.Supervisor.User.FirstName,
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
-			Staff: classStaffResponse,
+			Staff:    classStaffResponse,
 			Language: classSchedule.Language,
 		})
 	}
@@ -260,6 +260,7 @@ type ClassScheduleInfoResponse struct {
 	Instructor              Instructor               `json:"instructor"`
 	Staffs                  []ClassStaff             `json:"staffs"`
 	GroupChapterPermissions []GroupChapterPermission `json:"group_chapter_permissions"`
+	Language                string                   `json:"language"`
 }
 
 func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassScheduleInfoResponse {
@@ -318,6 +319,7 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 		AllowUploadProfile:      classSchedule.AllowUploadPic,
 		Staffs:                  classStaffResponse,
 		GroupChapterPermissions: groupChapterPermResponse,
+		Language: *classSchedule.Language,
 	}
 }
 
@@ -374,7 +376,6 @@ func NewMyClassScheduleInfoResponse(
 			FirstName:    *classSchedule.Supervisor.User.FirstName,
 			LastName:     *classSchedule.Supervisor.User.LastName,
 		},
-		
 	}
 }
 
