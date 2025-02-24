@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -111,9 +112,9 @@ func (studentRepository *StudentRepository) GetStudentGroupOrYearCount(groupID u
 	return count
 }
 
-func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year string, status string) int64 {
+func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year string, status string,language string) int64 {
 	var total int64
-	baseQuery := studentRepository.DB.Model(models.Student{})
+	baseQuery := studentRepository.DB.Model(models.Student{}).Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id")
 	if status != "" {
 		baseQuery = baseQuery.Joins("JOIN users ON users.user_id = students.stu_id").Where("users.is_online = ?", status)
 	}
@@ -123,7 +124,11 @@ func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year
 	}
 
 	if year != "" {
-		baseQuery = baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").Where("class_schedules.year = ?", year)
+		baseQuery = baseQuery.Where("class_schedules.year = ?", year)
+	}
+
+	if language != "" {
+		baseQuery = baseQuery.Where("class_schedules.language = ?",strings.ToUpper(language))
 	}
 	baseQuery.Count(&total)
 	return total

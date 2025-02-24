@@ -1,6 +1,9 @@
 package repositories
 
 import (
+	"fmt"
+	"strings"
+
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -20,7 +23,7 @@ func (deptRepository *DepartmentRepository) GetAllDepts(depts *[]models.Departme
 	deptRepository.DB.Find(depts)
 }
 
-func (deptRepository *DepartmentRepository) GetAllDeptsWithTotalMarks(depts *[]models.DepartmentWithAggregate, year string) error {
+func (deptRepository *DepartmentRepository) GetAllDeptsWithTotalMarks(depts *[]models.DepartmentWithAggregate, year string,language string) error {
 	baseQuery := deptRepository.DB.Model(models.Department{}).
 		Select(`
             departments.*, 
@@ -28,7 +31,7 @@ func (deptRepository *DepartmentRepository) GetAllDeptsWithTotalMarks(depts *[]m
             COUNT(DISTINCT students.stu_id) as student_count
         `)
 
-	joinCondition := "class_schedules.dept_id = departments.dept_id"
+	joinCondition := fmt.Sprintf("class_schedules.dept_id = departments.dept_id AND class_schedules.language = '%s'",strings.ToUpper(language))
 	if year != "" {
 		joinCondition += " AND class_schedules.year = '" + year + "'"
 	}

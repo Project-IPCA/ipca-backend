@@ -3364,7 +3364,12 @@ func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context)
 func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Context) error {
 	groupIdStr := c.QueryParam("groupId")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
 	groupId, _ := uuid.Parse(groupIdStr)
+
+	if groupIdStr == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+	}
 
 	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3403,12 +3408,13 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
+
+		language = *classSchedule.Language
 	}
 
 	var allLabClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	//TODO Add logic for query data
-	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo, "PYTHON")
+	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo, language)
 
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
 	studentCount := studentRepo.GetStudentGroupOrYearCount(groupId, year)
@@ -3490,6 +3496,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 	groupId := c.QueryParam("groupId")
 	status := c.QueryParam("status")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if groupId == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3538,7 +3549,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 			}
 		}
 	}
-	totalStudent = studentRepo.GetTotalStudent(groupId, year, status)
+	totalStudent = studentRepo.GetTotalStudent(groupId, year, status,language)
 
 	response := responses.NewTotalStudentResponse(totalStudent)
 	return responses.Response(c, http.StatusOK, response)
@@ -3627,6 +3638,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.Context) error {
 	groupId := c.QueryParam("group_id")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if groupId == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3679,7 +3695,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 		}
 	}
 
-	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year)
+	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year,language)
 
 	response := responses.NewTotalSubmissionsResponse(totalSubmissions)
 
@@ -3698,6 +3714,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 // @Router			/api/supervisor/groups/total [get]
 func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error {
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if language == ""{
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3717,7 +3738,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error 
 
 	var totalGroup int64
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	totalGroup = classScheduleRepo.GetTotalGroup(year)
+	totalGroup = classScheduleRepo.GetTotalGroup(year,language)
 
 	response := responses.NewTotalGroupsResponse(totalGroup)
 
@@ -3803,6 +3824,11 @@ func (supervisorHandler *SupervisorHandler) GetScoreRankingByGroup(c echo.Contex
 func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Context) error {
 	groupId := c.QueryParam("group_id")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if groupId == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3864,6 +3890,7 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 			groupId,
 			year,
 			d,
+			language,
 		)
 		dateList = append(dateList, d.Format("2006-01-02"))
 		submissionsList = append(submissionsList, submissions)
@@ -3886,6 +3913,11 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 // @Router			/api/supervisor/average_dept_score [get]
 func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) error {
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3905,7 +3937,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	var department []models.DepartmentWithAggregate
 	departmentRepo := repositories.NewDepartmentRepository(supervisorHandler.server.DB)
-	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year)
+	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year,language)
 
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Qurey.")
@@ -3913,8 +3945,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	var labClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	//TODO Add logic for query data
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo, "PYTHON")
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo, language)
 
 	response := responses.NewAverageDeptScoreResponse(department, labClassInfo)
 
