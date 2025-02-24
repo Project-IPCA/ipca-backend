@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,7 +57,7 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionByID(
 }
 
 func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetTotalSubmissions(
-	groupId string, year string,
+	groupId string, year string,language string,
 ) int64 {
 	var total int64
 	baseQuery := exerciseSubmissionRepo.DB.Model(models.ExerciseSubmission{})
@@ -76,6 +77,10 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetTotalSubmissions(
 			Where("class_schedules.year = ?", year)
 	}
 
+	if language != ""{
+		baseQuery = baseQuery.Where("exercise_submissions.language = ?",strings.ToUpper(language))
+	}
+
 	baseQuery.Count(&total)
 
 	return total
@@ -85,6 +90,7 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionsByDate
 	submissions *int64,
 	groupId string, year string,
 	date time.Time,
+	language string,
 ) {
 	baseQuery := exerciseSubmissionRepo.DB.Model(models.ExerciseSubmission{})
 
@@ -101,6 +107,10 @@ func (exerciseSubmissionRepo *ExerciseSubmissionRepository) GetSubmissionsByDate
 	if year != "" {
 		baseQuery = baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").
 			Where("class_schedules.year = ?", year)
+	}
+
+	if language != ""{
+		baseQuery = baseQuery.Where("exercise_submissions.language = ?",strings.ToUpper(language))
 	}
 
 	baseQuery = baseQuery.Where(
