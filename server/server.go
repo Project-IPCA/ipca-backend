@@ -3,7 +3,6 @@ package server
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -19,7 +18,7 @@ type Server struct {
 	DB      *gorm.DB
 	Config  *config.Config
 	Redis   *redis.Client
-	RabitMQ *amqp.Connection
+	RabitMQ *rabbitmq_client.RabbitMQConnection
 	Minio   *minio.Client
 }
 
@@ -36,4 +35,22 @@ func NewServer(cfg *config.Config) *Server {
 
 func (server *Server) Start(addr string) error {
 	return server.Echo.Start(":" + addr)
+}
+
+func (server *Server) CloseConnection() {
+	if server.RabitMQ != nil {
+		if server.RabitMQ.Ch != nil {
+			server.RabitMQ.Ch.Close()
+		}
+		if server.RabitMQ.Conn != nil {
+			server.RabitMQ.Conn.Close()
+		}
+	}
+	if server.DB != nil {
+		database, _ := server.DB.DB()
+		database.Close()
+	}
+	if server.Redis != nil {
+		server.Redis.Close()
+	}
 }

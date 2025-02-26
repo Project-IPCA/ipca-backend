@@ -15,24 +15,19 @@ type IRabbitMQAction interface {
 }
 
 type RabbitMQAction struct {
-	RabbitMQ *amqp.Connection
-	cfg      *config.Config
+	RabitMQ *RabbitMQConnection
+	cfg     *config.Config
 }
 
-func NewRabbitMQAction(rabbitmq *amqp.Connection,config *config.Config) *RabbitMQAction {
+func NewRabbitMQAction(rabbitmq *RabbitMQConnection, config *config.Config) *RabbitMQAction {
 	return &RabbitMQAction{
-		RabbitMQ: rabbitmq,
-		cfg: config,
+		RabitMQ: rabbitmq,
+		cfg:     config,
 	}
 }
 
 func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
-	ch, err := rabbitMQAction.RabbitMQ.Channel()
-	if err != nil {
-		return fmt.Errorf("fail to open channel: %v " , err)
-	}
-
-	q, err := ch.QueueDeclare(
+	q, err := rabbitMQAction.RabitMQ.Ch.QueueDeclare(
 		rabbitMQAction.cfg.RabbitMQ.QueueName,
 		true,
 		false,
@@ -41,18 +36,18 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 		nil,
 	)
 	if err != nil {
-		return fmt.Errorf("fail declare a queue: %v" ,err)
+		return fmt.Errorf("fail declare a queue: %v", err)
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	body, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message to json: %v" ,err)
+		return fmt.Errorf("failed to marshal message to json: %v", err)
 	}
 
-	err = ch.PublishWithContext(ctx,
+	err = rabbitMQAction.RabitMQ.Ch.PublishWithContext(ctx,
 		"",
 		q.Name,
 		false,
