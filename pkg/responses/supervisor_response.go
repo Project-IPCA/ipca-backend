@@ -27,6 +27,7 @@ type LabData struct {
 	Name       string `json:"name"`
 	ItemId     string `json:"item_id"`
 	ChapterId  string `json:"chapter_id"`
+	CanSelect  bool   `json:"can_select"`
 }
 
 func NewGetLabChapterInfoResponse(
@@ -59,12 +60,23 @@ func NewGetLabChapterInfoResponse(
 			continue
 		}
 		levelStr := *exercise.Level
+		canSelect := true
+		if len(exercise.TestcaseList) == 0 {
+			canSelect = false
+		}
+		for _, testcase := range exercise.TestcaseList {
+			if *testcase.TestcaseError != "" {
+				canSelect = false
+				break
+			}
+		}
 		if _, exists := labList[levelStr]; exists {
 			labList[levelStr] = append(labList[levelStr], LabData{
 				ExerciseId: exercise.ExerciseID.String(),
 				Name:       *exercise.Name,
 				ItemId:     levelStr,
 				ChapterId:  exercise.ChapterID.String(),
+				CanSelect:  canSelect,
 			})
 		}
 	}

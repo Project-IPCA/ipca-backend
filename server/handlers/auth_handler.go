@@ -53,8 +53,8 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 
 	if user.UserID == uuid.Nil {
 		return responses.ErrorResponse(
-			c, http.StatusNotFound,
-			"User Not Found.",
+			c, http.StatusUnauthorized,
+			"username or password is not correct.",
 		)
 	}
 
@@ -83,7 +83,7 @@ func (authHandler *AuthHandler) Login(c echo.Context) error {
 	if classSchedule.AllowLogin == false {
 		return responses.ErrorResponse(
 			c,
-			http.StatusUnauthorized,
+			http.StatusForbidden,
 			"Login is not allowed by Instructor.",
 		)
 	}

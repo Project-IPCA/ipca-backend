@@ -3368,7 +3368,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 	groupId, _ := uuid.Parse(groupIdStr)
 
 	if groupIdStr == "" && language == "" {
-		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
 	}
 
 	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
@@ -3499,7 +3499,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 	language := c.QueryParam("language")
 
 	if groupId == "" && language == "" {
-		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3549,7 +3549,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 			}
 		}
 	}
-	totalStudent = studentRepo.GetTotalStudent(groupId, year, status,language)
+	totalStudent = studentRepo.GetTotalStudent(groupId, year, status, language)
 
 	response := responses.NewTotalStudentResponse(totalStudent)
 	return responses.Response(c, http.StatusOK, response)
@@ -3641,7 +3641,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 	language := c.QueryParam("language")
 
 	if groupId == "" && language == "" {
-		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3695,7 +3695,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 		}
 	}
 
-	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year,language)
+	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year, language)
 
 	response := responses.NewTotalSubmissionsResponse(totalSubmissions)
 
@@ -3716,7 +3716,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error 
 	year := c.QueryParam("year")
 	language := c.QueryParam("language")
 
-	if language == ""{
+	if language == "" {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
 	}
 
@@ -3738,7 +3738,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error 
 
 	var totalGroup int64
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	totalGroup = classScheduleRepo.GetTotalGroup(year,language)
+	totalGroup = classScheduleRepo.GetTotalGroup(year, language)
 
 	response := responses.NewTotalGroupsResponse(totalGroup)
 
@@ -3827,7 +3827,7 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 	language := c.QueryParam("language")
 
 	if groupId == "" && language == "" {
-		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3916,7 +3916,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 	language := c.QueryParam("language")
 
 	if language == "" {
-		return responses.ErrorResponse(c, http.StatusBadRequest,"Invalid Request.")
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
 	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3937,7 +3937,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	var department []models.DepartmentWithAggregate
 	departmentRepo := repositories.NewDepartmentRepository(supervisorHandler.server.DB)
-	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year,language)
+	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year, language)
 
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Qurey.")

@@ -40,5 +40,5 @@ func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByID(exerciseI
 }
 
 func (labExerciesRepository *LabExerciseRepository) GetLabExerciseByChapterIDAndLanguage(labExercise *[]models.LabExercise, chapterId uuid.UUID, language string) {
-	labExerciesRepository.DB.Where("chapter_id = ? AND language = ?", chapterId,language).Find(labExercise)
+	labExerciesRepository.DB.Where("chapter_id = ? AND language = ?", chapterId, language).Preload("TestcaseList").Find(labExercise)
 }
