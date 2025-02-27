@@ -2,6 +2,7 @@ package rabbitmq_client
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Project-IPCA/ipca-backend/config"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -10,6 +11,7 @@ import (
 type RabbitMQConnection struct {
 	Conn *amqp.Connection
 	Ch   *amqp.Channel
+	mu   sync.Mutex  
 }
 
 func RabbitMQClient(cfg *config.Config) *RabbitMQConnection {
@@ -31,3 +33,18 @@ func RabbitMQClient(cfg *config.Config) *RabbitMQConnection {
 		Ch:   ch,
 	}
 }
+
+func (rmq *RabbitMQConnection) GetChannel() (*amqp.Channel, error) {  
+	rmq.mu.Lock()  
+	defer rmq.mu.Unlock()  
+	
+	if rmq.Ch.IsClosed() {  
+		ch, err := rmq.Conn.Channel()  
+		if err != nil {  
+			return nil, fmt.Errorf("failed to create new channel: %v", err)  
+		}  
+		rmq.Ch = ch  
+	}  
+
+	return rmq.Ch, nil  
+}  
