@@ -27,7 +27,12 @@ func NewRabbitMQAction(rabbitmq *RabbitMQConnection, config *config.Config) *Rab
 }
 
 func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
-	q, err := rabbitMQAction.RabitMQ.Ch.QueueDeclare(
+	ch, err := rabbitMQAction.RabitMQ.GetChannel()  
+	if err != nil {  
+		return fmt.Errorf("failed to get channel: %v", err)  
+	}  
+
+	q, err := ch.QueueDeclare(
 		rabbitMQAction.cfg.RabbitMQ.QueueName,
 		true,
 		false,
@@ -47,7 +52,7 @@ func (rabbitMQAction *RabbitMQAction) SendQueue(message interface{}) error {
 		return fmt.Errorf("failed to marshal message to json: %v", err)
 	}
 
-	err = rabbitMQAction.RabitMQ.Ch.PublishWithContext(ctx,
+	err = ch.PublishWithContext(ctx,
 		"",
 		q.Name,
 		false,
