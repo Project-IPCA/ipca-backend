@@ -14,14 +14,21 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 )
 
+type ChapterStudentItemsResponse struct {
+	ChapterIdx int `json:"chapter_idx"`
+	ItemIdx    int `json:"item_idx"`
+	Marking    int `json:"marking"`
+}
+
 type GetAllChapterResponse struct {
-	Index               int    `json:"index"`
-	ChapterId           string `json:"chapter_id"`
-	Name                string `json:"name"`
-	Marking             int    `json:"marking"`
-	FullMark            int    `json:"full_mark"`
-	IsOpen              bool   `json:"is_open"`
-	LastExerciseSuceess int    `json:"last_exercise_success"`
+	Index               int                           `json:"index"`
+	ChapterId           string                        `json:"chapter_id"`
+	Name                string                        `json:"name"`
+	Items               []ChapterStudentItemsResponse `json:"items"`
+	TotakMark           int                           `json:"total_mark"`
+	FullMark            int                           `json:"full_mark"`
+	IsOpen              bool                          `json:"is_open"`
+	LastExerciseSuceess int                           `json:"last_exercise_success"`
 }
 
 func NewGetAllChapter(
@@ -50,6 +57,7 @@ func NewGetAllChapter(
 		marking := 0
 		currntItem := 0
 		studentNotDoneItemList := make([]models.StudentAssignmentChapterItem, 0)
+		itemData := make([]ChapterStudentItemsResponse, 0)
 		for _, studentItem := range studentChapterItem {
 			if studentItem.ChapterID == chapter.ChapterID {
 				marking = marking + studentItem.Marking
@@ -57,6 +65,12 @@ func NewGetAllChapter(
 				if studentItem.Marking == 0 {
 					studentNotDoneItemList = append(studentNotDoneItemList, studentItem)
 				}
+				chapterItem := ChapterStudentItemsResponse{
+					ChapterIdx: chapter.LabClassInfo.ChapterIndex,
+					ItemIdx:    int(studentItem.ItemID),
+					Marking:    studentItem.Marking,
+				}
+				itemData = append(itemData, chapterItem)
 			}
 			if currntItem >= labClassInfo.NoItems {
 				break
@@ -77,9 +91,10 @@ func NewGetAllChapter(
 			Index:               chapter.LabClassInfo.ChapterIndex,
 			ChapterId:           chapter.ChapterID.String(),
 			Name:                chapter.LabClassInfo.Name,
-			Marking:             marking,
+			TotakMark:           marking,
 			FullMark:            chapter.LabClassInfo.FullMark,
 			IsOpen:              canAccess,
+			Items:               itemData,
 			LastExerciseSuceess: minNotDone,
 		})
 	}
