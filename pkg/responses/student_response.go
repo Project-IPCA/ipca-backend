@@ -57,11 +57,11 @@ func NewGetAllChapter(
 		}
 		marking := 0
 		currntItem := 0
-		isSubmit := false
 		studentNotDoneItemList := make([]models.StudentAssignmentChapterItem, 0)
 		itemData := make([]ChapterStudentItemsResponse, 0)
 		for _, studentItem := range studentChapterItem {
 			if studentItem.ChapterID == chapter.ChapterID {
+				isSubmit := false
 				marking = marking + studentItem.Marking
 				currntItem = currntItem + 1
 				if studentItem.Marking == 0 {
