@@ -345,7 +345,7 @@ func (studentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 	}
 
 	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
-	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems, userId)
+	studentAssignItemRepo.GetAllStudentAssignChapterWithSubmission(&allStudentAssignChapterItems, userId)
 
 	response := responses.NewGetAllChapter(
 		groupChapterPermission,
