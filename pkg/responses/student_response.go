@@ -15,9 +15,10 @@ import (
 )
 
 type ChapterStudentItemsResponse struct {
-	ChapterIdx int `json:"chapter_idx"`
-	ItemIdx    int `json:"item_idx"`
-	Marking    int `json:"marking"`
+	ChapterIdx int   `json:"chapter_idx"`
+	ItemIdx    int   `json:"item_idx"`
+	Marking    int   `json:"marking"`
+	IsSubmit   *bool `json:"is_submit"`
 }
 
 type GetAllChapterResponse struct {
@@ -56,6 +57,7 @@ func NewGetAllChapter(
 		}
 		marking := 0
 		currntItem := 0
+		isSubmit := false
 		studentNotDoneItemList := make([]models.StudentAssignmentChapterItem, 0)
 		itemData := make([]ChapterStudentItemsResponse, 0)
 		for _, studentItem := range studentChapterItem {
@@ -65,10 +67,16 @@ func NewGetAllChapter(
 				if studentItem.Marking == 0 {
 					studentNotDoneItemList = append(studentNotDoneItemList, studentItem)
 				}
+				if len(studentItem.SubmissionList) > 0 {
+					isSubmit = true
+				} else {
+					isSubmit = false
+				}
 				chapterItem := ChapterStudentItemsResponse{
 					ChapterIdx: chapter.LabClassInfo.ChapterIndex,
 					ItemIdx:    int(studentItem.ItemID),
 					Marking:    studentItem.Marking,
+					IsSubmit:   &isSubmit,
 				}
 				itemData = append(itemData, chapterItem)
 			}
