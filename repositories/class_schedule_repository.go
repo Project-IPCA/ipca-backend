@@ -50,6 +50,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedulesByQu
 	instructorId string,
 	staffIds []string,
 	year string,
+	language string,
 	semester string,
 	day string,
 	page string,
@@ -96,6 +97,10 @@ func (classScheduleRepository *ClassScheduleRepository) GetAllClassSchedulesByQu
 		baseQuery = baseQuery.Where("year = ?", yearInt)
 	}
 
+	if language != "" {
+		baseQuery = baseQuery.Where("language = ?", language)
+	}
+
 	semesterInt, err := strconv.Atoi(semester)
 	if err == nil && semester != "" {
 		baseQuery = baseQuery.Where("semester = ?", semesterInt)
@@ -137,6 +142,7 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 	classSchedules *[]models.ClassSchedule,
 	supervisorId uuid.UUID,
 	year string,
+	language string,
 	page string,
 	pageSize string,
 ) int64 {
@@ -165,6 +171,10 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 		baseQuery = baseQuery.Where("year = ?", yearInt)
 	}
 
+	if language != "" {
+		baseQuery = baseQuery.Where("language = ?", language)
+	}
+
 	baseQuery = baseQuery.Where(
 		classScheduleRepository.DB.Where("supervisor_id = ?", supervisorId).Or(
 			"EXISTS (SELECT 1 FROM class_lab_staffs WHERE class_lab_staffs.class_id = class_schedules.group_id AND class_lab_staffs.staff_id = ?)",
@@ -181,7 +191,10 @@ func (classScheduleRepository *ClassScheduleRepository) GetMyClassSchedulesByQue
 	return totalClassSchedules
 }
 
-func (classScheduleRepository *ClassScheduleRepository) GetTotalGroup(year string,language string) int64 {
+func (classScheduleRepository *ClassScheduleRepository) GetTotalGroup(
+	year string,
+	language string,
+) int64 {
 	var totalGruop int64
 	baseQuery := classScheduleRepository.DB.Model(models.ClassSchedule{})
 
@@ -189,8 +202,8 @@ func (classScheduleRepository *ClassScheduleRepository) GetTotalGroup(year strin
 		baseQuery.Where("year = ?", year)
 	}
 
-	if language != ""{
-		baseQuery.Where("language = ?",strings.ToUpper(language))
+	if language != "" {
+		baseQuery.Where("language = ?", strings.ToUpper(language))
 	}
 
 	baseQuery.Count(&totalGruop)

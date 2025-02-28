@@ -450,6 +450,7 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 // @Param instructorId query string false "instructorId"
 // @Param staffIds query []string false "staffIds" collectionFormat(multi)
 // @Param year query string false "year"
+// @Param language query string false "language"
 // @Param semester query string false "semester"
 // @Param day query string false "day"
 // @Param page query string false "Page"
@@ -462,6 +463,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 	instructorId := c.QueryParam("instructorId")
 	staffIds := c.QueryParams()["staffIds"]
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
 	semester := c.QueryParam("semester")
 	day := c.QueryParam("day")
 	page := c.QueryParam("page")
@@ -484,6 +486,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 		instructorId,
 		staffIds,
 		year,
+		language,
 		semester,
 		day,
 		page,
@@ -513,6 +516,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 // @Accept json
 // @Produce json
 // @Param year query string false "Year"
+// @Param language query string false "Language"
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
 // @Success 200		{array}	responses.MyGroupResponse
@@ -523,6 +527,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 	page := c.QueryParam("page")
 	pageSize := c.QueryParam("pageSize")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -540,6 +545,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 		&existClassSchedules,
 		existUser.UserID,
 		year,
+		language,
 		page,
 		pageSize,
 	)
@@ -1397,7 +1403,11 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfo, chapterIdxInt, *classSchedule.Language)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(
+		&labClassInfo,
+		chapterIdxInt,
+		*classSchedule.Language,
+	)
 
 	var groupChapterSelectItem []models.GroupChapterSelectedItem
 	groupChapterSelectItemRepo := repositories.NewGroupChapterSelectedItemRepository(
@@ -1411,7 +1421,11 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var exerciseList []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
-	labExerciseRepo.GetLabExerciseByChapterIDAndLanguage(&exerciseList, labClassInfo.ChapterID, *classSchedule.Language)
+	labExerciseRepo.GetLabExerciseByChapterIDAndLanguage(
+		&exerciseList,
+		labClassInfo.ChapterID,
+		*classSchedule.Language,
+	)
 
 	response := responses.NewGetLabChapterInfoResponse(
 		labClassInfo,
@@ -2641,7 +2655,11 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfo, chapterInt, *classSchedule.Language)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(
+		&labClassInfo,
+		chapterInt,
+		*classSchedule.Language,
+	)
 
 	if int64(chapterInt) > labClassInfoRepo.GetCount() || chapterInt < 0 {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Chapter Index Out of Range.")
@@ -4019,8 +4037,12 @@ func (supervisorHandler *SupervisorHandler) GetLastTimeLog(c echo.Context) error
 
 	var activityLog []models.ActivityLog
 	activityLogRepo := repositories.NewActivityLogRepository(supervisorHandler.server.DB)
-	total, err := activityLogRepo.GetActivityLogByGroupID(&activityLog, groupIdStr, lasttime, limitInt)
-
+	total, err := activityLogRepo.GetActivityLogByGroupID(
+		&activityLog,
+		groupIdStr,
+		lasttime,
+		limitInt,
+	)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
