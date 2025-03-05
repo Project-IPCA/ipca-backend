@@ -3491,7 +3491,13 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 		return responses.ErrorResponse(c, http.StatusInternalServerError, errString)
 	}
 
-	response := responses.NewAverageChapterScoreResponse(averrageScore, allLabClassInfo[0].FullMark)
+	fullMark := 0
+
+	if len(allLabClassInfo) > 0 {
+		fullMark = allLabClassInfo[0].FullMark
+	}
+
+	response := responses.NewAverageChapterScoreResponse(averrageScore, fullMark)
 
 	return responses.Response(c, http.StatusOK, response)
 }
