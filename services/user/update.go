@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -89,4 +90,15 @@ func (userService *Service) ResetUserStudentPassword(
 		user.Password = string(encryptedPassword)
 		userService.DB.Save(user)
 	}
+}
+
+func (userService *Service) RestoreAdmin(
+	user *models.User,
+) error {
+	user.IsActive = true
+	err := userService.DB.Save(*user)
+	if err.Error != nil {
+		return fmt.Errorf("error while restore admin : %v", err.Error)
+	}
+	return nil
 }
