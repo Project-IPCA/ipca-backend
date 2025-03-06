@@ -319,11 +319,11 @@ func (commonHandle *CommonHandler) GetStudentSubmission(c echo.Context) error {
 	}
 	var studentUser models.Student
 	studentRepo := repositories.NewStudentRepository(commonHandle.server.DB)
-	studentRepo.GetStudentByStuID(&studentUser,stuUuid)
+	studentRepo.GetStudentByStuID(&studentUser, stuUuid)
 
 	var labClassInfoData models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(commonHandle.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfoData, chapterInt,*studentUser.Group.Language)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfoData, chapterInt, *studentUser.Group.Language)
 
 	if *existUser.Role == constants.Role.Student {
 		var groupChapterPermission models.GroupChapterPermission
@@ -456,9 +456,10 @@ func (commonHandler *CommonHandler) GetDepartments(c echo.Context) error {
 // @Security BearerAuth
 // @Router /api/common/staffs [get]
 func (commonHandler *CommonHandler) GetStaffs(c echo.Context) error {
+	active := c.QueryParam("active")
 	var users []models.User
 	userRepo := repositories.NewUserRepository(commonHandler.server.DB)
-	userRepo.GetUserAdminRole(&users)
+	userRepo.GetUserAdminRole(&users, active)
 	response := responses.NewStaffsResponse(users)
 	return responses.Response(c, http.StatusOK, response)
 }

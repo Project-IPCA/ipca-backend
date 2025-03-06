@@ -498,7 +498,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 
 	var userAdmin []models.User
 	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserAdminRole(&userAdmin)
+	userRepo.GetUserAdminRole(&userAdmin, "1")
 	response := responses.NewClassSchedulesResponse(
 		existClassSchedules,
 		allClassSchedules,
@@ -3168,6 +3168,55 @@ func (supervisorHandler *SupervisorHandler) DeleteAdmin(c echo.Context) error {
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Admin Success.")
+}
+
+// @Description Restore Admin
+// @ID supervisor-restore-admin
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param admin_id path string true "Admin ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/admin/{admin_id}  [patch]
+func (supervisorHandler *SupervisorHandler) RestoreAdmin(c echo.Context) error {
+	adminIdStr := c.Param("admin_id")
+	adminId, err := uuid.Parse(adminIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var RestoreAdmin models.User
+	userRepository.GetUserByUserID(&RestoreAdmin, adminId)
+	if !utils.ContainsString(constants.AdminRoleList, *RestoreAdmin.Role) {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Admin Role.")
+	}
+
+	if *RestoreAdmin.Role == constants.Role.Supervisor &&
+		*existUser.Role != constants.Role.Beyonder {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	err = userService.RestoreAdmin(&RestoreAdmin)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Restore Admin Fail.")
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Restore Admin Success.")
 }
 
 // @Description Create Department

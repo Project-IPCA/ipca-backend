@@ -134,6 +134,7 @@ type StaffsResponse struct {
 	FirstName string    `json:"f_name"`
 	LastName  string    `json:"l_name"`
 	Role      string    `json:"role"`
+	Active    bool      `json:"active"`
 }
 
 func NewStaffsResponse(users []models.User) *[]StaffsResponse {
@@ -144,6 +145,7 @@ func NewStaffsResponse(users []models.User) *[]StaffsResponse {
 			FirstName: *user.FirstName,
 			LastName:  *user.LastName,
 			Role:      *user.Role,
+			Active:    user.IsActive,
 		})
 	}
 	return &response
