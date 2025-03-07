@@ -3484,7 +3484,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo, language)
 
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
-	studentCount := studentRepo.GetStudentGroupOrYearCount(groupId, year)
+	studentCount := studentRepo.GetStudentGroupOrYearCount(groupId, year, language)
 	studentAssignItemsRepo := repositories.NewStudentAssignChapterItemRepository(
 		supervisorHandler.server.DB,
 	)
