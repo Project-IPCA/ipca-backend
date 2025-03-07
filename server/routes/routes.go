@@ -11,12 +11,10 @@ import (
 )
 
 func ConfigureRoutes(server *s.Server) {
-	testHandler := handlers.NewTestHandler(server)
 	supervisorHandler := handlers.NewSupervisorHandler(server)
 	studentHandler := handlers.NewStudentHandle(server)
 	authHandler := handlers.NewAuthHandler(server)
 	commonHandler := handlers.NewCommonHandler(server)
-	initHandler := handlers.NewInitHandler(server)
 
 	server.Echo.IPExtractor = echo.ExtractIPFromXFFHeader()
 	server.Echo.Static("/static", "bucket")
@@ -30,13 +28,6 @@ func ConfigureRoutes(server *s.Server) {
 	refreshTokenConfig := authMiddleware.GetRefreshTokenConfig()
 
 	apiGroup := server.Echo.Group("/api")
-
-	// Init
-	initGroup := apiGroup.Group("/init")
-	initGroup.POST("/department", initHandler.InitDepartment)
-	initGroup.POST("/supervisor", initHandler.InitSupervisor)
-	initGroup.POST("/labclassinfo", initHandler.InitClassInfo)
-	initGroup.POST("/ta", initHandler.InitTA)
 
 	// Supervisor
 	supervisorGroup := apiGroup.Group("/supervisor")
@@ -153,9 +144,4 @@ func ConfigureRoutes(server *s.Server) {
 	commonAuthGroup.GET("/departments", commonHandler.GetDepartments)
 	commonAuthGroup.GET("/staffs", commonHandler.GetStaffs)
 	commonAuthGroup.GET("/supervisors", commonHandler.GetSupervisors)
-
-	// Test
-	apiGroup.GET("/greeting", testHandler.Greeting)
-	apiGroup.GET("/test_redis", testHandler.TestRedis)
-	apiGroup.GET("/test_rabbit", testHandler.TestRabbitMQ)
 }
