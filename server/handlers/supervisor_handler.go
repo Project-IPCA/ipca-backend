@@ -282,7 +282,7 @@ func (supervisorHandler *SupervisorHandler) CreateGroup(c echo.Context) error {
 
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepository := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepository.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepository.GetAllLabClassInfos(&labClassInfos, *existClassSchedule.Language)
 	groupAssignmentChapterItemRepository := repositories.NewGroupAssignmentChapterItemRepository(
 		supervisorHandler.server.DB,
 	)
@@ -450,6 +450,7 @@ func (supervisorHandler *SupervisorHandler) DeleteGroup(c echo.Context) error {
 // @Param instructorId query string false "instructorId"
 // @Param staffIds query []string false "staffIds" collectionFormat(multi)
 // @Param year query string false "year"
+// @Param language query string false "language"
 // @Param semester query string false "semester"
 // @Param day query string false "day"
 // @Param page query string false "Page"
@@ -462,6 +463,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 	instructorId := c.QueryParam("instructorId")
 	staffIds := c.QueryParams()["staffIds"]
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
 	semester := c.QueryParam("semester")
 	day := c.QueryParam("day")
 	page := c.QueryParam("page")
@@ -484,6 +486,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 		instructorId,
 		staffIds,
 		year,
+		language,
 		semester,
 		day,
 		page,
@@ -495,7 +498,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 
 	var userAdmin []models.User
 	userRepo := repositories.NewUserRepository(supervisorHandler.server.DB)
-	userRepo.GetUserAdminRole(&userAdmin)
+	userRepo.GetUserAdminRole(&userAdmin, "1")
 	response := responses.NewClassSchedulesResponse(
 		existClassSchedules,
 		allClassSchedules,
@@ -513,6 +516,7 @@ func (supervisorHandler *SupervisorHandler) GetAllAvailableGroups(c echo.Context
 // @Accept json
 // @Produce json
 // @Param year query string false "Year"
+// @Param language query string false "Language"
 // @Param page query string false "Page"
 // @Param pageSize query string false "Page Size"
 // @Success 200		{array}	responses.MyGroupResponse
@@ -523,6 +527,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 	page := c.QueryParam("page")
 	pageSize := c.QueryParam("pageSize")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -540,6 +545,7 @@ func (supervisorHandler *SupervisorHandler) GetMyGroups(c echo.Context) error {
 		&existClassSchedules,
 		existUser.UserID,
 		year,
+		language,
 		page,
 		pageSize,
 	)
@@ -805,18 +811,18 @@ func (supervisorHandler *SupervisorHandler) UpdateMyGroupInfo(c echo.Context) er
 	return responses.MessageResponse(c, http.StatusOK, "Update Group Info.")
 }
 
-// @Description Create Exercise
-// @ID supervisor-create-exercise
+// @Description Create Pyhon Exercise
+// @ID supervisor-create-python-exercise
 // @Tags Supervisor
 // @Accept json
 // @Produce json
-// @Param params body	requests.CreateLabExerciseRequest	true	"Creaet Lab Exercise Request"
+// @Param params body	requests.CreatePythonExerciseRequest	true	"Creaet Python Exercise Request"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/exercise [post]
-func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error {
-	createLabExerciseReq := new(requests.CreateLabExerciseRequest)
+// @Router			/api/supervisor/exercise/python [post]
+func (supervisorHandler *SupervisorHandler) CreatePythonExercise(c echo.Context) error {
+	createLabExerciseReq := new(requests.CreatePythonExerciseRequest)
 	if err := c.Bind(createLabExerciseReq); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
@@ -845,7 +851,7 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
-	exerciseId, err := labExerciseService.CreateWithoutSourceCode(
+	exerciseId, err := labExerciseService.CreatePythonWithoutSourceCode(
 		createLabExerciseReq,
 		&existUser.UserID,
 		existUser.Username,
@@ -855,6 +861,84 @@ func (supervisorHandler *SupervisorHandler) CreateExercise(c echo.Context) error
 	}
 
 	filename := fmt.Sprintf("exercise_" + exerciseId.String() + "*.py")
+	tempFile, err := utils.CreateTempFile(filename, createLabExerciseReq.Sourcecode)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Create Temp File Fail %s", err),
+		)
+	}
+	defer os.Remove(tempFile.Name())
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	uploadFileName, err := minioAction.UploadToMinio(
+		tempFile,
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		false,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	var labExerciseData models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	labExerciseRepo.GetLabExerciseByID(exerciseId, &labExerciseData)
+	labExerciseService.UpdateLabExerciseSourcecode(&labExerciseData, uploadFileName)
+
+	return responses.Response(c, http.StatusOK, labExerciseData)
+}
+
+// @Description Create C Exercise
+// @ID supervisor-create-c-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.CreateCExerciseRequest	true	"Creaet C Exercise Request"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/exercise/c [post]
+func (supervisorHandler *SupervisorHandler) CreateCExercise(c echo.Context) error {
+	createLabExerciseReq := new(requests.CreateCExerciseRequest)
+	if err := c.Bind(createLabExerciseReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := createLabExerciseReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
+	exerciseId, err := labExerciseService.CreateCWithoutSourceCode(
+		createLabExerciseReq,
+		&existUser.UserID,
+		existUser.Username,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Create Exercise Fail")
+	}
+
+	filename := fmt.Sprintf("exercise_" + exerciseId.String() + "*.c")
 	tempFile, err := utils.CreateTempFile(filename, createLabExerciseReq.Sourcecode)
 	if err != nil {
 		return responses.ErrorResponse(
@@ -1002,6 +1086,7 @@ func (supervisorHandler *SupervisorHandler) SaveExerciseTestcase(c echo.Context)
 		ExerciseId:   saveExerciseTesetcaseReq.ExerciseID,
 		TestcaseList: saveExerciseTesetcaseReq.TestCaseList,
 		Sourcecode:   sourcecode.String(),
+		Language:     *labExercise.Language,
 	}
 	err = rabbit.SendQueue(message)
 	if err != nil {
@@ -1308,9 +1393,21 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 		)
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, groupUuid)
+
+	if classSchedule.GroupID == uuid.Nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Group.")
+	}
+
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterIdxInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(
+		&labClassInfo,
+		chapterIdxInt,
+		*classSchedule.Language,
+	)
 
 	var groupChapterSelectItem []models.GroupChapterSelectedItem
 	groupChapterSelectItemRepo := repositories.NewGroupChapterSelectedItemRepository(
@@ -1324,7 +1421,11 @@ func (supervisorHandler *SupervisorHandler) GetLabChapterInfo(c echo.Context) er
 
 	var exerciseList []models.LabExercise
 	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
-	labExerciseRepo.GetLabExerciseByChapterID(&exerciseList, labClassInfo.ChapterID)
+	labExerciseRepo.GetLabExerciseByChapterIDAndLanguage(
+		&exerciseList,
+		labClassInfo.ChapterID,
+		*classSchedule.Language,
+	)
 
 	response := responses.NewGetLabChapterInfoResponse(
 		labClassInfo,
@@ -1381,7 +1482,7 @@ func (supervisorHandler *SupervisorHandler) GetStudentGroupList(c echo.Context) 
 
 	var labClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo, *classSchedule.Language)
 
 	var student []models.Student
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
@@ -2426,7 +2527,7 @@ func (supervisorHandler *SupervisorHandler) GetStudentChapterList(c echo.Context
 
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos, *classSchedule.Language)
 
 	var groupChapterPermission []models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
@@ -2554,7 +2655,11 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(
+		&labClassInfo,
+		chapterInt,
+		*classSchedule.Language,
+	)
 
 	if int64(chapterInt) > labClassInfoRepo.GetCount() || chapterInt < 0 {
 		return responses.ErrorResponse(c, http.StatusForbidden, "Chapter Index Out of Range.")
@@ -2624,20 +2729,20 @@ func (supervisorHandler *SupervisorHandler) GetAssginStudentExercise(c echo.Cont
 	return responses.Response(c, http.StatusOK, response)
 }
 
-// @Description Update Exercise
-// @ID supervisor-update-exercise
+// @Description Update Python Exercise
+// @ID supervisor-update-python-exercise
 // @Tags Supervisor
 // @Accept json
 // @Produce json
-// @Param params body	requests.UpdateLabExerciseRequest	true	"Update Exercise"
+// @Param params body	requests.UpdatePythonExerciseRequest	true	"Update Python Exercise"
 // @Success 200		{object}	responses.Data
 // @Failure 400		{object}	responses.Error
 // @Failure 403		{object}	responses.Error
 // @Failure 500		{object}	responses.Error
 // @Security BearerAuth
-// @Router			/api/supervisor/exercise [put]
-func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error {
-	updateLabExerciseReq := new(requests.UpdateLabExerciseRequest)
+// @Router			/api/supervisor/exercise/python [put]
+func (supervisorHandler *SupervisorHandler) UpdatePythonExercise(c echo.Context) error {
+	updateLabExerciseReq := new(requests.UpdatePythonExerciseRequest)
 	if err := c.Bind(updateLabExerciseReq); err != nil {
 		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
 	}
@@ -2678,7 +2783,7 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 	}
 
 	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
-	err = labExerciseService.UpdateLabExercise(&labExerciseData, *updateLabExerciseReq)
+	err = labExerciseService.UpdatePythonExercise(&labExerciseData, *updateLabExerciseReq)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -2751,6 +2856,152 @@ func (supervisorHandler *SupervisorHandler) UpdateExercise(c echo.Context) error
 		ExerciseId:   *updateLabExerciseReq.ExerciseID,
 		TestcaseList: testcaseList,
 		Sourcecode:   updateLabExerciseReq.Sourcecode,
+		Language:     constants.ExerciseLanguage.Python,
+	}
+	err = rabbit.SendQueue(message)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			"Error While Send Queue RabbitMQ",
+		)
+	}
+
+	return responses.MessageResponse(
+		c,
+		http.StatusOK,
+		"Update Exercise Successfully Wait For Testcase Output",
+	)
+}
+
+// @Description Update C Exercise
+// @ID supervisor-update-c-exercise
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param params body	requests.UpdateCExerciseRequest	true	"Update C Exercise"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/exercise/c [put]
+func (supervisorHandler *SupervisorHandler) UpdateCExercise(c echo.Context) error {
+	updateLabExerciseReq := new(requests.UpdateCExerciseRequest)
+	if err := c.Bind(updateLabExerciseReq); err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request")
+	}
+	if err := updateLabExerciseReq.Validate(); err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"Invalid Request",
+		)
+	}
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		var rolePermission []models.RolePermission
+		rolePermissionRepo := repositories.NewRolePermissionRepository(supervisorHandler.server.DB)
+		rolePermissionRepo.GetPermissionByRole(&rolePermission, *existUser.Role)
+
+		if !utils.ValidateRolePermission(rolePermission, constants.PermissionType.ExerciseAdmin) {
+			return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
+		}
+	}
+
+	var labExerciseData models.LabExercise
+	labExerciseRepo := repositories.NewLabExerciseRepository(supervisorHandler.server.DB)
+	err = labExerciseRepo.GetLabExerciseByID(*updateLabExerciseReq.ExerciseID, &labExerciseData)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return responses.ErrorResponse(
+				c,
+				http.StatusBadRequest,
+				"Not Found Exercise.",
+			)
+		}
+	}
+
+	labExerciseService := labexercise.NewLabExerciseService(supervisorHandler.server.DB)
+	err = labExerciseService.UpdateCExercise(&labExerciseData, *updateLabExerciseReq)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	tempFile, err := utils.CreateTempFile(
+		fmt.Sprintf(*labExerciseData.Sourcecode+"*.c"),
+		updateLabExerciseReq.Sourcecode,
+	)
+	if err != nil {
+		return responses.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Create Temp File Fail %s", err),
+		)
+	}
+	defer os.Remove(tempFile.Name())
+
+	minioAction := minioclient.NewMinioAction(supervisorHandler.server.Minio)
+	err = minioAction.DeleteFileInMinio(
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		*labExerciseData.Sourcecode,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	filename, err := minioAction.UploadToMinio(
+		tempFile,
+		supervisorHandler.server.Config.Minio.BucketSupervisorCode,
+		false,
+	)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	labExerciseService.UpdateLabExerciseSourcecode(&labExerciseData, filename)
+
+	exerciseTestcaseService := exercisetestcase.NewExerciseTestcaseService(
+		supervisorHandler.server.DB,
+	)
+	exerciseTestcaseService.UpdateTestcaseIsReadyByExerciseID(
+		*updateLabExerciseReq.ExerciseID,
+		constants.TestcaseIsReadyType.No,
+	)
+
+	var exerciseTestcase []models.ExerciseTestcase
+	exerciseTestcaseRepo := repositories.NewExerciseTestcaseRepository(supervisorHandler.server.DB)
+	exerciseTestcaseRepo.GetTestcasesByExerciseID(labExerciseData.ExerciseID, &exerciseTestcase)
+
+	testcaseList := make([]requests.ExerciseTestcaseReq, 0)
+	for _, testcase := range exerciseTestcase {
+		testcaseList = append(testcaseList, requests.ExerciseTestcaseReq{
+			TestcaseID:      testcase.TestcaseID,
+			ExerciseID:      testcase.ExerciseID,
+			IsReady:         testcase.IsReady,
+			TestcaseContent: testcase.TestcaseContent,
+			IsActive:        *testcase.IsActive,
+			IsShowStudent:   *testcase.IsShowStudent,
+			TestcaseNote:    *testcase.TestcaseNote,
+			TestcaseOutput:  *testcase.TestcaseOutput,
+			TestcaseError:   *testcase.TestcaseError,
+		})
+	}
+
+	rabbit := rabbitmq_client.NewRabbitMQAction(
+		supervisorHandler.server.RabitMQ,
+		supervisorHandler.server.Config,
+	)
+	message := requests.AddTestcaseRabitMessage{
+		JobId:        *updateLabExerciseReq.JobID,
+		JobType:      "upsert-testcase",
+		ExerciseId:   *updateLabExerciseReq.ExerciseID,
+		TestcaseList: testcaseList,
+		Sourcecode:   updateLabExerciseReq.Sourcecode,
+		Language:     constants.ExerciseLanguage.C,
 	}
 	err = rabbit.SendQueue(message)
 	if err != nil {
@@ -2917,6 +3168,55 @@ func (supervisorHandler *SupervisorHandler) DeleteAdmin(c echo.Context) error {
 	}
 
 	return responses.MessageResponse(c, http.StatusOK, "Delete Admin Success.")
+}
+
+// @Description Restore Admin
+// @ID supervisor-restore-admin
+// @Tags Supervisor
+// @Accept json
+// @Produce json
+// @Param admin_id path string true "Admin ID"
+// @Success 200		{object}	responses.Data
+// @Failure 400		{object}	responses.Error
+// @Failure 403		{object}	responses.Error
+// @Failure 500		{object}	responses.Error
+// @Security BearerAuth
+// @Router			/api/supervisor/admin/{admin_id}  [patch]
+func (supervisorHandler *SupervisorHandler) RestoreAdmin(c echo.Context) error {
+	adminIdStr := c.Param("admin_id")
+	adminId, err := uuid.Parse(adminIdStr)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request Param")
+	}
+
+	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
+	existUser, err := utils.GetUserClaims(c, *userRepository)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusForbidden, err.Error())
+	}
+
+	if !utils.ValidateSupervisorAndBeyonder(existUser) {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	var RestoreAdmin models.User
+	userRepository.GetUserByUserID(&RestoreAdmin, adminId)
+	if !utils.ContainsString(constants.AdminRoleList, *RestoreAdmin.Role) {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Admin Role.")
+	}
+
+	if *RestoreAdmin.Role == constants.Role.Supervisor &&
+		*existUser.Role != constants.Role.Beyonder {
+		return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission")
+	}
+
+	userService := user.NewUserService(supervisorHandler.server.DB)
+	err = userService.RestoreAdmin(&RestoreAdmin)
+	if err != nil {
+		return responses.ErrorResponse(c, http.StatusInternalServerError, "Restore Admin Fail.")
+	}
+
+	return responses.MessageResponse(c, http.StatusOK, "Restore Admin Success.")
 }
 
 // @Description Create Department
@@ -3131,7 +3431,12 @@ func (supervisorHandler *SupervisorHandler) GetAllRolePermission(c echo.Context)
 func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Context) error {
 	groupIdStr := c.QueryParam("groupId")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
 	groupId, _ := uuid.Parse(groupIdStr)
+
+	if groupIdStr == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	classLabStaffRepo := repositories.NewClassLabStaffRepository(supervisorHandler.server.DB)
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
@@ -3170,11 +3475,13 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 				return responses.ErrorResponse(c, http.StatusForbidden, "Invalid Permission.")
 			}
 		}
+
+		language = *classSchedule.Language
 	}
 
 	var allLabClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo)
+	labClassInfoRepo.GetAllLabClassInfos(&allLabClassInfo, language)
 
 	studentRepo := repositories.NewStudentRepository(supervisorHandler.server.DB)
 	studentCount := studentRepo.GetStudentGroupOrYearCount(groupId, year)
@@ -3233,7 +3540,13 @@ func (supervisorHandler *SupervisorHandler) GetAverageChapterScore(c echo.Contex
 		return responses.ErrorResponse(c, http.StatusInternalServerError, errString)
 	}
 
-	response := responses.NewAverageChapterScoreResponse(averrageScore, allLabClassInfo[0].FullMark)
+	fullMark := 0
+
+	if len(allLabClassInfo) > 0 {
+		fullMark = allLabClassInfo[0].FullMark
+	}
+
+	response := responses.NewAverageChapterScoreResponse(averrageScore, fullMark)
 
 	return responses.Response(c, http.StatusOK, response)
 }
@@ -3256,6 +3569,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 	groupId := c.QueryParam("groupId")
 	status := c.QueryParam("status")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if groupId == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3304,7 +3622,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalStudent(c echo.Context) erro
 			}
 		}
 	}
-	totalStudent = studentRepo.GetTotalStudent(groupId, year, status)
+	totalStudent = studentRepo.GetTotalStudent(groupId, year, status, language)
 
 	response := responses.NewTotalStudentResponse(totalStudent)
 	return responses.Response(c, http.StatusOK, response)
@@ -3393,6 +3711,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalStaff(c echo.Context) error 
 func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.Context) error {
 	groupId := c.QueryParam("group_id")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if groupId == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3445,7 +3768,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 		}
 	}
 
-	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year)
+	totalSubmissions = exerciseSubmissionRepo.GetTotalSubmissions(groupId, year, language)
 
 	response := responses.NewTotalSubmissionsResponse(totalSubmissions)
 
@@ -3464,6 +3787,11 @@ func (supervisorHandler *SupervisorHandler) GetTotalExerciseSubmissions(c echo.C
 // @Router			/api/supervisor/groups/total [get]
 func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error {
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3483,7 +3811,7 @@ func (supervisorHandler *SupervisorHandler) GetTotalGroup(c echo.Context) error 
 
 	var totalGroup int64
 	classScheduleRepo := repositories.NewClassScheduleRepository(supervisorHandler.server.DB)
-	totalGroup = classScheduleRepo.GetTotalGroup(year)
+	totalGroup = classScheduleRepo.GetTotalGroup(year, language)
 
 	response := responses.NewTotalGroupsResponse(totalGroup)
 
@@ -3569,6 +3897,11 @@ func (supervisorHandler *SupervisorHandler) GetScoreRankingByGroup(c echo.Contex
 func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Context) error {
 	groupId := c.QueryParam("group_id")
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if groupId == "" && language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3630,6 +3963,7 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 			groupId,
 			year,
 			d,
+			language,
 		)
 		dateList = append(dateList, d.Format("2006-01-02"))
 		submissionsList = append(submissionsList, submissions)
@@ -3652,6 +3986,11 @@ func (supervisorHandler *SupervisorHandler) GetSubmissionsOverTime(c echo.Contex
 // @Router			/api/supervisor/average_dept_score [get]
 func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) error {
 	year := c.QueryParam("year")
+	language := c.QueryParam("language")
+
+	if language == "" {
+		return responses.ErrorResponse(c, http.StatusBadRequest, "Invalid Request.")
+	}
 
 	userRepository := repositories.NewUserRepository(supervisorHandler.server.DB)
 	existUser, err := utils.GetUserClaims(c, *userRepository)
@@ -3671,7 +4010,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	var department []models.DepartmentWithAggregate
 	departmentRepo := repositories.NewDepartmentRepository(supervisorHandler.server.DB)
-	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year)
+	err = departmentRepo.GetAllDeptsWithTotalMarks(&department, year, language)
 
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, "Error While Qurey.")
@@ -3679,7 +4018,7 @@ func (supervisorHandler *SupervisorHandler) GetAverageDeptScore(c echo.Context) 
 
 	var labClassInfo []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(supervisorHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfo, language)
 
 	response := responses.NewAverageDeptScoreResponse(department, labClassInfo)
 
@@ -3753,8 +4092,12 @@ func (supervisorHandler *SupervisorHandler) GetLastTimeLog(c echo.Context) error
 
 	var activityLog []models.ActivityLog
 	activityLogRepo := repositories.NewActivityLogRepository(supervisorHandler.server.DB)
-	total, err := activityLogRepo.GetActivityLogByGroupID(&activityLog, groupIdStr, lasttime, limitInt)
-
+	total, err := activityLogRepo.GetActivityLogByGroupID(
+		&activityLog,
+		groupIdStr,
+		lasttime,
+		limitInt,
+	)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}

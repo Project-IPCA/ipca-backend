@@ -23,6 +23,7 @@ type AddTestcaseRabitMessage struct {
 	ExerciseId   uuid.UUID             `json:"exercise_id"`
 	TestcaseList []ExerciseTestcaseReq `json:"testcase_list"`
 	Sourcecode   string                `json:"sourcecode"`
+	Language     string                `json:"language"`
 }
 
 type ExerciseTestcaseReq struct {

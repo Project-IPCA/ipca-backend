@@ -106,8 +106,20 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 	exerciseSubmissionRepo := repositories.NewExerciseSubmissionRepository(studentHandler.server.DB)
 	exerciseSubmissionRepo.GetStudentSubmission(existUser.UserID, *studentAssignChapterItem.ExerciseID, &submissionList)
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(studentHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	attemps := len(submissionList) + 1
-	filename := fmt.Sprintf("%s-%04d*.py", existUser.Username, attemps)
+	var filename string
+	switch *classSchedule.Language {
+	case constants.ExerciseLanguage.Python:
+		filename = fmt.Sprintf("%s-%04d*.py", existUser.Username, attemps)
+	case constants.ExerciseLanguage.C:
+		filename = fmt.Sprintf("%s-%04d*.c", existUser.Username, attemps)
+	default:
+		filename = fmt.Sprintf("%s-%04d*.txt", existUser.Username, attemps)
+	}
 	tempFile, err := utils.CreateTempFile(filename, exerciseSubmitReq.Sourcecode)
 	if err != nil {
 		return responses.ErrorResponse(
@@ -141,6 +153,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		nil,
 		nil,
 		nil,
+		classSchedule.Language,
 	)
 	if err != nil {
 		return responses.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -200,6 +213,7 @@ func (studentHandler *StudentHandler) ExerciseSubmit(c echo.Context) error {
 		StudentID:    userId,
 		ChapterId:    chapterUuid,
 		ItemId:       exerciseSubmitReq.ItemId,
+		Language:     *labExercise.Language,
 	}
 
 	rabbit := rabbitmq_client.NewRabbitMQAction(
@@ -261,9 +275,13 @@ func (studentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(studentHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos, *classSchedule.Language)
 
 	var groupChapterPermission []models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
@@ -327,7 +345,7 @@ func (studentHandler *StudentHandler) GetALLChapter(c echo.Context) error {
 	}
 
 	var allStudentAssignChapterItems []models.StudentAssignmentChapterItem
-	studentAssignItemRepo.GetAllStudentAssignChapter(&allStudentAssignChapterItems, userId)
+	studentAssignItemRepo.GetAllStudentAssignChapterWithSubmission(&allStudentAssignChapterItems, userId)
 
 	response := responses.NewGetAllChapter(
 		groupChapterPermission,
@@ -362,9 +380,13 @@ func (studentHandler *StudentHandler) GetChapterList(c echo.Context) error {
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(studentHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	var labClassInfos []models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
-	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos)
+	labClassInfoRepo.GetAllLabClassInfos(&labClassInfos, *classSchedule.Language)
 
 	var groupChapterPermission []models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(
@@ -445,9 +467,13 @@ func (studentHandler *StudentHandler) GetStudentAssignedExercise(c echo.Context)
 		return responses.ErrorResponse(c, http.StatusForbidden, "This User Not Student")
 	}
 
+	var classSchedule models.ClassSchedule
+	classScheduleRepo := repositories.NewClassScheduleRepository(studentHandler.server.DB)
+	classScheduleRepo.GetClassScheduleByGroupID(&classSchedule, *existUser.Student.GroupID)
+
 	var labClassInfo models.LabClassInfo
 	labClassInfoRepo := repositories.NewLabClassInfoRepository(studentHandler.server.DB)
-	labClassInfoRepo.GetLabClassInfoByChapterIndex(&labClassInfo, chapterInt)
+	labClassInfoRepo.GetLabClassInfoByChapterIndexAndLanguage(&labClassInfo, chapterInt, *classSchedule.Language)
 
 	var groupChapterPermission models.GroupChapterPermission
 	groupChapterPermissionRepo := repositories.NewGroupChapterPermissionRepository(studentHandler.server.DB)

@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"strings"
+
 	"gorm.io/gorm"
 
 	"github.com/Project-IPCA/ipca-backend/models"
@@ -26,13 +28,22 @@ func (labClassInfoRepository *LabClassInfoRepository) GetCount() int64 {
 
 func (labClassInfoRepository *LabClassInfoRepository) GetAllLabClassInfos(
 	labClassInfos *[]models.LabClassInfo,
+	language string,
 ) {
-	labClassInfoRepository.DB.Order("chapter_index ASC").Find(labClassInfos)
+	labClassInfoRepository.DB.Where("language = ?",strings.ToUpper(language)).Order("chapter_index ASC").Find(labClassInfos)
 }
 
 func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndex(
 	labClassInfo *models.LabClassInfo,
 	chapterIdx int,
+) {
+	labClassInfoRepository.DB.Where("chapter_index = ?", chapterIdx).Find(labClassInfo)
+}
+
+func (labClassInfoRepository *LabClassInfoRepository) GetLabClassInfoByChapterIndexAndLanguage(
+	labClassInfo *models.LabClassInfo,
+	chapterIdx int,
+	language string,
 ){
-	labClassInfoRepository.DB.Where("chapter_index",chapterIdx).Find(labClassInfo)
+	labClassInfoRepository.DB.Where("chapter_index = ? AND language = ?",chapterIdx,strings.ToUpper(language)).Find(labClassInfo)
 }

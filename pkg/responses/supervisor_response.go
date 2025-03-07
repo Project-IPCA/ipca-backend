@@ -19,6 +19,7 @@ type GetLabChapterInfoResponse struct {
 	GroupId           uuid.UUID            `json:"group_id"`
 	GroupSelectedLabs map[string][]string  `json:"group_selected_labs"`
 	LabList           map[string][]LabData `json:"lab_list"`
+	Language          string               `json:"language"`
 }
 
 type LabData struct {
@@ -26,6 +27,7 @@ type LabData struct {
 	Name       string `json:"name"`
 	ItemId     string `json:"item_id"`
 	ChapterId  string `json:"chapter_id"`
+	CanSelect  bool   `json:"can_select"`
 }
 
 func NewGetLabChapterInfoResponse(
@@ -58,12 +60,23 @@ func NewGetLabChapterInfoResponse(
 			continue
 		}
 		levelStr := *exercise.Level
+		canSelect := true
+		if len(exercise.TestcaseList) == 0 {
+			canSelect = false
+		}
+		for _, testcase := range exercise.TestcaseList {
+			if *testcase.TestcaseError != "" {
+				canSelect = false
+				break
+			}
+		}
 		if _, exists := labList[levelStr]; exists {
 			labList[levelStr] = append(labList[levelStr], LabData{
 				ExerciseId: exercise.ExerciseID.String(),
 				Name:       *exercise.Name,
 				ItemId:     levelStr,
 				ChapterId:  exercise.ChapterID.String(),
+				CanSelect:  canSelect,
 			})
 		}
 	}
@@ -75,6 +88,7 @@ func NewGetLabChapterInfoResponse(
 		GroupId:           groupId,
 		GroupSelectedLabs: groupSelectedLabs,
 		LabList:           labList,
+		Language:          *labClassInfo.Language,
 	}
 }
 
@@ -120,6 +134,7 @@ type StaffsResponse struct {
 	FirstName string    `json:"f_name"`
 	LastName  string    `json:"l_name"`
 	Role      string    `json:"role"`
+	Active    bool      `json:"active"`
 }
 
 func NewStaffsResponse(users []models.User) *[]StaffsResponse {
@@ -130,6 +145,7 @@ func NewStaffsResponse(users []models.User) *[]StaffsResponse {
 			FirstName: *user.FirstName,
 			LastName:  *user.LastName,
 			Role:      *user.Role,
+			Active:    user.IsActive,
 		})
 	}
 	return &response

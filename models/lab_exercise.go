@@ -22,6 +22,7 @@ type LabExercise struct {
 	SuggestedConstraints   *json.RawMessage   `gorm:"type:json;column:suggested_constraints"`
 	AddedBy                *string            `gorm:"type:varchar(40)"`
 	CreatedBy              *uuid.UUID         `gorm:"type:varchar(36)"`
+	Language               *string            `gorm:"type:enum('PYTHON','C');default:'PYTHON'"`
 	Chapter                LabClassInfo       `gorm:"foreignKey:ChapterID;references:ChapterID"`
 	TestcaseList           []ExerciseTestcase `gorm:"foreignKey:ExerciseID;references:ExerciseID"`
 }

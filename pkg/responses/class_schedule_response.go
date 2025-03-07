@@ -35,6 +35,7 @@ type ClassSchedule struct {
 	StudentAmount int          `json:"student_amount"`
 	Instructor    Instructor   `json:"instructor"`
 	Staff         []ClassStaff `json:"staffs"`
+	Language      *string      `json:"language"`
 }
 
 type AvailableGroupFilter struct {
@@ -88,7 +89,8 @@ func NewClassSchedulesResponse(
 				FirstName:    *classSchedule.Supervisor.User.FirstName,
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
-			Staff: classStaffResponse,
+			Staff:    classStaffResponse,
+			Language: classSchedule.Language,
 		})
 	}
 
@@ -159,12 +161,14 @@ func NewMyClassSchedulesResponse(
 	for _, classSchedule := range filteredClassSchedules {
 		classStaffResponse := make([]ClassStaff, 0)
 		for _, labStaff := range classSchedule.ClassLabStaffs {
-			classStaffResponse = append(classStaffResponse, ClassStaff{
-				StaffID:   labStaff.User.UserID,
-				FirstName: *labStaff.User.FirstName,
-				LastName:  *labStaff.User.LastName,
-				Role:      *labStaff.User.Role,
-			})
+			if labStaff.User.IsActive {
+				classStaffResponse = append(classStaffResponse, ClassStaff{
+					StaffID:   labStaff.User.UserID,
+					FirstName: *labStaff.User.FirstName,
+					LastName:  *labStaff.User.LastName,
+					Role:      *labStaff.User.Role,
+				})
+			}
 		}
 		departmentData := Department{
 			DeptID: classSchedule.Department.DeptID,
@@ -186,7 +190,8 @@ func NewMyClassSchedulesResponse(
 				FirstName:    *classSchedule.Supervisor.User.FirstName,
 				LastName:     *classSchedule.Supervisor.User.LastName,
 			},
-			Staff: classStaffResponse,
+			Staff:    classStaffResponse,
+			Language: classSchedule.Language,
 		})
 	}
 
@@ -257,17 +262,20 @@ type ClassScheduleInfoResponse struct {
 	Instructor              Instructor               `json:"instructor"`
 	Staffs                  []ClassStaff             `json:"staffs"`
 	GroupChapterPermissions []GroupChapterPermission `json:"group_chapter_permissions"`
+	Language                string                   `json:"language"`
 }
 
 func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassScheduleInfoResponse {
 	classStaffResponse := make([]ClassStaff, 0)
 	for _, labStaff := range classSchedule.ClassLabStaffs {
-		classStaffResponse = append(classStaffResponse, ClassStaff{
-			StaffID:   labStaff.User.UserID,
-			FirstName: *labStaff.User.FirstName,
-			LastName:  *labStaff.User.LastName,
-			Role:      *labStaff.User.Role,
-		})
+		if labStaff.User.IsActive {
+			classStaffResponse = append(classStaffResponse, ClassStaff{
+				StaffID:   labStaff.User.UserID,
+				FirstName: *labStaff.User.FirstName,
+				LastName:  *labStaff.User.LastName,
+				Role:      *labStaff.User.Role,
+			})
+		}
 	}
 	groupChapterPermResponse := make([]GroupChapterPermission, 0)
 	for _, gcp := range classSchedule.GroupChapterPermissions {
@@ -315,6 +323,7 @@ func NewClassScheduleInfoResponse(classSchedule models.ClassSchedule) *ClassSche
 		AllowUploadProfile:      classSchedule.AllowUploadPic,
 		Staffs:                  classStaffResponse,
 		GroupChapterPermissions: groupChapterPermResponse,
+		Language:                *classSchedule.Language,
 	}
 }
 
@@ -343,12 +352,14 @@ func NewMyClassScheduleInfoResponse(
 ) *MyGroupInfoResponse {
 	classStaffResponse := make([]ClassStaff, 0)
 	for _, labStaff := range classSchedule.ClassLabStaffs {
-		classStaffResponse = append(classStaffResponse, ClassStaff{
-			StaffID:   labStaff.User.UserID,
-			FirstName: *labStaff.User.FirstName,
-			LastName:  *labStaff.User.LastName,
-			Role:      *labStaff.User.Role,
-		})
+		if labStaff.User.IsActive {
+			classStaffResponse = append(classStaffResponse, ClassStaff{
+				StaffID:   labStaff.User.UserID,
+				FirstName: *labStaff.User.FirstName,
+				LastName:  *labStaff.User.LastName,
+				Role:      *labStaff.User.Role,
+			})
+		}
 	}
 
 	return &MyGroupInfoResponse{

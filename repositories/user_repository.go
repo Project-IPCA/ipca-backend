@@ -49,12 +49,17 @@ func (userRepository *UserRepository) GetUserStudentAndGroupByUserID(
 
 func (userRepository *UserRepository) GetUserAdminRole(
 	user *[]models.User,
+	active string,
 ) {
-	userRepository.DB.Preload("Executive").
+	baseQuery := userRepository.DB.Model(models.User{}).Preload("Executive").
 		Preload("Supervisor").
 		Preload("TA").
-		Where("role = ? OR role = ? OR role = ?", constants.Role.Supervisor, constants.Role.Ta, constants.Role.Executive).
-		Find(user)
+		Where("role = ? OR role = ? OR role = ?", constants.Role.Supervisor, constants.Role.Ta, constants.Role.Executive)
+
+	if active != "" {
+		baseQuery.Where("is_active = ?", active)
+	}
+	baseQuery.Find(&user)
 }
 
 func (userRepository *UserRepository) GetTotalAdmin(groupId string) int64 {

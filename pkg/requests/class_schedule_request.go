@@ -19,6 +19,7 @@ type BasicGroup struct {
 	Year         *int       `json:"year"       validate:""         example:"2023"`
 	TimeStart    *string    `json:"time_start" validate:""         example:"09:00:00"`
 	TimeEnd      *string    `json:"time_end"   validate:""         example:"12:00:00"`
+	Language     *string    `json:"language"   validate:""         example:"12:00:00"`
 }
 
 func (bg BasicGroup) Validate() error {

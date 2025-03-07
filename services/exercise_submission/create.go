@@ -14,6 +14,7 @@ func (exerciseSubmissionService *Service) Create(
 	output *string,
 	result *string,
 	errorMessage *string,
+	language *string,
 ) (uuid.UUID, error) {
 	submissionId := uuid.New()
 	submission := builders.NewExerciseSubmissionBuilder().
@@ -27,6 +28,7 @@ func (exerciseSubmissionService *Service) Create(
 	SetOutput(output).
 	SetResult(result).
 	SetErrorMessage(errorMessage).
+	SetLanguage(language).
 	Build()
 
 	exerciseSubmissionService.DB.Create(&submission)

@@ -8,8 +8,8 @@ import (
 )
 
 type ServiceWrapper interface {
-	Create(
-		request *requests.CreateLabExerciseRequest,
+	CreatePythonExercise(
+		request *requests.CreatePythonExerciseRequest,
 		supervisorId *uuid.UUID,
 		supervisorName string,
 	) error

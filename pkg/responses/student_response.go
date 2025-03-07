@@ -14,14 +14,22 @@ import (
 	"github.com/Project-IPCA/ipca-backend/pkg/utils"
 )
 
+type ChapterStudentItemsResponse struct {
+	ChapterIdx int   `json:"chapter_idx"`
+	ItemIdx    int   `json:"item_idx"`
+	Marking    int   `json:"marking"`
+	IsSubmit   *bool `json:"is_submit"`
+}
+
 type GetAllChapterResponse struct {
-	Index               int    `json:"index"`
-	ChapterId           string `json:"chapter_id"`
-	Name                string `json:"name"`
-	Marking             int    `json:"marking"`
-	FullMark            int    `json:"full_mark"`
-	IsOpen              bool   `json:"is_open"`
-	LastExerciseSuceess int    `json:"last_exercise_success"`
+	Index               int                           `json:"index"`
+	ChapterId           string                        `json:"chapter_id"`
+	Name                string                        `json:"name"`
+	Items               []ChapterStudentItemsResponse `json:"items"`
+	TotakMark           int                           `json:"total_mark"`
+	FullMark            int                           `json:"full_mark"`
+	IsOpen              bool                          `json:"is_open"`
+	LastExerciseSuceess int                           `json:"last_exercise_success"`
 }
 
 func NewGetAllChapter(
@@ -50,13 +58,27 @@ func NewGetAllChapter(
 		marking := 0
 		currntItem := 0
 		studentNotDoneItemList := make([]models.StudentAssignmentChapterItem, 0)
+		itemData := make([]ChapterStudentItemsResponse, 0)
 		for _, studentItem := range studentChapterItem {
 			if studentItem.ChapterID == chapter.ChapterID {
+				isSubmit := false
 				marking = marking + studentItem.Marking
 				currntItem = currntItem + 1
 				if studentItem.Marking == 0 {
 					studentNotDoneItemList = append(studentNotDoneItemList, studentItem)
 				}
+				if len(studentItem.SubmissionList) > 0 {
+					isSubmit = true
+				} else {
+					isSubmit = false
+				}
+				chapterItem := ChapterStudentItemsResponse{
+					ChapterIdx: chapter.LabClassInfo.ChapterIndex,
+					ItemIdx:    int(studentItem.ItemID),
+					Marking:    studentItem.Marking,
+					IsSubmit:   &isSubmit,
+				}
+				itemData = append(itemData, chapterItem)
 			}
 			if currntItem >= labClassInfo.NoItems {
 				break
@@ -77,9 +99,10 @@ func NewGetAllChapter(
 			Index:               chapter.LabClassInfo.ChapterIndex,
 			ChapterId:           chapter.ChapterID.String(),
 			Name:                chapter.LabClassInfo.Name,
-			Marking:             marking,
+			TotakMark:           marking,
 			FullMark:            chapter.LabClassInfo.FullMark,
 			IsOpen:              canAccess,
+			Items:               itemData,
 			LastExerciseSuceess: minNotDone,
 		})
 	}
@@ -210,6 +233,7 @@ type StudentAssignmentItemResponse struct {
 	UserDefinedConstraints *json.RawMessage   `json:"user_defined_constraints"`
 	SuggestedConstraints   *json.RawMessage   `json:"suggested_constraints"`
 	TestcaseList           []TestcaseResponse `json:"testcase_list"`
+	Language               string             `json:"language"`
 }
 
 type TestcaseResponse struct {
@@ -259,6 +283,7 @@ func NewGetStudentAssignmentItemResponse(
 		UserDefinedConstraints: labExercise.UserDefinedConstraints,
 		SuggestedConstraints:   labExercise.SuggestedConstraints,
 		TestcaseList:           testcaseListResponse,
+		Language:               *labExercise.Language,
 	}
 	return &response
 }
