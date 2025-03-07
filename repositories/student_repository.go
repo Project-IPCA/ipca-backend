@@ -96,23 +96,27 @@ func (studentRepository *StudentRepository) GetStudentInGroupID(
 	studentRepository.DB.Where("group_id = ?", groupID).Preload("User").Find(students)
 }
 
-func (studentRepository *StudentRepository) GetStudentGroupOrYearCount(groupID uuid.UUID, year string) int64 {
+func (studentRepository *StudentRepository) GetStudentGroupOrYearCount(groupID uuid.UUID, year string, language string) int64 {
 	var count int64
-	baseQuery := studentRepository.DB.Model(models.Student{})
+	baseQuery := studentRepository.DB.Model(models.Student{}).Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id")
 
 	if groupID != uuid.Nil {
 		baseQuery.Where("students.group_id = ?", groupID)
 	}
 
+	if language != "" {
+		baseQuery.Where("class_schedules.language = ?", strings.ToUpper(language))
+	}
+
 	if year != "" {
-		baseQuery.Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id").Where("class_schedules.year = ?", year)
+		baseQuery.Where("class_schedules.year = ?", year)
 	}
 
 	baseQuery.Count(&count)
 	return count
 }
 
-func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year string, status string,language string) int64 {
+func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year string, status string, language string) int64 {
 	var total int64
 	baseQuery := studentRepository.DB.Model(models.Student{}).Joins("JOIN class_schedules ON class_schedules.group_id = students.group_id")
 	if status != "" {
@@ -128,7 +132,7 @@ func (studentRepository *StudentRepository) GetTotalStudent(groupId string, year
 	}
 
 	if language != "" {
-		baseQuery = baseQuery.Where("class_schedules.language = ?",strings.ToUpper(language))
+		baseQuery = baseQuery.Where("class_schedules.language = ?", strings.ToUpper(language))
 	}
 	baseQuery.Count(&total)
 	return total
