@@ -17,4 +17,5 @@ func Start(cfg *config.Config) {
 	if err != nil {
 		log.Fatal("Port already used")
 	}
+	defer app.CloseConnection()
 }
